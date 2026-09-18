@@ -1,0 +1,17 @@
+{% extends "base_correo.html" %}
+{% block titulo %}Bienvenido a VAEL{% endblock %}
+{% block contenido %}
+<h2 style="margin-top:0;">Bienvenido a VAEL, {{ usuario.nombre }}</h2>
+<p>Se creó tu cuenta de acceso al panel de RRHH. Estas son tus credenciales:</p>
+<table role="presentation" style="margin:16px 0;">
+  <tr><td style="padding:4px 12px 4px 0;color:#8a8a99;">Email</td><td><strong>{{ usuario.email }}</strong></td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#8a8a99;">Contraseña temporal</td><td><strong>{{ password_temporal }}</strong></td></tr>
+</table>
+<p>
+  <a href="{{ link_sistema }}" style="display:inline-block;background-color:#1a1a2e;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;">
+    Ingresar a VAEL
+  </a>
+</p>
+<p>Por seguridad, te recomendamos cambiar esta contraseña apenas ingreses.</p>
+<p>El equipo de VAEL</p>
+{% endblock %}

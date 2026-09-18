@@ -1,0 +1,15 @@
+{% extends "base_correo.html" %}
+{% block titulo %}¡Felicitaciones! Pasaste al siguiente paso{% endblock %}
+{% block contenido %}
+<h2 style="margin-top:0;">¡Felicitaciones, {{ candidato.nombre }}!</h2>
+<p>Aprobaste la evaluación técnica de <strong>{{ vacante_titulo }}</strong>. El siguiente paso es una entrevista conversacional por voz con <strong>EVA</strong>, nuestra entrevistadora de IA.</p>
+<p>
+  <a href="{{ link_entrevista }}" style="display:inline-block;background-color:#1a1a2e;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;">
+    Ir a la entrevista
+  </a>
+</p>
+<p><strong>¿Qué es EVA?</strong> Es una entrevistadora conversacional con la que vas a hablar por voz, como una llamada normal. Te va a hacer preguntas sobre tu experiencia y cómo encarás distintas situaciones de trabajo.</p>
+<p><strong>Cómo prepararte:</strong> buscá un lugar tranquilo, probá tu micrófono y cámara antes de empezar, y respondé con naturalidad — no hay respuestas "correctas" memorizadas.</p>
+<p>Este link es válido por <strong>48 horas</strong>.</p>
+<p>¡Éxitos!<br>El equipo de VAEL</p>
+{% endblock %}

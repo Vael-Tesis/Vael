@@ -1,0 +1,78 @@
+name: CI
+
+"on":
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Tests y lint (backend)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vael
+          POSTGRES_PASSWORD: vael
+          POSTGRES_DB: vael_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vael -d vael_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      ENVIRONMENT: test
+      DEBUG: "true"
+      DATABASE_URL: postgresql+asyncpg://vael:vael@localhost:5432/vael_db
+      SECRET_KEY: ci-test-secret-key-minimo-32-caracteres
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: gemini-3-flash
+      GEMINI_LIVE_MODEL: gemini-2.5-flash-native-audio-preview-12-2025
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-east-1
+      S3_BUCKET_NAME: vael-storage-test
+      SES_REGION: us-east-1
+      EMAIL_FROM: noreply@vael.ai
+      EMAIL_FROM_NAME: VAEL
+      INTERNAL_SERVICE_KEY: ci-internal-secret
+      FRONTEND_URL: http://localhost:5173
+      ALLOWED_ORIGINS: http://localhost:5173
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Aplicar migraciones (alembic upgrade head)
+        run: alembic upgrade head
+
+      - name: Tests (pytest)
+        run: pytest -v

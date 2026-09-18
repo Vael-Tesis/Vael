@@ -1,0 +1,14 @@
+{% extends "base_correo.html" %}
+{% block titulo %}Tu evaluación técnica está lista{% endblock %}
+{% block contenido %}
+<h2 style="margin-top:0;">Hola {{ candidato.nombre }},</h2>
+<p>Tu CV fue aprobado para el proceso de <strong>{{ vacante_titulo }}</strong>. El siguiente paso es una evaluación técnica.</p>
+<p>
+  <a href="{{ link_examen }}" style="display:inline-block;background-color:#1a1a2e;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;">
+    Iniciar evaluación
+  </a>
+</p>
+<p>Tenés <strong>45 minutos</strong> desde que empieces, y este link es válido por <strong>48 horas</strong>.</p>
+<p>Instrucciones: buscá un lugar tranquilo con buena conexión, activá tu cámara para la validación de identidad, y evitá cambiar de pestaña durante el examen.</p>
+<p>¡Éxitos!<br>El equipo de VAEL</p>
+{% endblock %}

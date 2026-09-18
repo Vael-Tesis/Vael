@@ -1,0 +1,62 @@
+# Backend framework (sección 2 CLAUDE.md)
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+gunicorn==23.0.0
+
+# Requerido por FastAPI para endpoints con Form()/File() — carga-masiva, postulación
+# pública y captura de entrevista lo necesitan; sin esto, esos routers ni siquiera importan.
+python-multipart==0.0.32
+
+# ORM + validación + migraciones
+sqlmodel==0.0.22
+alembic==1.14.0
+
+# Base de datos — PostgreSQL 16 (driver async)
+asyncpg==0.30.0
+
+# Autenticación JWT y hashing de contraseñas
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Configuración desde .env (core/config.py)
+pydantic-settings==2.6.1
+
+# pydantic no queda pineado por fastapi/sqlmodel/pydantic-settings (todos aceptan un rango
+# amplio) — sin fijarlo acá, pip resuelve una pre-release. Además google-genai==2.24.0 exige
+# pydantic>=2.12.5, así que subió de 2.9.2 a la última estable que lo satisface.
+pydantic==2.13.5
+
+# Validación de emails (EmailStr) — usada en schemas/auth.py y schemas/candidato.py
+email-validator==2.2.0
+
+# Google Gemini — análisis de CV, exámenes, calificación (SDK estándar)
+google-generativeai==0.8.0
+
+# Google Gemini Live — tokens efímeros para la entrevista por voz (SDK nuevo, distinto del
+# de arriba; google-generativeai no soporta auth_tokens.create todavía).
+# OJO: estaba pineado en 0.2.2 (una versión temprana que NO tiene client.aio.auth_tokens
+# en absoluto — se agregó después). Verificado durante esta auditoría contra el paquete
+# real: 2.24.0 sí expone auth_tokens.create, CreateAuthTokenConfig y LiveConnectConstraints
+# con los mismos nombres de campo que usa services/entrevista_ia.py.
+google-genai==2.24.0
+
+# Plantillas HTML de correo (services/correos.py)
+Jinja2==3.1.4
+
+# Envío de correo SMTP async en desarrollo (services/correos.py) — en producción, SES vía aws_services.py
+aiosmtplib==3.0.2
+
+# AWS — Rekognition, Transcribe, Comprehend, S3, SQS, SES (services/aws_services.py)
+# boto3 fijado en el rango que exige aiobotocore 2.15.2 (dependencia de aioboto3 13.2.0):
+# >=1.35.16,<1.35.37 — no puede ir más abajo (1.35.0, como estaba) ni más arriba sin
+# actualizar aioboto3 también.
+boto3==1.35.36
+aioboto3==13.2.0
+
+# Extracción de texto de CVs en PDF (services/analisis_cv.py)
+PyPDF2==3.0.1
+pdfminer.six==20240706
+
+# Cliente HTTP async — descarga el PDF del CV desde su URL (services/analisis_cv.py)
+# 0.28.1 porque google-genai==2.24.0 exige httpx>=0.28.1
+httpx==0.28.1

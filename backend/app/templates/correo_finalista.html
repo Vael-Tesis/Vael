@@ -1,0 +1,8 @@
+{% extends "base_correo.html" %}
+{% block titulo %}Eres finalista{% endblock %}
+{% block contenido %}
+<h2 style="margin-top:0;">¡Excelentes noticias, {{ candidato.nombre }}!</h2>
+<p>Quedaste como <strong>finalista</strong> en el proceso de <strong>{{ vacante_titulo }}</strong>.</p>
+<p>El equipo de RRHH se va a poner en contacto con vos a la brevedad para coordinar los próximos pasos (entrevista presencial o, según el proceso, la etapa de contratación).</p>
+<p>¡Felicitaciones por llegar hasta acá!<br>El equipo de VAEL</p>
+{% endblock %}

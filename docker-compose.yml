@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: vael-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vael
+      POSTGRES_PASSWORD: vael
+      POSTGRES_DB: vael_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - vael_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vael -d vael_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      target: development
+    container_name: vael-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      # Dentro de la red de docker-compose el host de la BD es el nombre del servicio,
+      # no localhost — sobrescribe lo que traiga backend/.env para el resto de variables.
+      DATABASE_URL: postgresql+asyncpg://vael:vael@db:5432/vael_db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: vael-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  vael_db_data:
