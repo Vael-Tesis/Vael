@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from pydantic import EmailStr
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -11,17 +12,19 @@ from app.core.dependencies import get_current_user, require_rol
 from app.core.security import emitir_token_candidato
 from app.models.base import new_id, utcnow
 from app.models.candidato import Candidato, ClasificacionIA, EstadoCandidato, NotaCandidato
+from app.models.entrevista import EntrevistaIA
+from app.models.evaluacion import Examen
 from app.models.usuario import RolUsuario, TipoToken, Usuario
 from app.models.vacante import Vacante
 from app.schemas.candidato import (
     CambiarEstadoRequest,
-    CandidatoCreateRequest,
     CandidatoResponse,
     CandidatoUpdateRequest,
     CargaMasivaResponse,
     MensajeResponse,
     NotaCreateRequest,
     NotaResponse,
+    RankingCandidatoResponse,
 )
 from app.services.analisis_cv import analizar_cv_candidato
 from app.services.aws_services import subir_archivo
@@ -74,29 +77,61 @@ async def listar_candidatos(
 
 @router.post("/", response_model=CandidatoResponse, status_code=status.HTTP_201_CREATED)
 async def crear_candidato(
-    body: CandidatoCreateRequest,
+    background_tasks: BackgroundTasks,
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
+    vacante_id: Annotated[str, Form()],
+    nombre: Annotated[str, Form()],
+    apellidos: Annotated[str, Form()],
+    email: Annotated[EmailStr, Form()],
+    cv: Annotated[UploadFile, File()],
+    telefono: Annotated[str | None, Form()] = None,
+    linkedin: Annotated[str | None, Form()] = None,
+    github: Annotated[str | None, Form()] = None,
+    portfolio: Annotated[str | None, Form()] = None,
+    pretension_salarial: Annotated[float | None, Form()] = None,
 ) -> Candidato:
-    """Registra manualmente un candidato para una vacante."""
-    vacante = await db.get(Vacante, body.vacante_id)
+    """Registra manualmente un candidato para una vacante, sube su CV a S3 y dispara el análisis IA."""
+    vacante = await db.get(Vacante, vacante_id)
     if vacante is None or vacante.tenant_id != actor.tenant_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vacante no encontrada")
 
-    candidato = Candidato(tenant_id=actor.tenant_id, **body.model_dump())
+    contenido = await cv.read()
+    clave = f"cvs/{actor.tenant_id}/{vacante_id}/{new_id()}_{cv.filename}"
+    cv_url = await subir_archivo(contenido, clave, cv.content_type or "application/pdf")
+
+    candidato = Candidato(
+        tenant_id=actor.tenant_id,
+        vacante_id=vacante_id,
+        nombre=nombre,
+        apellidos=apellidos,
+        email=email,
+        telefono=telefono,
+        linkedin=linkedin,
+        github=github,
+        portfolio=portfolio,
+        cv_url=cv_url,
+        pretension_salarial=pretension_salarial,
+    )
     db.add(candidato)
     await db.commit()
     await db.refresh(candidato)
+
+    background_tasks.add_task(analizar_cv_candidato, candidato.id)
     return candidato
 
 
-@router.get("/ranking", response_model=list[CandidatoResponse])
+@router.get("/ranking", response_model=list[RankingCandidatoResponse])
 async def ranking_candidatos(
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     vacante_id: str,
-) -> list[Candidato]:
-    """Ranking de candidatos de una vacante, ordenado por score_final descendente."""
+) -> list[RankingCandidatoResponse]:
+    """Ranking de candidatos de una vacante, ordenado por score_final descendente.
+
+    Incluye la nota de examen y de entrevista de cada candidato (si ya las rindió),
+    para que RRHH vea el desglose de las tres componentes del score ponderado.
+    """
     statement = (
         select(Candidato)
         .where(
@@ -107,7 +142,29 @@ async def ranking_candidatos(
         .order_by(Candidato.score_final.desc())
     )
     result = await db.exec(statement)
-    return list(result.all())
+    candidatos = list(result.all())
+
+    candidato_ids = [c.id for c in candidatos]
+    notas_examen: dict[str, float] = {}
+    notas_entrevista: dict[str, float] = {}
+
+    if candidato_ids:
+        examenes_statement = select(Examen).where(Examen.candidato_id.in_(candidato_ids))
+        examenes_result = await db.exec(examenes_statement)
+        notas_examen = {e.candidato_id: e.nota for e in examenes_result.all() if e.nota is not None}
+
+        entrevistas_statement = select(EntrevistaIA).where(EntrevistaIA.candidato_id.in_(candidato_ids))
+        entrevistas_result = await db.exec(entrevistas_statement)
+        notas_entrevista = {e.candidato_id: e.nota for e in entrevistas_result.all() if e.nota is not None}
+
+    return [
+        RankingCandidatoResponse(
+            **CandidatoResponse.model_validate(c).model_dump(),
+            nota_examen=notas_examen.get(c.id),
+            nota_entrevista=notas_entrevista.get(c.id),
+        )
+        for c in candidatos
+    ]
 
 
 @router.get("/banco-talento", response_model=list[CandidatoResponse])

@@ -75,6 +75,18 @@ class EventoAuditoriaResponse(BaseModel):
     timestamp: datetime
 
 
+class ResolverCodigoRequest(BaseModel):
+    """Código corto (VAEL-XXXX-XXXX) que el candidato ingresa manualmente."""
+
+    codigo_corto: str = Field(min_length=1)
+
+
+class ResolverCodigoResponse(BaseModel):
+    """El JWT asociado al código corto, listo para usarse como Bearer token."""
+
+    token: str
+
+
 class CandidatoAccesoResponse(BaseModel):
     """Datos del candidato retornados al validar su token de acceso."""
 

@@ -6,21 +6,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from app.models.candidato import ClasificacionIA, EstadoCandidato
 
 
-class CandidatoCreateRequest(BaseModel):
-    """Datos para el registro manual de un candidato."""
-
-    vacante_id: str
-    nombre: str = Field(min_length=1)
-    apellidos: str = Field(min_length=1)
-    email: EmailStr
-    telefono: str | None = None
-    linkedin: str | None = None
-    github: str | None = None
-    portfolio: str | None = None
-    cv_url: str | None = None
-    pretension_salarial: float | None = None
-
-
 class CandidatoUpdateRequest(BaseModel):
     """Datos editables de un candidato — todos opcionales (actualización parcial).
 
@@ -73,6 +58,13 @@ class CandidatoResponse(BaseModel):
     fecha_postulacion: datetime
     created_at: datetime
     updated_at: datetime
+
+
+class RankingCandidatoResponse(CandidatoResponse):
+    """Candidato en el ranking de una vacante, con la nota de cada etapa que ya rindió."""
+
+    nota_examen: float | None = None
+    nota_entrevista: float | None = None
 
 
 class CambiarEstadoRequest(BaseModel):

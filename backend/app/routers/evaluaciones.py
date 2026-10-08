@@ -11,7 +11,7 @@ from app.models.area import Area
 from app.models.candidato import Candidato
 from app.models.evaluacion import Examen, EstadoExamen, EventoAuditoria, PreguntaExamen
 from app.models.base import utcnow
-from app.models.usuario import Usuario
+from app.models.usuario import TokenAcceso, Usuario
 from app.models.vacante import Vacante
 from app.schemas.evaluacion import (
     CandidatoAccesoResponse,
@@ -26,6 +26,8 @@ from app.schemas.evaluacion import (
     PreguntaExamenPublica,
     PreguntaExamenResponse,
     ProgresoCandidatoResponse,
+    ResolverCodigoRequest,
+    ResolverCodigoResponse,
 )
 from app.services.examen import calificar_examen, generar_preguntas, registrar_evento
 
@@ -134,6 +136,31 @@ async def auditoria_examen(
 
 
 # --- Candidato (token de acceso, no usuario RRHH) ------------------------
+
+
+@router.post("/candidato/resolver-codigo", response_model=ResolverCodigoResponse)
+async def resolver_codigo_candidato(
+    body: ResolverCodigoRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ResolverCodigoResponse:
+    """Intercambia el código corto (VAEL-XXXX-XXXX) ingresado manualmente por su JWT asociado.
+
+    Sin autenticación: es el paso previo a tener un token — el candidato todavía no
+    tiene ningún Bearer que mandar. El código es único globalmente, así que no se
+    filtra por tenant.
+    """
+    statement = select(TokenAcceso).where(TokenAcceso.codigo_corto == body.codigo_corto)
+    result = await db.exec(statement)
+    token_acceso = result.first()
+
+    if token_acceso is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Código inválido")
+    if token_acceso.usado:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este código ya fue utilizado")
+    if token_acceso.expira_en < utcnow():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este código ha expirado")
+
+    return ResolverCodigoResponse(token=token_acceso.token)
 
 
 @router.post("/candidato/acceso", response_model=CandidatoAccesoResponse)
