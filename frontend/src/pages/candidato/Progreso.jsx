@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import api from '../../services/api.js'
+import { sinBackend } from '../../utils/devFallback.js'
 
 const DEMO = {
   fases: [
@@ -36,7 +37,7 @@ export default function Progreso() {
   const candidatoData = JSON.parse(sessionStorage.getItem('vael_candidate_data') || '{}')
   const { data } = useQuery({
     queryKey: ['progreso'],
-    queryFn: () => api.get('/evaluaciones/candidato/progreso').then(r => r.data).catch(() => DEMO),
+    queryFn: () => api.get('/evaluaciones/candidato/progreso').then(r => r.data).catch(err => { if (sinBackend(err)) return DEMO; throw err }),
   })
 
   const progreso = data || DEMO

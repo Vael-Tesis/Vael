@@ -129,7 +129,7 @@ export default function Plantillas() {
 
   const { data } = useQuery({
     queryKey: ['plantillas'],
-    queryFn: () => api.get('/entrevista/plantillas').then(r => r.data).catch(() => DEMO),
+    queryFn: () => api.get('/entrevista/plantillas').then(r => r.data).catch(err => { if (sinBackend(err)) return DEMO; throw err }),
   })
 
   const plantillas = data || DEMO

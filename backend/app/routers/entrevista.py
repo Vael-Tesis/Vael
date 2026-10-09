@@ -83,7 +83,7 @@ async def _obtener_entrevista_del_tenant(entrevista_id: str, tenant_id: str, db:
     return entrevista
 
 
-@router.get("/", response_model=list[EntrevistaResponse])
+@router.get("", response_model=list[EntrevistaResponse])
 async def listar_entrevistas(
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

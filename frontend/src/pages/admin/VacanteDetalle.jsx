@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import api from '../../services/api.js'
+import { sinBackend } from '../../utils/devFallback.js'
 import Card from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -42,7 +43,7 @@ export default function VacanteDetalle() {
 
   const { data: v } = useQuery({
     queryKey: ['vacante', id],
-    queryFn: () => api.get(`/vacantes/${id}`).then(r => r.data).catch(() => DEMO),
+    queryFn: () => api.get(`/vacantes/${id}`).then(r => r.data).catch(err => { if (sinBackend(err)) return DEMO; throw err }),
   })
 
   const vacante = v || DEMO

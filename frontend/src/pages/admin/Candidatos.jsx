@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api.js'
+import { sinBackend } from '../../utils/devFallback.js'
 import PageHeader from '../../components/ui/PageHeader.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -60,7 +61,7 @@ export default function Candidatos() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['candidatos'],
-    queryFn: () => api.get('/candidatos').then(r => r.data).catch(() => DEMO),
+    queryFn: () => api.get('/candidatos').then(r => r.data).catch(err => { if (sinBackend(err)) return DEMO; throw err }),
   })
 
   const candidatos = data || DEMO

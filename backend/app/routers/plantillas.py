@@ -64,7 +64,7 @@ async def _obtener_dimension_del_tenant(
     return dimension
 
 
-@router.get("/", response_model=list[PlantillaResponse])
+@router.get("", response_model=list[PlantillaResponse])
 async def listar_plantillas(
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

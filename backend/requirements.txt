@@ -17,6 +17,7 @@ asyncpg==0.30.0
 # Autenticación JWT y hashing de contraseñas
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bycrypt==4.1.0
 
 # Configuración desde .env (core/config.py)
 pydantic-settings==2.6.1

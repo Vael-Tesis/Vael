@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import api from '../../services/api.js'
+import { sinBackend } from '../../utils/devFallback.js'
 
 const METRICS = [
   { key: 'vacantes_activas',        label: 'Vacantes activas' },
@@ -132,7 +133,7 @@ export default function Dashboard() {
       api.get('/candidatos', { params: { limit: 500 } }),
     ])
       .then(([vacantesRes, candidatosRes]) => calcularMetricas(vacantesRes.data, candidatosRes.data))
-      .catch(() => DEMO),
+      .catch(err => { if (sinBackend(err)) return DEMO; throw err }),
   })
 
   const d = data || DEMO

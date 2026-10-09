@@ -49,7 +49,7 @@ async def _obtener_candidato_del_tenant(candidato_id: str, tenant_id: str, db: A
     return candidato
 
 
-@router.get("/", response_model=list[CandidatoResponse])
+@router.get("", response_model=list[CandidatoResponse])
 async def listar_candidatos(
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

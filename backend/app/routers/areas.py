@@ -29,7 +29,7 @@ async def _obtener_area_del_tenant(area_id: str, tenant_id: str, db: AsyncSessio
     return area
 
 
-@router.get("/", response_model=list[AreaResponse])
+@router.get("", response_model=list[AreaResponse])
 async def listar_areas(
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

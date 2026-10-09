@@ -92,7 +92,7 @@ def _construir_feed_xml(vacante: Vacante, empresa: Empresa | None) -> bytes:
     return tostring(source, encoding="utf-8", xml_declaration=True)
 
 
-@router.get("/", response_model=list[VacanteResponse])
+@router.get("", response_model=list[VacanteResponse])
 async def listar_vacantes(
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

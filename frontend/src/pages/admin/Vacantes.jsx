@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import api from '../../services/api.js'
+import { sinBackend } from '../../utils/devFallback.js'
 import PageHeader from '../../components/ui/PageHeader.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -38,7 +39,7 @@ export default function Vacantes() {
   const { data, isLoading } = useQuery({
     queryKey: ['vacantes', filtro],
     queryFn: () => api.get('/vacantes', { params: filtro !== 'todas' ? { estado: filtro } : {} })
-      .then(r => r.data).catch(() => DEMO_VACANTES),
+      .then(r => r.data).catch(err => { if (sinBackend(err)) return DEMO_VACANTES; throw err }),
   })
 
   const vacantes = data || DEMO_VACANTES

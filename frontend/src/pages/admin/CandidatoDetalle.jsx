@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import api from '../../services/api.js'
+import { sinBackend } from '../../utils/devFallback.js'
 import Card from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -81,12 +82,12 @@ export default function CandidatoDetalle() {
 
   const { data: c } = useQuery({
     queryKey: ['candidato', id],
-    queryFn: () => api.get(`/candidatos/${id}`).then(r => r.data).catch(() => DEMO),
+    queryFn: () => api.get(`/candidatos/${id}`).then(r => r.data).catch(err => { if (sinBackend(err)) return DEMO; throw err }),
   })
 
   const { data: notas } = useQuery({
     queryKey: ['candidato', id, 'notas'],
-    queryFn: () => api.get(`/candidatos/${id}/notas`).then(r => r.data).catch(() => DEMO.notas),
+    queryFn: () => api.get(`/candidatos/${id}/notas`).then(r => r.data).catch(err => { if (sinBackend(err)) return DEMO.notas; throw err }),
   })
 
   const candidato = c || DEMO

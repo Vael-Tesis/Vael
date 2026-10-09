@@ -4,13 +4,13 @@ from fastapi.testclient import TestClient
 
 def test_sin_token_responde_403(client: TestClient) -> None:
     """GET sin header Authorization -> 403 (HTTPBearer, mismo comportamiento que el resto de la app)."""
-    response = client.get("/api/areas/")
+    response = client.get("/api/areas")
     assert response.status_code == 403
 
 
 def test_token_invalido_responde_401(client: TestClient) -> None:
     """GET con un token mal formado -> 401 (decode_token falla)."""
-    response = client.get("/api/areas/", headers={"Authorization": "Bearer no-es-un-jwt"})
+    response = client.get("/api/areas", headers={"Authorization": "Bearer no-es-un-jwt"})
     assert response.status_code == 401
 
 
@@ -37,7 +37,7 @@ def test_crud_feliz_de_areas(client: TestClient, admin_headers: dict[str, str]) 
     assert area["codigo_corto"] == "TI"
     assert area["activa"] is True
 
-    listar = client.get("/api/areas/", headers=admin_headers)
+    listar = client.get("/api/areas", headers=admin_headers)
     assert listar.status_code == 200
     assert any(a["id"] == area["id"] for a in listar.json())
 

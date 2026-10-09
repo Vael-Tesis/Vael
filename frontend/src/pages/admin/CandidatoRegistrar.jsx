@@ -61,7 +61,7 @@ export default function CandidatoRegistrar() {
 
   const { data } = useQuery({
     queryKey: ['vacantes-select'],
-    queryFn: () => api.get('/vacantes').then(r => r.data).catch(() => DEMO_VACANTES),
+    queryFn: () => api.get('/vacantes').then(r => r.data).catch(err => { if (sinBackend(err)) return DEMO_VACANTES; throw err }),
   })
   const vacantes = (data || DEMO_VACANTES).filter(v => v.estado !== 'cerrada')
 

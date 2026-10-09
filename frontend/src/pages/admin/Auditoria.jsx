@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import api from '../../services/api.js'
+import { sinBackend } from '../../utils/devFallback.js'
 import PageHeader from '../../components/ui/PageHeader.jsx'
 import Card from '../../components/ui/Card.jsx'
 import EmptyState from '../../components/ui/EmptyState.jsx'
@@ -45,7 +46,7 @@ function SemaforoTag({ valor, puntaje }) {
 export default function Auditoria() {
   const { data } = useQuery({
     queryKey: ['auditoria'],
-    queryFn: () => api.get('/evaluaciones/auditoria').then(r => r.data).catch(() => DEMO),
+    queryFn: () => api.get('/evaluaciones/auditoria').then(r => r.data).catch(err => { if (sinBackend(err)) return DEMO; throw err }),
   })
 
   const registros = data || DEMO

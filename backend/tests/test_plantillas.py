@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 def test_sin_token_responde_403(client: TestClient) -> None:
     """GET sin header Authorization -> 403."""
-    response = client.get("/api/plantillas/")
+    response = client.get("/api/plantillas")
     assert response.status_code == 403
 
 
@@ -37,7 +37,7 @@ def test_crud_feliz_de_plantillas_y_dimensiones(client: TestClient, admin_header
     assert plantilla["nombre"] == "Entrevista técnica"
     assert len(plantilla["dimensiones"]) == 2
 
-    listar = client.get("/api/plantillas/", headers=admin_headers)
+    listar = client.get("/api/plantillas", headers=admin_headers)
     assert listar.status_code == 200
     assert any(p["id"] == plantilla["id"] for p in listar.json())
 
