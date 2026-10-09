@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import api from '../../services/api.js'
+import { sinBackend } from '../../utils/devFallback.js'
 import Card from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
 
 const PASOS = ['Información básica', 'Requisitos', 'Condiciones', 'Configuración IA']
 
-const AREAS_DEMO = [
+// Solo se usa como fallback si sinBackend(err) — ver utils/devFallback.js
+const AREAS_FALLBACK_DEV = [
   { id: '1', nombre: 'Tecnología', codigo_corto: 'TI' },
   { id: '2', nombre: 'Diseño', codigo_corto: 'DIS' },
   { id: '3', nombre: 'Comercial', codigo_corto: 'COM' },
@@ -39,13 +42,15 @@ function Field({ label, children }) {
   )
 }
 
-function Select({ value, onChange, options }) {
+function Select({ value, onChange, options, disabled }) {
   return (
-    <select value={value} onChange={onChange} style={{
+    <select value={value} onChange={onChange} disabled={disabled} style={{
       width: '100%', height: 36, padding: '0 12px',
       border: '1px solid var(--border)', borderRadius: 6,
       background: 'var(--bg-card)', color: 'var(--text-primary)',
       fontSize: 13, outline: 'none',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.6 : 1,
     }}>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
@@ -78,6 +83,12 @@ export default function VacanteForm() {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setForm(f => ({ ...f, [key]: val }))
   }
+
+  const { data: areas, isLoading: cargandoAreas } = useQuery({
+    queryKey: ['areas'],
+    queryFn: () => api.get('/areas').then(r => r.data).catch(err => { if (sinBackend(err)) return AREAS_FALLBACK_DEV; throw err }),
+  })
+  const areasDisponibles = areas || []
 
   function construirPayload() {
     const dividirLista = (valor) => valor.split(',').map(s => s.trim()).filter(Boolean)
@@ -153,10 +164,21 @@ export default function VacanteForm() {
                   <Input value={form.titulo} onChange={set('titulo')} placeholder="Full Stack Developer" />
                 </Field>
                 <Field label="Área">
-                  <Select
-                    value={form.area_id} onChange={set('area_id')}
-                    options={[{ value: '', label: 'Selecciona un área' }, ...AREAS_DEMO.map(a => ({ value: a.id, label: a.nombre }))]}
-                  />
+                  {cargandoAreas ? (
+                    <Select value="" onChange={() => {}} disabled options={[{ value: '', label: 'Cargando áreas...' }]} />
+                  ) : areasDisponibles.length === 0 ? (
+                    <>
+                      <Select value="" onChange={() => {}} disabled options={[{ value: '', label: 'No hay áreas disponibles' }]} />
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                        No hay áreas — <Link to="/areas" style={{ color: 'var(--text-primary)' }}>créalas primero en la sección Áreas</Link>
+                      </p>
+                    </>
+                  ) : (
+                    <Select
+                      value={form.area_id} onChange={set('area_id')}
+                      options={[{ value: '', label: 'Selecciona un área' }, ...areasDisponibles.map(a => ({ value: a.id, label: a.nombre }))]}
+                    />
+                  )}
                 </Field>
                 <Field label="Descripción del puesto">
                   <TextArea value={form.descripcion} onChange={set('descripcion')} placeholder="Describe el rol y su propósito dentro del equipo..." rows={4} />

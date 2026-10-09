@@ -118,7 +118,7 @@ async def listar_vacantes(
     return list(result.all())
 
 
-@router.post("/", response_model=VacanteResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=VacanteResponse, status_code=status.HTTP_201_CREATED)
 async def crear_vacante(
     body: VacanteCreateRequest,
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],

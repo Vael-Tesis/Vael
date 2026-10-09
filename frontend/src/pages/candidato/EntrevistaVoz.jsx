@@ -41,13 +41,6 @@ export default function EntrevistaVoz() {
   }, [etapa])
 
   async function capturarIdentidad() {
-  // DEV: saltar validación real si no hay backend
-  if (import.meta.env.DEV) {
-    setFotoCapturada(true)
-    toast.success('Identidad verificada (modo desarrollo)')
-    return
-  }
-
   const video = videoRef.current
   const canvas = document.createElement('canvas')
   canvas.width = video.videoWidth
@@ -69,15 +62,6 @@ export default function EntrevistaVoz() {
 
   async function iniciarEntrevista() {
     setConectando(true)
-    
-    // DEV: saltar conexión real si no hay backend
-    if (import.meta.env.DEV) {
-      setTimeout(() => {
-        setEtapa(ETAPAS.SALA)
-        setConectando(false)
-      }, 800)
-      return
-    }
 
     try {
       await api.post('/entrevista/iniciar')

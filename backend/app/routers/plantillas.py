@@ -80,7 +80,7 @@ async def listar_plantillas(
     return list(result.all())
 
 
-@router.post("/", response_model=PlantillaDetalleResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PlantillaDetalleResponse, status_code=status.HTTP_201_CREATED)
 async def crear_plantilla(
     body: PlantillaCreateRequest,
     actor: Annotated[Usuario, Depends(require_rol(*_ADMIN_O_GERENTE))],

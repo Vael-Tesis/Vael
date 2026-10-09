@@ -45,7 +45,7 @@ async def listar_areas(
     return list(result.all())
 
 
-@router.post("/", response_model=AreaResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=AreaResponse, status_code=status.HTTP_201_CREATED)
 async def crear_area(
     body: AreaCreateRequest,
     actor: Annotated[Usuario, Depends(require_rol(*_ADMIN_O_GERENTE))],

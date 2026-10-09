@@ -75,7 +75,7 @@ async def listar_candidatos(
     return list(result.all())
 
 
-@router.post("/", response_model=CandidatoResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CandidatoResponse, status_code=status.HTTP_201_CREATED)
 async def crear_candidato(
     background_tasks: BackgroundTasks,
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
