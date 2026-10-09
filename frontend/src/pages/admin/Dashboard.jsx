@@ -1,25 +1,32 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import api from '../../services/api.js'
 
 const METRICS = [
-  { key: 'total_postulaciones', label: 'Postulaciones' },
-  { key: 'cv_aprobados',        label: 'CV aprobados' },
-  { key: 'en_entrevista',       label: 'En entrevista' },
-  { key: 'finalistas',          label: 'Finalistas' },
+  { key: 'vacantes_activas',        label: 'Vacantes activas' },
+  { key: 'candidatos_nuevos',       label: 'Candidatos nuevos' },
+  { key: 'evaluaciones_pendientes', label: 'Evaluaciones pendientes' },
+  { key: 'finalistas',              label: 'Finalistas' },
 ]
 
 const FUNNEL = [
-  { label: 'Postulaciones', key: 'total_postulaciones', color: '#0a0a0a' },
-  { label: 'CV aprobados',  key: 'cv_aprobados',        color: '#0a0a0a' },
-  { label: 'Examen aprobado', key: 'examen_aprobados',  color: '#0a0a0a' },
-  { label: 'En entrevista', key: 'en_entrevista',       color: '#0a0a0a' },
-  { label: 'Finalistas',    key: 'finalistas',           color: '#166534' },
+  { label: 'Postulaciones',   key: 'total_postulaciones', color: '#0a0a0a' },
+  { label: 'CV aprobados',    key: 'cv_aprobados',        color: '#0a0a0a' },
+  { label: 'Examen aprobado', key: 'examen_aprobados',    color: '#0a0a0a' },
+  { label: 'En entrevista',   key: 'en_entrevista',       color: '#0a0a0a' },
+  { label: 'Finalistas',      key: 'finalistas',          color: '#166534' },
 ]
 
-// Datos demo para cuando el endpoint no existe aún
+// Estados que cuentan como "evaluación pendiente" (examen o entrevista por rendir)
+const ESTADOS_EVALUACION_PENDIENTE = ['examen_pendiente', 'entrevista_pendiente']
+// Candidato "nuevo": postuló en los últimos 7 días
+const DIAS_CANDIDATO_NUEVO = 7
+
+// Datos demo para cuando el backend no responde aún (modo desarrollo)
 const DEMO = {
+  vacantes_activas: 12,
+  candidatos_nuevos: 34,
+  evaluaciones_pendientes: 19,
   total_postulaciones: 248,
   cv_aprobados: 91,
   examen_aprobados: 52,
@@ -31,6 +38,47 @@ const DEMO = {
     { id: 3, nombre: 'Lucía',  apellidos: 'Ramírez', score_cv: 61, estado: 'examen_pendiente',    vacante_codigo: 'DIS-2026-002' },
     { id: 4, nombre: 'Jorge',  apellidos: 'Torres',  score_cv: 92, estado: 'entrevista_pendiente', vacante_codigo: 'TI-2026-003' },
   ],
+}
+
+/** Combina vacantes + candidatos (ya traídos del backend) en las métricas que muestra el dashboard. */
+function calcularMetricas(vacantes, candidatos) {
+  const vacantePorId = new Map(vacantes.map(v => [v.id, v]))
+  const hace7dias = Date.now() - DIAS_CANDIDATO_NUEVO * 24 * 60 * 60 * 1000
+
+  const total_postulaciones = candidatos.length
+  const cv_aprobados = candidatos.filter(c => c.score_cv != null && c.score_cv >= 60).length
+  const examen_aprobados = candidatos.filter(c =>
+    ['examen_aprobado', 'entrevista_pendiente', 'entrevista_realizada', 'finalista', 'contratado'].includes(c.estado)
+  ).length
+  const en_entrevista = candidatos.filter(c =>
+    ['entrevista_pendiente', 'entrevista_realizada'].includes(c.estado)
+  ).length
+  const finalistas = candidatos.filter(c => c.es_finalista || c.estado === 'finalista').length
+  const evaluaciones_pendientes = candidatos.filter(c => ESTADOS_EVALUACION_PENDIENTE.includes(c.estado)).length
+  const candidatos_nuevos = candidatos.filter(c => {
+    const fecha = c.fecha_postulacion ? new Date(c.fecha_postulacion).getTime() : null
+    return fecha != null && fecha >= hace7dias
+  }).length
+
+  const candidatos_recientes = [...candidatos]
+    .sort((a, b) => new Date(b.fecha_postulacion) - new Date(a.fecha_postulacion))
+    .slice(0, 6)
+    .map(c => ({
+      ...c,
+      vacante_codigo: vacantePorId.get(c.vacante_id)?.codigo || '—',
+    }))
+
+  return {
+    vacantes_activas: vacantes.filter(v => v.estado === 'abierta').length,
+    candidatos_nuevos,
+    evaluaciones_pendientes,
+    total_postulaciones,
+    cv_aprobados,
+    examen_aprobados,
+    en_entrevista,
+    finalistas,
+    candidatos_recientes,
+  }
 }
 
 const ESTADO_BADGE = {
@@ -79,7 +127,12 @@ const card = {
 export default function Dashboard() {
   const { data } = useQuery({
     queryKey: ['dashboard'],
-    queryFn: () => api.get('/dashboard/metricas').then(r => r.data).catch(() => DEMO),
+    queryFn: () => Promise.all([
+      api.get('/vacantes', { params: { limit: 500 } }),
+      api.get('/candidatos', { params: { limit: 500 } }),
+    ])
+      .then(([vacantesRes, candidatosRes]) => calcularMetricas(vacantesRes.data, candidatosRes.data))
+      .catch(() => DEMO),
   })
 
   const d = data || DEMO

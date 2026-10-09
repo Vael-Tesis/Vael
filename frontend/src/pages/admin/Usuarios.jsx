@@ -1,5 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import api from '../../services/api.js'
 import PageHeader from '../../components/ui/PageHeader.jsx'
 import Card from '../../components/ui/Card.jsx'
@@ -21,13 +23,87 @@ const ROL_VARIANT = {
   gerente:    'neutral',
 }
 
+function MenuUsuario({ usuario, abierto, onToggle, onActivar, onDesactivar, onCambiarPassword }) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <Button variant="ghost" size="sm" onClick={onToggle}>···</Button>
+      {abierto && (
+        <>
+          <div onClick={onToggle} style={{ position: 'fixed', inset: 0, zIndex: 9 }} />
+          <div style={{
+            position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 10,
+            background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: 180, overflow: 'hidden',
+          }}>
+            {usuario.activo ? (
+              <button onClick={onDesactivar} style={menuItemStyle}>Desactivar usuario</button>
+            ) : (
+              <button onClick={onActivar} style={menuItemStyle}>Activar usuario</button>
+            )}
+            <button onClick={onCambiarPassword} style={menuItemStyle}>Cambiar contraseña</button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+const menuItemStyle = {
+  display: 'block', width: '100%', textAlign: 'left',
+  background: 'none', border: 'none', cursor: 'pointer',
+  padding: '9px 14px', fontSize: 13, color: 'var(--text-primary)',
+}
+
 export default function Usuarios() {
+  const queryClient = useQueryClient()
+  const [menuAbiertoId, setMenuAbiertoId] = useState(null)
+
   const { data } = useQuery({
     queryKey: ['usuarios'],
     queryFn: () => api.get('/auth/usuarios').then(r => r.data).catch(() => DEMO),
   })
 
   const usuarios = data || DEMO
+
+  function cerrarMenu() {
+    setMenuAbiertoId(null)
+  }
+
+  async function activarUsuario(id) {
+    cerrarMenu()
+    try {
+      await api.put(`/auth/usuarios/${id}/activar`)
+      toast.success('Usuario activado')
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+    } catch {
+      toast.error('No se pudo activar el usuario')
+    }
+  }
+
+  async function desactivarUsuario(id) {
+    cerrarMenu()
+    try {
+      await api.put(`/auth/usuarios/${id}/desactivar`)
+      toast.success('Usuario desactivado')
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+    } catch {
+      toast.error('No se pudo desactivar el usuario')
+    }
+  }
+
+  async function cambiarPassword(id) {
+    cerrarMenu()
+    const nueva = window.prompt('Nueva contraseña (mínimo 8 caracteres):')
+    if (!nueva) return
+    if (nueva.length < 8) return toast.error('La contraseña debe tener al menos 8 caracteres')
+
+    try {
+      await api.put(`/auth/usuarios/${id}/cambiar-password`, { password_nueva: nueva })
+      toast.success('Contraseña actualizada')
+    } catch {
+      toast.error('No se pudo cambiar la contraseña')
+    }
+  }
 
   return (
     <div style={{ padding: '20px 24px' }}>
@@ -80,7 +156,14 @@ export default function Usuarios() {
               <Badge variant={u.activo ? 'success' : 'neutral'}>
                 {u.activo ? 'Activo' : 'Inactivo'}
               </Badge>
-              <Button variant="ghost" size="sm">···</Button>
+              <MenuUsuario
+                usuario={u}
+                abierto={menuAbiertoId === u.id}
+                onToggle={() => setMenuAbiertoId(menuAbiertoId === u.id ? null : u.id)}
+                onActivar={() => activarUsuario(u.id)}
+                onDesactivar={() => desactivarUsuario(u.id)}
+                onCambiarPassword={() => cambiarPassword(u.id)}
+              />
             </motion.div>
           ))
         )}

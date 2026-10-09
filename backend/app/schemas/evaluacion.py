@@ -75,6 +75,21 @@ class EventoAuditoriaResponse(BaseModel):
     timestamp: datetime
 
 
+class EventoAuditoriaGeneralResponse(BaseModel):
+    """Evento de proctoring del tenant, de examen o de entrevista (uno de los dos id viene informado)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    examen_id: str | None
+    entrevista_id: str | None
+    candidato_id: str | None = None
+    tipo: str
+    severidad: SeveridadEvento
+    detalle: str | None
+    timestamp: datetime
+
+
 class ResolverCodigoRequest(BaseModel):
     """Código corto (VAEL-XXXX-XXXX) que el candidato ingresa manualmente."""
 

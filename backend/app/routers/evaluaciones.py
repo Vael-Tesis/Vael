@@ -9,12 +9,14 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_candidate, get_current_candidato, get_current_user
 from app.models.area import Area
 from app.models.candidato import Candidato
-from app.models.evaluacion import Examen, EstadoExamen, EventoAuditoria, PreguntaExamen
+from app.models.entrevista import EntrevistaIA
+from app.models.evaluacion import Examen, EstadoExamen, EventoAuditoria, PreguntaExamen, SeveridadEvento
 from app.models.base import utcnow
 from app.models.usuario import TokenAcceso, Usuario
 from app.models.vacante import Vacante
 from app.schemas.evaluacion import (
     CandidatoAccesoResponse,
+    EventoAuditoriaGeneralResponse,
     EventoAuditoriaResponse,
     EventoProctoringRequest,
     ExamenDetalleResponse,
@@ -133,6 +135,69 @@ async def auditoria_examen(
     )
     result = await db.exec(statement)
     return list(result.all())
+
+
+@router.get("/auditoria", response_model=list[EventoAuditoriaGeneralResponse])
+async def auditoria_general(
+    actor: Annotated[Usuario, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    candidato_id: str | None = None,
+    severidad: SeveridadEvento | None = None,
+    tipo: str | None = None,
+    skip: int = 0,
+    limit: int = 100,
+) -> list[EventoAuditoriaGeneralResponse]:
+    """Lista los eventos de proctoring del tenant (examen y entrevista), de más reciente a más antiguo.
+
+    A diferencia de /examenes/{id}/auditoria (acotado a un examen puntual), este
+    endpoint cubre todo el tenant y ambas etapas, útil para una vista de compliance.
+    """
+    examenes_statement = select(Examen.id, Examen.candidato_id).where(Examen.tenant_id == actor.tenant_id)
+    entrevistas_statement = select(EntrevistaIA.id, EntrevistaIA.candidato_id).where(
+        EntrevistaIA.tenant_id == actor.tenant_id
+    )
+
+    if candidato_id is not None:
+        examenes_statement = examenes_statement.where(Examen.candidato_id == candidato_id)
+        entrevistas_statement = entrevistas_statement.where(EntrevistaIA.candidato_id == candidato_id)
+
+    examenes_result = await db.exec(examenes_statement)
+    candidato_por_examen = dict(examenes_result.all())
+
+    entrevistas_result = await db.exec(entrevistas_statement)
+    candidato_por_entrevista = dict(entrevistas_result.all())
+
+    statement = select(EventoAuditoria).where(
+        EventoAuditoria.tenant_id == actor.tenant_id,
+        (
+            EventoAuditoria.examen_id.in_(candidato_por_examen.keys())
+            | EventoAuditoria.entrevista_id.in_(candidato_por_entrevista.keys())
+        ),
+    )
+
+    if severidad is not None:
+        statement = statement.where(EventoAuditoria.severidad == severidad)
+    if tipo is not None:
+        statement = statement.where(EventoAuditoria.tipo == tipo)
+
+    statement = statement.order_by(EventoAuditoria.timestamp.desc()).offset(skip).limit(limit)
+
+    result = await db.exec(statement)
+    eventos = list(result.all())
+
+    return [
+        EventoAuditoriaGeneralResponse(
+            id=e.id,
+            examen_id=e.examen_id,
+            entrevista_id=e.entrevista_id,
+            candidato_id=candidato_por_examen.get(e.examen_id) or candidato_por_entrevista.get(e.entrevista_id),
+            tipo=e.tipo,
+            severidad=e.severidad,
+            detalle=e.detalle,
+            timestamp=e.timestamp,
+        )
+        for e in eventos
+    ]
 
 
 # --- Candidato (token de acceso, no usuario RRHH) ------------------------

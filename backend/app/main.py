@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import auth, candidatos, entrevista, evaluaciones, publico, vacantes
+from app.routers import areas, auth, candidatos, entrevista, evaluaciones, plantillas, publico, vacantes
 
 
 @asynccontextmanager
@@ -30,10 +30,12 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(areas.router)
 app.include_router(vacantes.router)
 app.include_router(candidatos.router)
 app.include_router(evaluaciones.router)
 app.include_router(entrevista.router)
+app.include_router(plantillas.router)
 app.include_router(publico.router)
 
 

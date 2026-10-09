@@ -1,6 +1,10 @@
 # Testing y lint — solo para CI y desarrollo local, no se instalan en producción
 pytest==8.3.3
 pytest-asyncio==0.24.0
+
+# Driver async de SQLite — motor de la base de datos de prueba en tests/conftest.py
+# (override de get_db); en producción se sigue usando Postgres vía asyncpg.
+aiosqlite==0.22.1
 # httpx no se pinea acá — ya es dependencia directa de requirements.txt (analisis_cv.py +
 # google-genai); pinearlo distinto en los dos archivos causaba un conflicto de versiones
 # cuando se instalan juntos. TestClient de FastAPI solo necesita que esté presente.

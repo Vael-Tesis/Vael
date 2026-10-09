@@ -71,10 +71,10 @@ export default function Postular() {
       const { data } = await api.post(`/publico/postular/${codigo}/enviar`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      setEnviado(data.candidato_id || 'OK')
+      setEnviado(data.mensaje || 'OK')
     } catch (err) {
       if (sinBackend(err)) {
-        setEnviado('DEV-0001')
+        setEnviado('Postulación recibida correctamente (simulado)')
         toast.message('Modo desarrollo: envío simulado')
       } else {
         toast.error(err.response?.data?.detail || 'No se pudo enviar tu postulación')
@@ -126,7 +126,7 @@ export default function Postular() {
           </p>
           {enviado !== 'OK' && (
             <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              ID de postulación: <code>{enviado}</code>
+              {enviado}
             </p>
           )}
         </motion.div>

@@ -17,6 +17,7 @@ from app.models.vacante import Vacante
 from app.schemas.entrevista import (
     CapturaEntrevistaResponse,
     EntrevistaDetalleResponse,
+    EntrevistaResponse,
     EventoAuditoriaRequest,
     FinalizarEntrevistaRequest,
     IniciarEntrevistaResponse,
@@ -80,6 +81,28 @@ async def _obtener_entrevista_del_tenant(entrevista_id: str, tenant_id: str, db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entrevista no encontrada")
 
     return entrevista
+
+
+@router.get("/", response_model=list[EntrevistaResponse])
+async def listar_entrevistas(
+    actor: Annotated[Usuario, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    candidato_id: str | None = None,
+    vacante_id: str | None = None,
+    estado: EstadoEntrevista | None = None,
+) -> list[EntrevistaIA]:
+    """Lista las entrevistas del tenant, con filtros opcionales por candidato, vacante y estado."""
+    statement = select(EntrevistaIA).where(EntrevistaIA.tenant_id == actor.tenant_id)
+
+    if candidato_id is not None:
+        statement = statement.where(EntrevistaIA.candidato_id == candidato_id)
+    if vacante_id is not None:
+        statement = statement.where(EntrevistaIA.vacante_id == vacante_id)
+    if estado is not None:
+        statement = statement.where(EntrevistaIA.estado == estado)
+
+    result = await db.exec(statement)
+    return list(result.all())
 
 
 @router.post("/acceso", response_model=CandidatoAccesoResponse)

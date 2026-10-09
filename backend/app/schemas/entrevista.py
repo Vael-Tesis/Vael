@@ -23,6 +23,24 @@ class PreguntaEntrevistaPool(BaseModel):
     prioridad: PrioridadPregunta
 
 
+class EntrevistaResponse(BaseModel):
+    """Representación de una entrevista, sin el detalle de transcripción/capturas."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    tenant_id: str
+    candidato_id: str
+    vacante_id: str
+    plantilla_id: str | None
+    estado: EstadoEntrevista
+    nota: float | None
+    duracion_minutos: int | None
+    fecha_inicio: datetime | None
+    fecha_fin: datetime | None
+    created_at: datetime
+
+
 class IniciarEntrevistaResponse(BaseModel):
     """Datos para que el frontend abra la sesión de Gemini Live con EVA."""
 

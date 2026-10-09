@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import api from '../../services/api.js'
@@ -34,9 +34,11 @@ const TABS = [
 export default function VacanteDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState('info')
   const [generandoTextos, setGenerandoTextos] = useState(false)
   const [textos, setTextos] = useState(null)
+  const [duplicando, setDuplicando] = useState(false)
 
   const { data: v } = useQuery({
     queryKey: ['vacante', id],
@@ -45,12 +47,51 @@ export default function VacanteDetalle() {
 
   const vacante = v || DEMO
 
+  function invalidarVacante() {
+    queryClient.invalidateQueries({ queryKey: ['vacante', id] })
+  }
+
   async function handlePublicar() {
     try {
       await api.post(`/vacantes/${id}/publicar`)
       toast.success('Vacante publicada')
+      invalidarVacante()
     } catch {
       toast.error('Error al publicar')
+    }
+  }
+
+  async function handlePausar() {
+    try {
+      await api.post(`/vacantes/${id}/pausar`)
+      toast.success('Vacante pausada')
+      invalidarVacante()
+    } catch {
+      toast.error('Error al pausar')
+    }
+  }
+
+  async function handleCerrar() {
+    if (!window.confirm('¿Cerrar esta vacante? Ya no se podrán recibir postulaciones.')) return
+    try {
+      await api.post(`/vacantes/${id}/cerrar`)
+      toast.success('Vacante cerrada')
+      invalidarVacante()
+    } catch {
+      toast.error('Error al cerrar')
+    }
+  }
+
+  async function handleDuplicar() {
+    setDuplicando(true)
+    try {
+      const { data } = await api.post(`/vacantes/${id}/duplicar`)
+      toast.success('Vacante duplicada')
+      navigate(`/vacantes/${data.id}`)
+    } catch {
+      toast.error('Error al duplicar')
+    } finally {
+      setDuplicando(false)
     }
   }
 
@@ -86,7 +127,14 @@ export default function VacanteDetalle() {
         <div style={{ display: 'flex', gap: 8 }}>
           <Button variant="secondary" onClick={() => navigate(`/vacantes/${id}/editar`)}>Editar</Button>
           {vacante.estado === 'borrador' && <Button onClick={handlePublicar}>Publicar</Button>}
-          {vacante.estado === 'abierta' && <Button variant="secondary">Pausar</Button>}
+          {vacante.estado === 'abierta' && <Button variant="secondary" onClick={handlePausar}>Pausar</Button>}
+          {vacante.estado === 'pausada' && <Button onClick={handlePublicar}>Reanudar</Button>}
+          {vacante.estado !== 'cerrada' && (
+            <Button variant="danger" onClick={handleCerrar}>Cerrar</Button>
+          )}
+          <Button variant="secondary" onClick={handleDuplicar} disabled={duplicando}>
+            {duplicando ? 'Duplicando...' : 'Duplicar'}
+          </Button>
         </div>
       </div>
 

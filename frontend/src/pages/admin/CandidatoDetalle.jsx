@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import api from '../../services/api.js'
 import Card from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -42,6 +43,13 @@ const CLASIFICACION_CONFIG = {
   no_apto:               { label: 'No apto',               variant: 'danger' },
 }
 
+const ESTADOS_CANDIDATO = [
+  'postulado', 'cv_analizando', 'cv_aprobado', 'cv_rechazado',
+  'examen_pendiente', 'examen_rendido', 'examen_aprobado', 'examen_rechazado',
+  'entrevista_pendiente', 'entrevista_realizada',
+  'finalista', 'contratado', 'descartado',
+]
+
 function ScoreCircle({ value, max = 100, label }) {
   const pct = Math.round((value / max) * 100)
   const color = pct >= 80 ? 'var(--success-text)' : pct >= 60 ? 'var(--warning-text)' : 'var(--danger-text)'
@@ -63,15 +71,85 @@ function ScoreCircle({ value, max = 100, label }) {
 export default function CandidatoDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState('resumen')
+  const [nuevaNota, setNuevaNota] = useState('')
+  const [enviandoNota, setEnviandoNota] = useState(false)
+  const [reenviando, setReenviando] = useState(false)
+  const [marcandoFinalista, setMarcandoFinalista] = useState(false)
+  const [cambiandoEstado, setCambiandoEstado] = useState(false)
 
   const { data: c } = useQuery({
     queryKey: ['candidato', id],
     queryFn: () => api.get(`/candidatos/${id}`).then(r => r.data).catch(() => DEMO),
   })
 
+  const { data: notas } = useQuery({
+    queryKey: ['candidato', id, 'notas'],
+    queryFn: () => api.get(`/candidatos/${id}/notas`).then(r => r.data).catch(() => DEMO.notas),
+  })
+
   const candidato = c || DEMO
   const clasificacion = CLASIFICACION_CONFIG[candidato.clasificacion_ia] || CLASIFICACION_CONFIG.recomendado
+
+  function invalidarCandidato() {
+    queryClient.invalidateQueries({ queryKey: ['candidato', id] })
+  }
+
+  async function handleReenviarCorreo() {
+    setReenviando(true)
+    try {
+      await api.post(`/candidatos/${id}/reenviar-correo-etapa`)
+      toast.success('Correo reenviado')
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'No se pudo reenviar el correo')
+    } finally {
+      setReenviando(false)
+    }
+  }
+
+  async function handleMarcarFinalista() {
+    setMarcandoFinalista(true)
+    try {
+      await api.post(`/candidatos/${id}/marcar-finalista`)
+      toast.success('Candidato marcado como finalista')
+      invalidarCandidato()
+    } catch {
+      toast.error('No se pudo marcar como finalista')
+    } finally {
+      setMarcandoFinalista(false)
+    }
+  }
+
+  async function handleCambiarEstado(e) {
+    const estado = e.target.value
+    if (!estado || estado === candidato.estado) return
+    setCambiandoEstado(true)
+    try {
+      await api.post(`/candidatos/${id}/cambiar-estado`, { estado })
+      toast.success('Estado actualizado')
+      invalidarCandidato()
+    } catch {
+      toast.error('No se pudo cambiar el estado')
+    } finally {
+      setCambiandoEstado(false)
+    }
+  }
+
+  async function handleAgregarNota() {
+    if (!nuevaNota.trim()) return
+    setEnviandoNota(true)
+    try {
+      await api.post(`/candidatos/${id}/notas`, { contenido: nuevaNota.trim() })
+      setNuevaNota('')
+      toast.success('Nota agregada')
+      queryClient.invalidateQueries({ queryKey: ['candidato', id, 'notas'] })
+    } catch {
+      toast.error('No se pudo agregar la nota')
+    } finally {
+      setEnviandoNota(false)
+    }
+  }
 
   return (
     <div style={{ padding: '20px 24px', maxWidth: 1100 }}>
@@ -102,17 +180,35 @@ export default function CandidatoDetalle() {
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
               {candidato.vacante?.titulo} · {candidato.vacante?.codigo}
             </p>
-            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
               <Badge variant={clasificacion.variant}>{clasificacion.label}</Badge>
               {(candidato.tags || []).map(t => (
                 <Badge key={t} variant="neutral">{t}</Badge>
               ))}
+              <select
+                value={candidato.estado}
+                onChange={handleCambiarEstado}
+                disabled={cambiandoEstado}
+                style={{
+                  fontSize: 11, fontWeight: 500, borderRadius: 4, padding: '2px 6px',
+                  border: '1px solid var(--border)', background: 'var(--bg-card)',
+                  color: 'var(--text-secondary)', cursor: cambiandoEstado ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {ESTADOS_CANDIDATO.map(estado => (
+                  <option key={estado} value={estado}>{estado.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button variant="secondary">Reenviar correo</Button>
-          <Button variant="primary">Marcar finalista</Button>
+          <Button variant="secondary" onClick={handleReenviarCorreo} disabled={reenviando}>
+            {reenviando ? 'Enviando...' : 'Reenviar correo'}
+          </Button>
+          <Button variant="primary" onClick={handleMarcarFinalista} disabled={marcandoFinalista || candidato.es_finalista}>
+            {candidato.es_finalista ? 'Ya es finalista' : marcandoFinalista ? 'Marcando...' : 'Marcar finalista'}
+          </Button>
         </div>
       </div>
 
@@ -257,6 +353,8 @@ export default function CandidatoDetalle() {
           <Card>
             <textarea
               placeholder="Escribe una nota interna sobre este candidato..."
+              value={nuevaNota}
+              onChange={e => setNuevaNota(e.target.value)}
               style={{
                 width: '100%', minHeight: 70, padding: 10,
                 border: '1px solid var(--border)', borderRadius: 6,
@@ -264,16 +362,18 @@ export default function CandidatoDetalle() {
                 marginBottom: 10, outline: 'none',
               }}
             />
-            <Button size="sm" style={{ marginBottom: 16 }}>Agregar nota</Button>
+            <Button size="sm" onClick={handleAgregarNota} disabled={enviandoNota || !nuevaNota.trim()} style={{ marginBottom: 16 }}>
+              {enviandoNota ? 'Agregando...' : 'Agregar nota'}
+            </Button>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {(candidato.notas || []).map(n => (
+              {(notas || candidato.notas || []).map(n => (
                 <div key={n.id} style={{
                   padding: 10, background: 'var(--bg-page)', borderRadius: 6,
                 }}>
                   <p style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 4 }}>{n.contenido}</p>
                   <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {n.autor} · {new Date(n.created_at).toLocaleDateString('es-PE')}
+                    {n.autor || n.autor_id} · {new Date(n.created_at).toLocaleDateString('es-PE')}
                   </p>
                 </div>
               ))}
