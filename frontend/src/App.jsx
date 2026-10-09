@@ -38,9 +38,7 @@ import Plantillas from './pages/admin/Plantillas.jsx'
 import Areas from './pages/admin/Areas.jsx'
 import Usuarios from './pages/admin/Usuarios.jsx'
 
-// En desarrollo se permite entrar sin backend; en producción exige token
 function ProtectedRoute({ children }) {
-  if (import.meta.env.DEV) return children
   const token = localStorage.getItem('vael_token')
   if (!token) return <Navigate to="/login" replace />
   return children

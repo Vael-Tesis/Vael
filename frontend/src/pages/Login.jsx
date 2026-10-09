@@ -12,19 +12,6 @@ export default function Login() {
   async function handleSubmit(e) {
   e.preventDefault()
   setLoading(true)
-  
-  // DEV: saltar login si no hay backend
-  if (import.meta.env.DEV) {
-    localStorage.setItem('vael_token', 'dev-token')
-    localStorage.setItem('vael_user', JSON.stringify({
-      nombre: 'Gabriel',
-      apellidos: 'Llanos',
-      rol: 'admin'
-    }))
-    navigate('/dashboard')
-    setLoading(false)
-    return
-  }
 
   try {
     const { data } = await api.post('/auth/login', form)
