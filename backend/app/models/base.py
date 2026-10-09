@@ -6,8 +6,11 @@ from sqlmodel import Field, SQLModel
 
 
 def utcnow() -> datetime:
-    """Retorna la fecha y hora actual en UTC — usada como default de los timestamps."""
-    return datetime.now(timezone.utc)
+    """Retorna la fecha y hora actual en UTC, sin tzinfo (naive) — las columnas datetime
+    se crean como TIMESTAMP WITHOUT TIME ZONE; un valor aware aquí revienta cualquier
+    comparación/resta contra lo leído de la base con 'can't subtract offset-naive and
+    offset-aware datetimes'. Usada como default de todos los timestamps del proyecto."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def new_id() -> str:

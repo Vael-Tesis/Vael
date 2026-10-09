@@ -35,7 +35,7 @@ const inputStyle = {
   fontSize: 13, outline: 'none',
 }
 
-function Editor({ onCancel, onSaved }) {
+function Editor({ onCancel, onCreada }) {
   const [form, setForm] = useState({
     nombre: '', descripcion: '',
     dimensiones: [{ nombre: '', peso: 50 }, { nombre: '', peso: 50 }],
@@ -59,16 +59,11 @@ function Editor({ onCancel, onSaved }) {
       dimensiones: form.dimensiones.map(d => ({ ...d, peso: Number(d.peso) })),
     }
     try {
-      const { data } = await api.post('/entrevista/plantillas', payload)
-      onSaved(data)
+      await api.post('/entrevista/plantillas', payload)
       toast.success('Plantilla creada')
+      onCreada()
     } catch (err) {
-      if (sinBackend(err)) {
-        onSaved({ id: String(Date.now()), activa: true, ...payload })
-        toast.success('Plantilla creada (modo desarrollo)')
-      } else {
-        toast.error(err.response?.data?.detail || 'No se pudo crear la plantilla')
-      }
+      toast.error(err.response?.data?.detail || 'No se pudo crear la plantilla')
     } finally {
       setGuardando(false)
     }
@@ -134,8 +129,8 @@ export default function Plantillas() {
 
   const plantillas = data || DEMO
 
-  function agregarPlantilla(nueva) {
-    queryClient.setQueryData(['plantillas'], (prev = DEMO) => [...prev, nueva])
+  function onPlantillaCreada() {
+    queryClient.invalidateQueries({ queryKey: ['plantillas'] })
     setCreando(false)
   }
 
@@ -147,7 +142,7 @@ export default function Plantillas() {
         action={!creando && <Button onClick={() => setCreando(true)}>+ Nueva plantilla</Button>}
       />
 
-      {creando && <Editor onCancel={() => setCreando(false)} onSaved={agregarPlantilla} />}
+      {creando && <Editor onCancel={() => setCreando(false)} onCreada={onPlantillaCreada} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 10 }}>
         {plantillas.map((p, i) => (

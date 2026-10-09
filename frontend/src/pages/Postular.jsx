@@ -18,7 +18,7 @@ const DEMO = {
   mostrar_salario: true, salario_minimo: 4000, salario_maximo: 6000, moneda: 'PEN',
   descripcion: 'Buscamos un desarrollador Full Stack para unirse a nuestro equipo de producto y construir funcionalidades de punta a punta.',
   requisitos: '• 3+ años de experiencia con React y Node.js\n• Conocimiento de bases de datos relacionales\n• Experiencia con Git y trabajo en equipo',
-  tecnologias: 'React, Node.js, PostgreSQL, Docker, AWS',
+  tecnologias: ['React', 'Node.js', 'PostgreSQL', 'Docker', 'AWS'],
   beneficios: '• Trabajo híbrido\n• Seguro de salud\n• Capacitaciones y certificaciones',
 }
 
@@ -161,10 +161,10 @@ export default function Postular() {
           <Bloque titulo="Requisitos">
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{v.requisitos}</p>
           </Bloque>
-          {v.tecnologias && (
+          {v.tecnologias?.length > 0 && (
             <Bloque titulo="Tecnologías">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {v.tecnologias.split(',').map(t => t.trim()).filter(Boolean).map(t => (
+                {v.tecnologias.map(t => (
                   <Badge key={t} variant="info">{t}</Badge>
                 ))}
               </div>

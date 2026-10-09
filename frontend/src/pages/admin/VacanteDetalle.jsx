@@ -16,7 +16,7 @@ const DEMO = {
   modalidad: 'hibrido', ciudad: 'Lima', tipo_contrato: 'indefinido',
   descripcion: 'Buscamos un desarrollador Full Stack para unirse a nuestro equipo de producto...',
   requisitos: '3+ años de experiencia con React y Node.js. Conocimiento de bases de datos relacionales.',
-  tecnologias: 'React, Node.js, PostgreSQL, Docker, AWS',
+  tecnologias: ['React', 'Node.js', 'PostgreSQL', 'Docker', 'AWS'],
   score_cv_minimo: 60, nota_minima_examen: 13,
   candidatos: [
     { id: '1', nombre: 'María', apellidos: 'Alvarado', score_cv: 87, estado: 'entrevista_pendiente' },
@@ -173,7 +173,7 @@ export default function VacanteDetalle() {
               Tecnologías
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-              {(vacante.tecnologias || '').split(',').map(t => t.trim()).filter(Boolean).map(t => (
+              {(vacante.tecnologias || []).map(t => (
                 <Badge key={t} variant="info">{t}</Badge>
               ))}
             </div>

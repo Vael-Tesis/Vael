@@ -24,6 +24,72 @@ const ROL_VARIANT = {
   gerente:    'neutral',
 }
 
+const inputStyle = {
+  height: 34, padding: '0 10px', border: '1px solid var(--border)',
+  borderRadius: 6, background: 'var(--bg-card)', color: 'var(--text-primary)',
+  fontSize: 13, outline: 'none',
+}
+
+function EditorUsuario({ onCancel, onCreado }) {
+  const [form, setForm] = useState({ nombre: '', apellidos: '', email: '', rol: 'reclutador', telefono: '' })
+  const [guardando, setGuardando] = useState(false)
+
+  const valido = form.nombre.trim() && form.apellidos.trim() && form.email.trim()
+
+  async function guardar() {
+    setGuardando(true)
+    const payload = { ...form, telefono: form.telefono.trim() || null }
+    try {
+      await api.post('/auth/usuarios/crear', payload)
+      toast.success('Usuario creado — se le envió la contraseña temporal por correo')
+      onCreado()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'No se pudo crear el usuario')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 16 }}>
+      <Card>
+        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14 }}>Nuevo usuario</p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          <input style={inputStyle} placeholder="Nombre" value={form.nombre}
+            onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} />
+          <input style={inputStyle} placeholder="Apellidos" value={form.apellidos}
+            onChange={e => setForm(f => ({ ...f, apellidos: e.target.value }))} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+          <input style={inputStyle} type="email" placeholder="correo@empresa.com" value={form.email}
+            onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+          <input style={inputStyle} placeholder="Teléfono (opcional)" value={form.telefono}
+            onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))} style={inputStyle}>
+            <option value="admin">Admin</option>
+            <option value="reclutador">Reclutador</option>
+            <option value="evaluador">Evaluador</option>
+            <option value="gerente">Gerente</option>
+          </select>
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>
+          La contraseña temporal se genera automáticamente y se envía por correo.
+        </p>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+          <Button variant="secondary" onClick={onCancel}>Cancelar</Button>
+          <Button onClick={guardar} disabled={!valido || guardando}>
+            {guardando ? 'Creando...' : 'Crear usuario'}
+          </Button>
+        </div>
+      </Card>
+    </motion.div>
+  )
+}
+
 function MenuUsuario({ usuario, abierto, onToggle, onActivar, onDesactivar, onCambiarPassword }) {
   return (
     <div style={{ position: 'relative' }}>
@@ -58,6 +124,7 @@ const menuItemStyle = {
 export default function Usuarios() {
   const queryClient = useQueryClient()
   const [menuAbiertoId, setMenuAbiertoId] = useState(null)
+  const [creando, setCreando] = useState(false)
 
   const { data } = useQuery({
     queryKey: ['usuarios'],
@@ -65,6 +132,11 @@ export default function Usuarios() {
   })
 
   const usuarios = data || DEMO
+
+  function onUsuarioCreado() {
+    queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+    setCreando(false)
+  }
 
   function cerrarMenu() {
     setMenuAbiertoId(null)
@@ -111,8 +183,10 @@ export default function Usuarios() {
       <PageHeader
         title="Usuarios"
         description="Equipo RRHH con acceso al sistema"
-        action={<Button>+ Nuevo usuario</Button>}
+        action={!creando && <Button onClick={() => setCreando(true)}>+ Nuevo usuario</Button>}
       />
+
+      {creando && <EditorUsuario onCancel={() => setCreando(false)} onCreado={onUsuarioCreado} />}
 
       <Card padding="0">
         <div style={{

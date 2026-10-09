@@ -10,6 +10,7 @@ from passlib.context import CryptContext
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
+from app.models.base import utcnow
 from app.models.usuario import TipoToken, TokenAcceso
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -100,7 +101,7 @@ async def emitir_token_candidato(
         token=jwt_token,
         codigo_corto=_generar_codigo_corto(),
         tipo=tipo,
-        expira_en=datetime.now(timezone.utc) + timedelta(hours=expires_hours),
+        expira_en=utcnow() + timedelta(hours=expires_hours),
     )
     db.add(token_acceso)
     await db.commit()
