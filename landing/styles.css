@@ -207,6 +207,21 @@ section[id] { scroll-margin-top: calc(var(--nav-h) + 12px); }
   .btn--signal:hover  { box-shadow: 0 0 0 4px rgba(200, 240, 74, .38); }
 }
 
+/* Estado inerte: el botón se ve, pero todavía no lleva a ningún sitio
+   (p. ej. el acceso al panel mientras no haya dominio). Lo activa main.js. */
+.btn.is-disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  box-shadow: none;
+  background: var(--paper);
+  color: var(--ink-2);
+  border-color: var(--line);
+}
+.btn.is-disabled:active { transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .btn.is-disabled:hover { background: var(--paper); border-color: var(--line); }
+}
+
 /* --------------------------- Animaciones base --------------------------- */
 /* Entrada del hero en cascada (una sola vez) */
 .rise {

@@ -6,6 +6,12 @@
 (function () {
   'use strict';
 
+  /* ===================== CONFIGURACIÓN ===================== */
+  // URL del panel de administración. Vacío = botón deshabilitado.
+  // Cuando se compre el dominio, poner aquí: 'https://app.vael.ai/login'
+  const ADMIN_LOGIN_URL = '';
+  /* ========================================================= */
+
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function $(sel, ctx) { return (ctx || document).querySelector(sel); }
@@ -58,6 +64,37 @@
 
     document.addEventListener('click', function (e) {
       if (!nav.contains(e.target) && nav.classList.contains('is-open')) setOpen(false);
+    });
+  })();
+
+  /* --------------------------------------------------------------------- */
+  /* 1.b Botón de acceso al panel: se activa solo si hay dominio           */
+  /* --------------------------------------------------------------------- */
+  (function initAdminLogin() {
+    var link = $('#admin-login');
+    if (!link) return;
+
+    var url = String(ADMIN_LOGIN_URL || '').trim();
+
+    if (url) {
+      link.setAttribute('href', url);
+      link.removeAttribute('aria-disabled');
+      link.removeAttribute('title');
+      link.classList.remove('is-disabled');
+      return;
+    }
+
+    // Sin dominio todavía: visible pero inerte. Al no tener href no es
+    // enfocable ni navegable, así que no hay enlace roto que publicar.
+    link.removeAttribute('href');
+    link.setAttribute('role', 'link');
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('title', 'Disponible próximamente');
+    link.classList.add('is-disabled');
+
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
     });
   })();
 
