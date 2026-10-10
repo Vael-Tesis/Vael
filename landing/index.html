@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VAEL — Elige mejor y ten con qué sustentarlo</title>
+<meta name="description" content="VAEL analiza el CV, aplica el examen técnico y conduce la entrevista de cada postulante, y te entrega un ranking con un puntaje comparable y el detalle de dónde viene cada punto." />
+<meta name="theme-color" content="#0E5C4A" />
+<meta property="og:title" content="VAEL — Reclutamiento inteligente con puntajes que puedes sustentar" />
+<meta property="og:description" content="De cientos de postulantes a una lista corta de finalistas, con el detalle de cada puntaje." />
+<meta property="og:type" content="website" />
+
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<a class="skip-link" href="#hero">Saltar al contenido</a>
+
+<!-- ============================ NAV ============================ -->
+<header class="nav" id="nav">
+  <div class="nav__inner">
+    <a class="logo" href="#hero" aria-label="VAEL, inicio">
+      <span class="logo__mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" focusable="false">
+          <rect width="32" height="32" rx="9" fill="var(--brand)"></rect>
+          <path d="M9 13.5l4.6 6.2L23 9.8" fill="none" stroke="var(--signal)" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </span>
+      <span class="logo__word">VAEL</span>
+    </a>
+
+    <nav class="nav__links" id="nav-links" aria-label="Secciones del sitio">
+      <a href="#problema">El problema</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#score">El puntaje</a>
+      <a href="#para-quien">Para quién es</a>
+      <a href="#faq">Preguntas</a>
+      <a class="btn btn--primary btn--sm nav__cta" href="#demo">Solicitar demo</a>
+    </nav>
+
+    <button class="nav__toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links">
+      <span class="nav__toggle-bars" aria-hidden="true"><i></i><i></i></span>
+      <span class="sr-only">Abrir menú</span>
+    </button>
+  </div>
+</header>
+
+<main>
+<!-- ============================ HERO ============================ -->
+<section class="hero" id="hero">
+  <div class="hero__bg" aria-hidden="true">
+    <div class="hero__mesh"></div>
+    <div class="hero__grid"></div>
+    <svg class="hero__grain" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <filter id="vael-grain">
+        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
+        <feColorMatrix type="saturate" values="0" />
+      </filter>
+      <rect width="100%" height="100%" filter="url(#vael-grain)" />
+    </svg>
+  </div>
+
+  <div class="wrap hero__inner">
+    <p class="badge rise" style="--delay:0ms">
+      <span class="badge__dot" aria-hidden="true"></span>
+      Acceso temprano abierto
+    </p>
+
+    <h1 class="hero__title rise" style="--delay:60ms">
+      De cientos de postulantes a tu lista corta, con el
+      <span class="accent-word">
+        <em>sustento</em>
+        <svg class="accent-word__line" viewBox="0 0 220 18" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <path d="M3 12.5C38 5.5 86 3.8 130 6.2c30 1.6 60 4.4 87 8.3" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" />
+        </svg>
+      </span>
+      de cada decisión.
+    </h1>
+
+    <p class="hero__sub rise" style="--delay:120ms">
+      VAEL analiza el CV, aplica el examen técnico y conduce la entrevista de cada postulante, y te devuelve un ranking con un puntaje comparable y el detalle exacto de dónde salió cada punto.
+    </p>
+
+    <div class="hero__cta rise" style="--delay:180ms">
+      <a class="btn btn--primary" href="#demo">Solicitar demo</a>
+      <a class="btn btn--ghost" href="#como-funciona">Ver cómo funciona</a>
+    </div>
+
+    <!-- Visual del producto -->
+    <div class="hero__visual rise" style="--delay:260ms">
+      <div class="laptop" id="hero-card">
+        <div class="laptop__glow" id="hero-glow" aria-hidden="true"></div>
+        <div class="laptop__screen">
+          <div class="laptop__cam" aria-hidden="true"></div>
+          <div class="screen" id="screen">
+
+            <!-- Video del producto: reemplazar assets/demo.mp4 y assets/demo-poster.jpg -->
+            <video
+              class="screen__video"
+              id="demo-video"
+              src="assets/demo.mp4"
+              poster="assets/demo-poster.jpg"
+              autoplay muted loop playsinline preload="metadata"
+              aria-label="Recorrido en video por el panel de VAEL">
+            </video>
+
+            <!-- Fallback: mockup del panel en HTML/CSS, con las mismas proporciones que el video -->
+            <div class="mock" id="mock" role="img"
+                 aria-label="Panel de VAEL mostrando el ranking de candidatos de una vacante, con un puntaje final de 87 sobre 100 y su desglose por CV, examen y entrevista.">
+              <aside class="mock__rail" aria-hidden="true">
+                <span class="mock__rail-logo"></span>
+                <span class="mock__rail-item is-on"></span>
+                <span class="mock__rail-item"></span>
+                <span class="mock__rail-item"></span>
+                <span class="mock__rail-item"></span>
+              </aside>
+
+              <div class="mock__body">
+                <header class="mock__top">
+                  <div>
+                    <p class="mock__eyebrow">Vacante abierta</p>
+                    <p class="mock__title">Analista de Datos · Lima</p>
+                  </div>
+                  <span class="mock__tag">Vista de ejemplo</span>
+                </header>
+
+                <div class="mock__grid">
+                  <div class="mock__card mock__card--score">
+                    <div class="ring" aria-hidden="true">
+                      <svg viewBox="0 0 120 120">
+                        <circle class="ring__track" cx="60" cy="60" r="52" />
+                        <circle class="ring__fill" id="ring-fill" cx="60" cy="60" r="52" />
+                      </svg>
+                      <span class="ring__value"><b id="hero-score">0</b><i>/100</i></span>
+                    </div>
+                    <p class="mock__card-label">Puntaje final</p>
+                    <p class="mock__card-note">Candidata A · recomendada</p>
+                  </div>
+
+                  <div class="mock__card mock__card--bars">
+                    <p class="mock__card-label">De dónde viene el puntaje</p>
+                    <ul class="minibars">
+                      <li><span>CV</span><i class="minibar"><b style="--w:78%;--c:var(--brand)"></b></i><em>25%</em></li>
+                      <li><span>Examen</span><i class="minibar"><b style="--w:88%;--c:var(--gold)"></b></i><em>40%</em></li>
+                      <li><span>Entrevista</span><i class="minibar"><b style="--w:92%;--c:var(--signal)"></b></i><em>35%</em></li>
+                    </ul>
+                  </div>
+                </div>
+
+                <ul class="mock__list">
+                  <li>
+                    <span class="mock__avatar" aria-hidden="true">A</span>
+                    <span class="mock__name">Candidata A</span>
+                    <span class="mock__dot mock__dot--ok" aria-hidden="true"></span>
+                    <span class="mock__score mock__score--high">87</span>
+                  </li>
+                  <li>
+                    <span class="mock__avatar" aria-hidden="true">B</span>
+                    <span class="mock__name">Candidato B</span>
+                    <span class="mock__dot mock__dot--ok" aria-hidden="true"></span>
+                    <span class="mock__score">81</span>
+                  </li>
+                  <li>
+                    <span class="mock__avatar" aria-hidden="true">C</span>
+                    <span class="mock__name">Candidata C</span>
+                    <span class="mock__dot mock__dot--warn" aria-hidden="true"></span>
+                    <span class="mock__score">74</span>
+                  </li>
+                  <li class="is-dim">
+                    <span class="mock__avatar" aria-hidden="true">D</span>
+                    <span class="mock__name">Candidato D</span>
+                    <span class="mock__dot" aria-hidden="true"></span>
+                    <span class="mock__score">58</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="laptop__base" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= FRANJA DE CONFIANZA ======================= -->
+<section class="trust band band--alt" aria-label="Tecnología y tratamiento de datos">
+  <div class="wrap trust__inner">
+    <p class="trust__main reveal">
+      <span class="trust__pulse" aria-hidden="true"></span>
+      Potenciado por Google Gemini y AWS, la misma infraestructura sobre la que operan bancos y aseguradoras.
+    </p>
+    <ul class="trust__list reveal" style="--d:80ms">
+      <li>Los datos de tus candidatos son tuyos: no se comparten con otras empresas ni se usan para entrenar modelos.</li>
+      <li>Cada empresa trabaja en un espacio aislado, con accesos por rol y registro de quién revisó cada evaluación.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ PROBLEMA ============================ -->
+<section class="band" id="problema" aria-labelledby="problema-title">
+  <div class="wrap">
+    <header class="sec-head reveal">
+      <p class="eyebrow">El problema</p>
+      <h2 class="sec-title" id="problema-title">Hoy contratar bien depende de cuánto aguante tu equipo leyendo.</h2>
+      <p class="sec-sub">Tres cosas que te cuestan tiempo, dinero y credibilidad en cada proceso.</p>
+    </header>
+
+    <div class="cols-3">
+      <article class="pain reveal">
+        <p class="pain__fig" aria-hidden="true">300</p>
+        <h3 class="pain__title">CVs que alguien tiene que leer a mano</h3>
+        <p class="pain__text">Publicas una vacante y la bandeja se llena. Filtrar postulante por postulante toma días, y los primeros se revisan con mucho más cuidado que los últimos.</p>
+      </article>
+
+      <article class="pain reveal" style="--d:80ms">
+        <p class="pain__fig pain__fig--icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="48" height="48" focusable="false" aria-hidden="true">
+            <circle cx="24" cy="27" r="15" fill="none" stroke="var(--accent)" stroke-width="3.2" />
+            <path d="M24 19v8l6 4" fill="none" stroke="var(--ink)" stroke-width="3.2" stroke-linecap="round" />
+            <path d="M17 7h14" fill="none" stroke="var(--accent)" stroke-width="3.2" stroke-linecap="round" />
+          </svg>
+        </p>
+        <h3 class="pain__title">Semanas de entrevistas que no debieron ocurrir</h3>
+        <p class="pain__text">Agendas, reprogramas y te sientas con gente que en los primeros diez minutos ya sabías que no calificaba. Ese tiempo sale del día de tus mejores personas.</p>
+      </article>
+
+      <article class="pain reveal" style="--d:160ms">
+        <p class="pain__fig pain__fig--q" aria-hidden="true">?</p>
+        <h3 class="pain__title">La pregunta que no puedes responder con datos</h3>
+        <p class="pain__text">«¿Por qué contrataste a esta persona y no a la otra?» Si la respuesta es una impresión, una mala contratación se vuelve imposible de explicar y caro de corregir.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= CÓMO FUNCIONA ========================= -->
+<section class="band band--alt hiw" id="como-funciona" aria-labelledby="hiw-title">
+  <div class="wrap">
+    <header class="sec-head reveal">
+      <p class="eyebrow">Cómo funciona</p>
+      <h2 class="sec-title" id="hiw-title">Cuatro pasos. Tú solo apareces en el último.</h2>
+      <p class="sec-sub">Publicas el puesto y VAEL se encarga del proceso hasta que haya algo que decidir.</p>
+    </header>
+
+    <div class="hiw__layout">
+      <!-- Panel visual (sticky) -->
+      <div class="hiw__stage" id="hiw-stage" aria-hidden="true">
+        <div class="stage">
+          <div class="stage__panel is-active" data-panel="1">
+            <div class="panel-card">
+              <p class="panel-card__head">Nueva vacante</p>
+              <p class="panel-card__field">Analista de Datos</p>
+              <p class="panel-card__field panel-card__field--muted">Lima · Híbrido · Semi senior</p>
+              <div class="chips">
+                <span class="chip">SQL</span><span class="chip">Power BI</span><span class="chip">Python</span><span class="chip chip--soft">+4</span>
+              </div>
+              <p class="panel-card__foot"><span class="dot-ok"></span> Publicada y recibiendo postulaciones</p>
+            </div>
+          </div>
+
+          <div class="stage__panel" data-panel="2">
+            <div class="panel-card">
+              <p class="panel-card__head">Revisión de CVs</p>
+              <ul class="cvlist">
+                <li><span>Candidata A</span><i class="minibar"><b style="--w:84%;--c:var(--signal)"></b></i><em>84</em></li>
+                <li><span>Candidato B</span><i class="minibar"><b style="--w:76%;--c:var(--signal)"></b></i><em>76</em></li>
+                <li><span>Candidata C</span><i class="minibar"><b style="--w:69%;--c:var(--brand)"></b></i><em>69</em></li>
+                <li class="is-out"><span>Candidato D</span><i class="minibar"><b style="--w:41%;--c:var(--line)"></b></i><em>41</em></li>
+                <li class="is-out"><span>Candidata E</span><i class="minibar"><b style="--w:33%;--c:var(--line)"></b></i><em>33</em></li>
+              </ul>
+              <p class="panel-card__foot">Avanza quien supera el mínimo que tú definiste</p>
+            </div>
+          </div>
+
+          <div class="stage__panel" data-panel="3">
+            <div class="panel-card">
+              <p class="panel-card__head">Examen y entrevista</p>
+              <p class="panel-card__field panel-card__field--muted">Examen técnico · 10 preguntas del puesto</p>
+              <div class="progress"><b style="--w:70%"></b></div>
+              <p class="panel-card__field panel-card__field--muted panel-card__field--sep">Entrevista por voz en curso</p>
+              <div class="wave" id="wave">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <p class="panel-card__foot"><span class="dot-ok"></span> Sin agenda: el candidato entra cuando puede</p>
+            </div>
+          </div>
+
+          <div class="stage__panel" data-panel="4">
+            <div class="panel-card">
+              <p class="panel-card__head">Tu lista corta</p>
+              <ul class="ranklist">
+                <li><b>1</b><span>Candidata A</span><em class="is-high">87</em></li>
+                <li><b>2</b><span>Candidato B</span><em>81</em></li>
+                <li><b>3</b><span>Candidata C</span><em>74</em></li>
+              </ul>
+              <ul class="minibars minibars--tight">
+                <li><span>CV</span><i class="minibar"><b style="--w:78%;--c:var(--brand)"></b></i><em>25%</em></li>
+                <li><span>Examen</span><i class="minibar"><b style="--w:88%;--c:var(--gold)"></b></i><em>40%</em></li>
+                <li><span>Entrevista</span><i class="minibar"><b style="--w:92%;--c:var(--signal)"></b></i><em>35%</em></li>
+              </ul>
+              <p class="panel-card__foot">Cada puntaje se abre y se explica</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pasos -->
+      <ol class="hiw__steps" id="hiw-steps">
+        <li class="step" data-step="1">
+          <p class="step__n">01</p>
+          <h3 class="step__title">Publicas el puesto</h3>
+          <p class="step__text">Describes la vacante una sola vez: responsabilidades, requisitos y qué tan exigente quieres ser. Obtienes un enlace de postulación que pegas donde ya publicas.</p>
+        </li>
+        <li class="step" data-step="2">
+          <p class="step__n">02</p>
+          <h3 class="step__title">VAEL filtra y evalúa los CVs</h3>
+          <p class="step__text">Cada postulación se lee contra tu perfil real de puesto y recibe un puntaje con su resumen: qué cumple, qué le falta y qué no cuadra. Quien no llega al mínimo no avanza, y nadie en tu equipo pierde la mañana en eso.</p>
+        </li>
+        <li class="step" data-step="3">
+          <p class="step__n">03</p>
+          <h3 class="step__title">Aplica el examen y la entrevista asistida</h3>
+          <p class="step__text">Los que avanzan reciben un examen hecho para ese puesto y después una entrevista por voz, disponible a cualquier hora. Todo queda calificado, transcrito y guardado.</p>
+        </li>
+        <li class="step" data-step="4">
+          <p class="step__n">04</p>
+          <h3 class="step__title">Recibes el ranking con el detalle de cada puntaje</h3>
+          <p class="step__text">Entras al proceso cuando ya hay finalistas: un puntaje comparable por persona y, debajo, de dónde salió cada punto. Entrevistas tú a los que valen la hora.</p>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FEATURES ============================ -->
+<section class="band" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <header class="sec-head reveal">
+      <p class="eyebrow">Qué obtienes</p>
+      <h2 class="sec-title" id="features-title">Menos trabajo manual, mejores decisiones.</h2>
+    </header>
+
+    <div class="bento">
+      <article class="f-card f-card--lg reveal">
+        <div class="f-card__text">
+          <h3 class="f-card__title">Un ranking que puedes defender en una reunión</h3>
+          <p class="f-card__p">Un número por candidato, comparable entre todos, y debajo el detalle que lo sustenta: qué respondió, qué demostró y qué pesó más. Cuando te pregunten por qué ese y no otro, abres la pantalla.</p>
+        </div>
+        <div class="f-viz" id="f-viz" aria-hidden="true">
+          <ul class="f-viz__rows">
+            <li class="is-on"><span>Candidata A</span><i class="minibar"><b style="--w:87%;--c:var(--signal)"></b></i><em>87</em></li>
+            <li><span>Candidato B</span><i class="minibar"><b style="--w:81%;--c:var(--signal)"></b></i><em>81</em></li>
+            <li><span>Candidata C</span><i class="minibar"><b style="--w:74%;--c:var(--brand)"></b></i><em>74</em></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="f-card reveal" style="--d:60ms">
+        <span class="f-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false"><path d="M4 5h11M4 10h16M4 15h8M4 20h12" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </span>
+        <h3 class="f-card__title">Deja de leer CVs uno por uno</h3>
+        <p class="f-card__p">Sube el volumen que quieras: cada CV se lee, se resume y se puntúa contra el puesto, no contra una plantilla genérica.</p>
+      </article>
+
+      <article class="f-card reveal" style="--d:120ms">
+        <span class="f-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false"><rect x="4" y="3" width="16" height="18" rx="3" fill="none" stroke="var(--brand)" stroke-width="2.2"/><path d="M8.5 11.5l2.3 2.6L16 8.8" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h3 class="f-card__title">Un examen distinto para cada puesto</h3>
+        <p class="f-card__p">Las preguntas salen del perfil que publicaste y del CV de la persona. Nadie resuelve el mismo examen que el candidato anterior.</p>
+      </article>
+
+      <article class="f-card reveal" style="--d:180ms">
+        <span class="f-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3.5v9.5" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M9 6.3a3.6 3.6 0 016 0" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M5.5 12a6.5 6.5 0 0013 0" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M12 18.5V21" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>
+        </span>
+        <h3 class="f-card__title">Entrevistas sin cuadrar agendas</h3>
+        <p class="f-card__p">La primera entrevista ocurre cuando el candidato puede, incluso un domingo. Tú lees la transcripción y escuchas lo que importa.</p>
+      </article>
+
+      <article class="f-card reveal" style="--d:240ms">
+        <span class="f-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3l7 3v5c0 4.4-3 8-7 10-4-2-7-5.6-7-10V6l7-3z" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="11" r="2.2" fill="var(--accent)"/></svg>
+        </span>
+        <h3 class="f-card__title">Sabes si la evaluación fue honesta</h3>
+        <p class="f-card__p">Cada evaluación llega con una señal de integridad en verde, ámbar o rojo, y el detalle de lo que se registró durante la prueba.</p>
+      </article>
+
+      <article class="f-card reveal" style="--d:300ms">
+        <span class="f-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false"><path d="M4 7.5h16V20H4z" fill="none" stroke="var(--brand)" stroke-width="2.2"/><path d="M9 7.5V4.5h6v3" fill="none" stroke="var(--brand)" stroke-width="2.2"/><path d="M8.5 13.5h7" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </span>
+        <h3 class="f-card__title">El buen candidato que no quedó, no se pierde</h3>
+        <p class="f-card__p">Los perfiles fuertes que quedaron fuera por un cupo se guardan ordenados y con su puntaje. La próxima vacante arranca con una lista, no en cero.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= SCORE TRANSPARENTE ========================= -->
+<section class="band band--alt score" id="score" aria-labelledby="score-title">
+  <div class="wrap score__layout">
+    <div class="score__copy reveal">
+      <p class="eyebrow">El puntaje, abierto</p>
+      <h2 class="sec-title" id="score-title">Un número que se puede auditar, y los pesos los pones tú.</h2>
+      <p class="sec-sub">El puntaje final no sale de una caja negra. Es una suma que puedes revisar línea por línea, y si para tu puesto el examen importa más que el CV, lo cambias.</p>
+      <ul class="checks">
+        <li>Ves de dónde salió cada punto, por candidato y por etapa.</li>
+        <li>Mueves los pesos por vacante: un puesto operativo y uno de liderazgo no se miden igual.</li>
+        <li>Si tu jefe pregunta, la respuesta es una pantalla, no una opinión.</li>
+      </ul>
+      <a class="btn btn--primary" href="#demo">Quiero verlo con mi vacante</a>
+    </div>
+
+    <figure class="formula reveal" style="--d:100ms" id="formula">
+      <figcaption class="formula__cap">Puntaje final de un candidato</figcaption>
+
+      <div class="formula__total">
+        <span class="formula__total-n" id="score-total">0</span>
+        <span class="formula__total-u">/100</span>
+      </div>
+
+      <ul class="gauges">
+        <li class="gauge" style="--c:var(--brand)">
+          <p class="gauge__top"><span>CV</span><em><b data-count="25">0</b>%</em></p>
+          <span class="gauge__track"><b class="gauge__fill" style="--p:0.25"></b></span>
+          <p class="gauge__note">Experiencia y requisitos cumplidos</p>
+        </li>
+        <li class="gauge" style="--c:var(--gold)">
+          <p class="gauge__top"><span>Examen</span><em><b data-count="40">0</b>%</em></p>
+          <span class="gauge__track"><b class="gauge__fill" style="--p:0.40"></b></span>
+          <p class="gauge__note">Lo que realmente sabe hacer</p>
+        </li>
+        <li class="gauge" style="--c:var(--signal)">
+          <p class="gauge__top"><span>Entrevista</span><em><b data-count="35">0</b>%</em></p>
+          <span class="gauge__track"><b class="gauge__fill" style="--p:0.35"></b></span>
+          <p class="gauge__note">Comunicación, criterio y encaje</p>
+        </li>
+      </ul>
+
+      <p class="formula__foot">Pesos de referencia. Cada vacante puede usar los suyos.</p>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================ PARA QUIÉN ============================ -->
+<section class="band" id="para-quien" aria-labelledby="pq-title">
+  <div class="wrap">
+    <header class="sec-head reveal">
+      <p class="eyebrow">Para quién es</p>
+      <h2 class="sec-title" id="pq-title">Si contratar es parte de tu semana, VAEL es para ti.</h2>
+    </header>
+
+    <div class="cols-3">
+      <article class="who reveal">
+        <p class="who__kicker">Startups que contratan rápido</p>
+        <h3 class="who__title">Necesitas al indicado este mes, no el próximo trimestre</h3>
+        <p class="who__text">Sin equipo de reclutamiento y con el fundador leyendo CVs de madrugada. VAEL se queda con el filtro y el primer contacto; tú solo entrevistas a los finalistas.</p>
+      </article>
+
+      <article class="who reveal" style="--d:80ms">
+        <p class="who__kicker">Agencias de reclutamiento</p>
+        <h3 class="who__title">Presentas candidatos con evidencia, no con un CV bonito</h3>
+        <p class="who__text">Cada terna va con puntaje, examen y entrevista documentados. Tu cliente entiende por qué esos tres, y tú atiendes más búsquedas con el mismo equipo.</p>
+      </article>
+
+      <article class="who reveal" style="--d:160ms">
+        <p class="who__kicker">Áreas de RRHH con alto volumen</p>
+        <h3 class="who__title">Decenas de vacantes abiertas y cientos de postulantes en cada una</h3>
+        <p class="who__text">Un mismo criterio aplicado a todos, trazable y consistente entre reclutadores. Reportas el estado de cada proceso sin pedirle una hoja de cálculo a nadie.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ NOSOTROS ============================ -->
+<section class="band band--alt" id="nosotros" aria-labelledby="us-title">
+  <div class="wrap">
+    <header class="sec-head reveal">
+      <p class="eyebrow">Quiénes somos</p>
+      <h2 class="sec-title" id="us-title">Construimos VAEL porque el buen candidato se pierde en la pila.</h2>
+      <p class="sec-sub">Vimos procesos donde la decisión final dependía de quién llegó primero a la bandeja de entrada. Nos pareció un problema que merecía producto, no más horas extra.</p>
+    </header>
+
+    <div class="founders">
+      <article class="founder reveal">
+        <div class="founder__photo ph-box">
+          <span>{{DATO_PENDIENTE: foto de Gabriel Llanos — 800×800 px}}</span>
+        </div>
+        <h3 class="founder__name">Gabriel Llanos</h3>
+        <p class="founder__role">Cofundador · <span class="ph">{{DATO_PENDIENTE: rol exacto de Gabriel}}</span></p>
+        <p class="founder__quote">«Un proceso de selección debería terminar con una decisión que puedas explicar en una frase y sustentar en una pantalla.»</p>
+      </article>
+
+      <article class="founder reveal" style="--d:100ms">
+        <div class="founder__photo ph-box">
+          <span>{{DATO_PENDIENTE: foto de Diego Nina — 800×800 px}}</span>
+        </div>
+        <h3 class="founder__name">Diego Nina</h3>
+        <p class="founder__role">Cofundador · <span class="ph">{{DATO_PENDIENTE: rol exacto de Diego}}</span></p>
+        <p class="founder__quote">«Queremos que la persona correcta llegue a la entrevista aunque haya postulado la número 287.»</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FAQ ============================ -->
+<section class="band" id="faq" aria-labelledby="faq-title">
+  <div class="wrap wrap--narrow">
+    <header class="sec-head reveal">
+      <p class="eyebrow">Preguntas</p>
+      <h2 class="sec-title" id="faq-title">Lo que nos preguntan antes de empezar.</h2>
+    </header>
+
+    <div class="faq reveal">
+      <details class="qa">
+        <summary><span>¿La IA reemplaza al entrevistador humano?</span><i class="qa__plus" aria-hidden="true"></i></summary>
+        <div class="qa__body"><p>No. Reemplaza la parte del proceso que nadie quiere hacer: leer cientos de CVs y sostener primeras entrevistas de descarte. La decisión de contratar sigue siendo tuya, y la entrevista que importa la haces tú, con la información ya ordenada y sin gastar la hora en alguien que no calificaba.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary><span>¿Cómo evitan el sesgo?</span><i class="qa__plus" aria-hidden="true"></i></summary>
+        <div class="qa__body"><p>Todos los candidatos se miden con el mismo criterio, el que tú definiste en la vacante, y cada puntaje queda abierto: puedes ver qué lo subió y qué lo bajó. Eso hace visible algo que en un proceso manual queda invisible, y te permite corregirlo. VAEL no sustituye tu política de diversidad ni tu revisión humana: te da con qué auditarlas.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary><span>¿Qué pasa con los datos de mis candidatos?</span><i class="qa__plus" aria-hidden="true"></i></summary>
+        <div class="qa__body"><p>Son tuyos. Se guardan en un espacio aislado por empresa, con accesos por rol y registro de quién revisó cada evaluación. No se comparten con otras empresas ni se usan para entrenar modelos, y puedes solicitar la eliminación de los datos de un candidato o de un proceso completo. Almacenamiento y retención: <span class="ph">{{DATO_PENDIENTE: región de almacenamiento y política de retención}}</span>.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary><span>¿Se integra con lo que ya uso?</span><i class="qa__plus" aria-hidden="true"></i></summary>
+        <div class="qa__body"><p>VAEL funciona por sí solo: publicas el puesto, compartes el enlace de postulación donde ya publicas y recibes los resultados. Integraciones disponibles hoy: <span class="ph">{{DATO_PENDIENTE: lista de integraciones y sistemas compatibles}}</span>. Si trabajas con una herramienta específica, cuéntanoslo en la demo.</p></div>
+      </details>
+
+      <details class="qa">
+        <summary><span>¿Cuánto cuesta?</span><i class="qa__plus" aria-hidden="true"></i></summary>
+        <div class="qa__body"><p>Planes y precios: <span class="ph">{{DATO_PENDIENTE: precio y estructura de planes}}</span>. Durante el acceso temprano trabajamos con un grupo reducido de equipos para ajustar el producto a procesos reales; escríbenos y te decimos qué incluye.</p></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ CTA FINAL ============================ -->
+<section class="cta" id="demo" aria-labelledby="cta-title">
+  <div class="wrap wrap--narrow cta__inner">
+    <h2 class="cta__title" id="cta-title">Trae tu próxima vacante. Te mostramos el ranking con tus propios candidatos.</h2>
+    <p class="cta__sub">Estamos abriendo acceso temprano a equipos que contratan ahora. Déjanos tu correo y coordinamos una demo de 20 minutos.</p>
+
+    <form class="cta__form" id="demo-form" novalidate
+          action="{{DATO_PENDIENTE: endpoint del formulario de demo}}" method="post">
+      <label class="sr-only" for="email">Correo de trabajo</label>
+      <input class="cta__input" id="email" name="email" type="email" inputmode="email"
+             autocomplete="email" placeholder="tu@empresa.com" required />
+      <button class="btn btn--signal" type="submit">Solicitar demo</button>
+    </form>
+    <p class="cta__msg" id="form-msg" role="status" aria-live="polite"></p>
+
+    <p class="cta__fine">Sin tarjeta y sin instalar nada. Te respondemos al correo que dejes aquí.</p>
+  </div>
+</section>
+</main>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <div class="footer__brand">
+      <a class="logo" href="#hero" aria-label="VAEL, inicio">
+        <span class="logo__mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true" focusable="false">
+            <rect width="32" height="32" rx="9" fill="var(--brand)"></rect>
+            <path d="M9 13.5l4.6 6.2L23 9.8" fill="none" stroke="var(--signal)" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </span>
+        <span class="logo__word">VAEL</span>
+      </a>
+      <p class="footer__tag">Reclutamiento inteligente con puntajes que puedes sustentar.</p>
+    </div>
+
+    <nav class="footer__col" aria-label="Producto">
+      <h2 class="footer__h">Producto</h2>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#features">Qué obtienes</a>
+      <a href="#score">El puntaje</a>
+      <a href="#para-quien">Para quién es</a>
+    </nav>
+
+    <nav class="footer__col" aria-label="Compañía">
+      <h2 class="footer__h">Compañía</h2>
+      <a href="#nosotros">Quiénes somos</a>
+      <a href="#faq">Preguntas frecuentes</a>
+      <a href="#demo">Solicitar demo</a>
+    </nav>
+
+    <div class="footer__col">
+      <h2 class="footer__h">Contacto</h2>
+      <a href="mailto:{{DATO_PENDIENTE: correo de contacto}}">{{DATO_PENDIENTE: correo de contacto}}</a>
+      <p class="footer__muted">{{DATO_PENDIENTE: ciudad y país de la empresa}}</p>
+    </div>
+  </div>
+
+  <div class="wrap footer__bottom">
+    <p>© <span id="year">2026</span> VAEL. Todos los derechos reservados.</p>
+    <p class="footer__legal">
+      <a href="{{DATO_PENDIENTE: URL del aviso de privacidad}}">Aviso de privacidad</a>
+      <span aria-hidden="true">·</span>
+      <a href="{{DATO_PENDIENTE: URL de términos de servicio}}">Términos</a>
+    </p>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>
