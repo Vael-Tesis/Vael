@@ -1,8 +1,9 @@
 name: Deploy
 
+# Despliegue solo manual hasta DEP-C-05 (roadmap 11_roadmap_post_E2.md, PLN-C-04).
+# La infraestructura AWS aún no está aprovisionada.
 "on":
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
