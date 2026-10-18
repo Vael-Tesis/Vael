@@ -1,6 +1,6 @@
 # Registro de decisiones (ADR)
 
-Cada decisión de implementación se registra como `DEC-NNN` en formato ADR: contexto, decisión, alternativas descartadas, trade-off aceptado, consecuencias y validación. Ninguna decisión se edita para cambiar su sentido: una decisión nueva la reemplaza y lo indica.
+Cada decisión de implementación se registra como `DEC-NNN` en formato ADR (*Architecture Decision Record*, registro de decisión de arquitectura): contexto, decisión, alternativas descartadas, trade-off aceptado, consecuencias y validación. Una decisión aprobada no se edita para cambiar su sentido: una decisión nueva la modifica o la reemplaza y lo indica.
 
 | ID | Decisión | Registro |
 |---|---|---|
@@ -18,5 +18,9 @@ Cada decisión de implementación se registra como `DEC-NNN` en formato ADR: con
 | DEC-012 | Redis fuera del alcance | [DEC-012](DEC-012-redis-fuera-de-alcance.md) |
 | DEC-013 | Correo de cierre a los descartados | [DEC-013](DEC-013-notificacion-descartados.md) |
 | DEC-014 | Feed XML en la lista cerrada de operaciones del sistema | [DEC-014](DEC-014-feed-xml-lista-cerrada.md) |
+| DEC-015 | Alta de empresas mediante un comando de administración | [DEC-015](DEC-015-alta-empresa-script.md) |
+| DEC-016 | Procesamiento asíncrono con SQS + Lambda (punto 6 modificado por DEC-018) | [DEC-016](DEC-016-asincronia-sqs-lambda.md) |
+| DEC-017 | Metodología: plan por fases con sprints semanales basados en Scrum | [DEC-017](DEC-017-metodologia-hibrida.md) |
+| DEC-018 | Topología mínima en AWS sin NAT Gateway; dominio `vael.work` | [DEC-018](DEC-018-topologia-aws.md) |
 
-La siguiente decisión usa el número DEC-015.
+La siguiente decisión usa el número DEC-019.
