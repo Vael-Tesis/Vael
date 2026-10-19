@@ -24,5 +24,6 @@ Cada decisión de implementación se registra como `DEC-NNN` en formato ADR (*Ar
 | DEC-018 | Topología mínima en AWS sin NAT Gateway; dominio `vael.work` | [DEC-018](DEC-018-topologia-aws.md) |
 
 | DEC-019 | Copia de los documentos de diseño en `docs/diseno/` | [DEC-019](DEC-019-copia-diseno-repositorio.md) |
+| DEC-020 | Herramientas: GitHub Projects + Excel del curso; Playwright para E2E | [DEC-020](DEC-020-herramientas-tablero-e2e.md) |
 
-La siguiente decisión usa el número DEC-020.
+La siguiente decisión usa el número DEC-021.
