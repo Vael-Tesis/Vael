@@ -23,4 +23,6 @@ Cada decisión de implementación se registra como `DEC-NNN` en formato ADR (*Ar
 | DEC-017 | Metodología: plan por fases con sprints semanales basados en Scrum | [DEC-017](DEC-017-metodologia-hibrida.md) |
 | DEC-018 | Topología mínima en AWS sin NAT Gateway; dominio `vael.work` | [DEC-018](DEC-018-topologia-aws.md) |
 
-La siguiente decisión usa el número DEC-019.
+| DEC-019 | Copia de los documentos de diseño en `docs/diseno/` | [DEC-019](DEC-019-copia-diseno-repositorio.md) |
+
+La siguiente decisión usa el número DEC-020.
