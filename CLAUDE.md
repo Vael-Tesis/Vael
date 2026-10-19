@@ -1,17 +1,17 @@
 # CLAUDE.md — VAEL
 
-Instrucciones para Claude Code en este repositorio. Este archivo **se deriva** de la documentación del proyecto (Drive `VAEL/Docs`, docs 00 a 16) y de los ADRs de `docs/decisiones/`. Si este archivo contradice a un ADR, manda el ADR. Versión 2.1 — 2026-10-18.
+Instrucciones para Claude Code en este repositorio. Este archivo **se deriva** de la documentación del proyecto (Drive `VAEL/Docs`, la fuente de verdad) y de los ADRs de `docs/decisiones/`. Para el detalle de diseño, lee las copias en `docs/diseno/` (DEC-019): **no las edites**; si encuentras una contradicción, detente y avisa. Si este archivo contradice a un ADR, manda el ADR. Versión 2.2 — 2026-10-18.
 
 ## 1. Qué es VAEL
 
-Plataforma SaaS multiempresa de apoyo a la preselección de personal para empresas peruanas, con IA bajo supervisión humana. Dos perfiles: **Admin RRHH** (ruta A, este ciclo) y **Candidato** (ruta B, siguiente ciclo). El proceso tiene 19 etapas (doc 07): postulación → análisis de CV → examen técnico → entrevista por voz con EVA (Gemini Live) → puntaje final → ranking.
+Plataforma SaaS multiempresa de apoyo a la preselección de personal para empresas peruanas, con IA bajo supervisión humana. Dos perfiles: **Admin RRHH** (ruta A, este ciclo) y **Candidato** (ruta B, siguiente ciclo). El proceso tiene 19 etapas (`docs/diseno/07_flujo_proceso.md`): postulación → análisis de CV → examen técnico → entrevista por voz con EVA (Gemini Live) → puntaje final → ranking.
 
 **Principio rector: la IA recomienda; RRHH decide.**
 
 ## 2. Antes de cualquier tarea
 
 1. La tarea viene del Sprint Backlog del sprint en curso (roadmap `11_roadmap_post_E2.md` y Product Backlog). Una sesión = una tarea. Pide su ID y su criterio de aceptación (CA) si no los tienes.
-2. Lee los ADRs de `docs/decisiones/` que afecten a la tarea.
+2. Lee los ADRs de `docs/decisiones/` y los documentos de `docs/diseno/` que afecten a la tarea (servicios: `08_servicios_negocio.md`; vistas: `15_matriz_admin_y_endpoints.md`; requerimientos: `16_requerimientos_admin.md`; datos de prueba: `13_datos_semilla.md`).
 3. Trabaja en `feature/<ID>` creada desde `develop`. **Nunca** commitees en `main` ni en `develop`.
 4. **Detente y pregunta** si la tarea exige un endpoint o campo no documentado, contradice un ADR, requiere credenciales o genera costos en AWS, o si el CA es ambiguo.
 5. No modifiques `deploy.yml` ni recursos de AWS fuera de la etapa de Despliegue.
@@ -52,7 +52,7 @@ Plataforma SaaS multiempresa de apoyo a la preselección de personal para empres
 
 - Una pantalla migrada es `.tsx`, usa solo el cliente tipado generado desde `/openapi.json`, no tiene `any` explícito sin justificar y no usa mocks.
 - Los datos simulados (`devFallback`) solo se activan con `VITE_MOCKS=true`, desactivado por defecto.
-- Si el frontend necesita una ruta o un campo que no existe en el OpenAPI, **no lo inventes**: se agrega primero en el backend y en el doc 06.
+- Si el frontend necesita una ruta o un campo que no existe en el OpenAPI, **no lo inventes**: se agrega primero en el backend y en el doc 06 del Drive (y su copia en `docs/diseno/`).
 - Colores solo mediante las variables CSS de la paleta de VAEL; el Figma prevalece sobre la landing.
 
 ## 7. Metodología (DEC-017)
@@ -66,7 +66,7 @@ Enfoque iterativo e incremental basado en Scrum, con sprints de 1 semana. Produc
 ```
 backend/app/
   core/       config, database, dependencies (get_tenant), gemini, proctoring, security
-  models/     un archivo por dominio (doc 05)
+  models/     un archivo por dominio (`docs/diseno/05_modelos_bd.md`)
   routers/    auth, areas, plantillas, vacantes, candidatos, evaluaciones, entrevista, publico
   schemas/
   services/   analisis_cv, examen, entrevista_ia, correos, vacante_ia, aws_services
@@ -76,9 +76,11 @@ backend/alembic/versions/
 backend/tests/
 frontend/src/
 docs/decisiones/   ADRs
+docs/diseno/       copias de los docs de diseño del Drive (no editar)
+scripts/           sincronizar-diseno.ps1
 ```
 
-## 9. Estados del candidato (doc 05)
+## 9. Estados del candidato (`docs/diseno/05_modelos_bd.md`)
 
 `postulado` → `cv_analizando` → `cv_por_confirmar` → **decisión** → `cv_aprobado` | `cv_rechazado`
 `examen_pendiente` → `examen_rendido` → `examen_por_confirmar` → **decisión** → `examen_aprobado` | `examen_rechazado`
@@ -88,9 +90,9 @@ docs/decisiones/   ADRs
 
 ## 10. API
 
-El contrato detallado es el OpenAPI de FastAPI (`/openapi.json`). El doc 06 lista las rutas, los permisos y los cambios planificados. Niveles de permiso: público, candidato, autenticado, reclutador+ (`admin`, `gerente`, `reclutador`), admin o gerente, admin.
+El contrato detallado es el OpenAPI de FastAPI (`/openapi.json`). `docs/diseno/06_api_endpoints.md` lista las rutas, los permisos y los cambios planificados. Niveles de permiso: público, candidato, autenticado, reclutador+ (`admin`, `gerente`, `reclutador`), admin o gerente, admin.
 
-## 11. Proctoring (doc 07)
+## 11. Proctoring (`docs/diseno/07_flujo_proceso.md`)
 
 Examen: `perdida_foco` 3, `cambio_ventana` 4, `pantalla_dividida` 3, `inactividad` 2, `copy_paste` 6, `click_derecho` 5, `devtools` 8.
 Entrevista: `multiples_voces` 10, `sin_rostro` 8, `segunda_persona` 10.
@@ -120,7 +122,7 @@ El CI ejecuta lo mismo y bloquea el merge si falla.
 
 ## 14. Variables de entorno
 
-Ver `backend/.env.example` y el doc 09. Nunca guardes valores reales de secretos en el repositorio. En producción, `DEBUG=false` (deshabilita `/docs`).
+Ver `backend/.env.example`; el detalle de infraestructura está en el doc 09 del Drive. Nunca guardes valores reales de secretos en el repositorio. En producción, `DEBUG=false` (deshabilita `/docs`).
 
 ## 15. Desarrollo local
 
