@@ -24,7 +24,9 @@ class Settings(BaseSettings):
 
     # Google Gemini
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3-flash"
+    # ID verificado contra la API en DEV-C-04 (gemini-3-flash no existe). Se fija una versión
+    # concreta, no un alias como -latest, para que las mediciones del OE2 sean reproducibles.
+    gemini_model: str = "gemini-3.8-flash"
     gemini_live_model: str = "gemini-2.5-flash-native-audio-preview-12-2025"
 
     # AWS

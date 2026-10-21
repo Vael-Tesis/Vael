@@ -35,7 +35,7 @@ jobs:
       ACCESS_TOKEN_EXPIRE_MINUTES: "60"
       REFRESH_TOKEN_EXPIRE_DAYS: "7"
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_MODEL: gemini-3-flash
+      GEMINI_MODEL: gemini-3.8-flash
       GEMINI_LIVE_MODEL: gemini-2.5-flash-native-audio-preview-12-2025
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
