@@ -10,6 +10,7 @@ from sqlmodel import select
 from app.core.config import settings
 from app.core.database import async_session_factory
 from app.core.gemini import consultar_gemini_json
+from app.core.logs import medir_operacion, tenant_actual
 from app.models.base import utcnow
 from app.models.candidato import Candidato, EstadoCandidato
 from app.models.entrevista import DimensionEvaluacion, EntrevistaIA, PlantillaEvaluacion
@@ -268,8 +269,10 @@ async def analizar_entrevista_candidato(entrevista_id: str) -> None:
             result = await db.exec(statement)
             dimensiones = list(result.all())
 
+        tenant_actual.set(entrevista.tenant_id)
         try:
-            dimensiones_json, nota_entrevista = await analizar_entrevista(entrevista.transcripcion, dimensiones)
+            with medir_operacion(logger, "analisis_entrevista", entrevista_id=entrevista_id):
+                dimensiones_json, nota_entrevista = await analizar_entrevista(entrevista.transcripcion, dimensiones)
         except Exception:
             logger.exception("Falló el análisis de la entrevista %s", entrevista_id)
             return
