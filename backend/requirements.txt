@@ -47,7 +47,7 @@ Jinja2==3.1.4
 # Envío de correo SMTP async en desarrollo (services/correos.py) — en producción, SES vía aws_services.py
 aiosmtplib==3.0.2
 
-# AWS — Rekognition, Transcribe, Comprehend, S3, SQS, SES (services/aws_services.py)
+# AWS — Rekognition (solo detección de rostros), Transcribe, S3, SQS, SES (services/aws_services.py)
 # boto3 fijado en el rango que exige aiobotocore 2.15.2 (dependencia de aioboto3 13.2.0):
 # >=1.35.16,<1.35.37 — no puede ir más abajo (1.35.0, como estaba) ni más arriba sin
 # actualizar aioboto3 también.
