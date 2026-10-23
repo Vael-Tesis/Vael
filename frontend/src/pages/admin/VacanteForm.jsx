@@ -3,15 +3,15 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import api from '../../services/api.js'
-import { sinBackend } from '../../utils/devFallback.js'
-import Card from '../../components/ui/Card.jsx'
-import Button from '../../components/ui/Button.jsx'
-import Input from '../../components/ui/Input.jsx'
+import api from '../../services/api'
+import { sinBackend } from '../../utils/devFallback'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Input from '../../components/ui/Input'
 
 const PASOS = ['Información básica', 'Requisitos', 'Condiciones', 'Configuración IA']
 
-// Solo se usa como fallback si sinBackend(err) — ver utils/devFallback.js
+// Solo se usa como fallback si sinBackend(err) — ver utils/devFallback.ts
 const AREAS_FALLBACK_DEV = [
   { id: '1', nombre: 'Tecnología', codigo_corto: 'TI' },
   { id: '2', nombre: 'Diseño', codigo_corto: 'DIS' },

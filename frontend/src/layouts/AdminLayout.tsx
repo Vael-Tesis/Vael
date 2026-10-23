@@ -1,6 +1,20 @@
+import type { Dispatch, SetStateAction } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+
+export type Tema = 'light' | 'dark'
+
+interface UsuarioGuardado {
+  nombre?: string
+  apellidos?: string
+  rol?: string
+}
+
+interface AdminLayoutProps {
+  theme: Tema
+  setTheme: Dispatch<SetStateAction<Tema>>
+}
 
 const NAV = [
   {
@@ -31,9 +45,9 @@ const NAV = [
   },
 ]
 
-export default function AdminLayout({ theme, setTheme }) {
+export default function AdminLayout({ theme, setTheme }: AdminLayoutProps) {
   const navigate = useNavigate()
-  const user = JSON.parse(localStorage.getItem('vael_user') || '{}')
+  const user: UsuarioGuardado = JSON.parse(localStorage.getItem('vael_user') || '{}')
 
   function handleLogout() {
     localStorage.removeItem('vael_token')
@@ -64,10 +78,10 @@ export default function AdminLayout({ theme, setTheme }) {
         }}>
           <div style={{
             width: 28, height: 28,
-            background: 'var(--text-primary)',
+            background: 'var(--brand)',
             borderRadius: 6,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--bg-card)',
+            color: 'var(--on-brand)',
             fontSize: 11, fontWeight: 600, letterSpacing: '-0.5px',
           }}>VA</div>
           <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-primary)' }}>VAEL</span>
@@ -97,8 +111,8 @@ export default function AdminLayout({ theme, setTheme }) {
                     marginBottom: 1,
                     fontSize: 13,
                     fontWeight: isActive ? 500 : 400,
-                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    background: isActive ? 'var(--bg-page)' : 'transparent',
+                    color: isActive ? 'var(--brand)' : 'var(--text-secondary)',
+                    background: isActive ? 'var(--brand-soft)' : 'transparent',
                     textDecoration: 'none',
                     transition: 'background 120ms ease, color 120ms ease',
                   })}
@@ -130,7 +144,7 @@ export default function AdminLayout({ theme, setTheme }) {
             {(user.nombre?.[0] || 'U') + (user.apellidos?.[0] || '')}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', truncate: true }}>
+            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user.nombre || 'Usuario'}
             </p>
             <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>{user.rol || 'admin'}</p>

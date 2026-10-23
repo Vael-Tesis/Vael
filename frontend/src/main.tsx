@@ -4,8 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import './index.css'
-import App from './App.jsx'
-import ErrorBoundary from './components/ErrorBoundary.jsx'
+import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,7 +16,10 @@ const queryClient = new QueryClient({
   },
 })
 
-createRoot(document.getElementById('root')).render(
+const raiz = document.getElementById('root')
+if (!raiz) throw new Error('No se encontró el elemento #root en index.html')
+
+createRoot(raiz).render(
   <StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

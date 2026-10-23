@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import api from '../../services/api.js'
-import Button from '../../components/ui/Button.jsx'
+import api from '../../services/api'
+import Button from '../../components/ui/Button'
 
 const ETAPAS = {
   CONSENTIMIENTO: 'consentimiento',

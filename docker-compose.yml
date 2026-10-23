@@ -43,7 +43,9 @@ services:
     container_name: vael-frontend
     restart: unless-stopped
     environment:
-      VITE_API_URL: http://localhost:8000
+      # Dentro de la red de docker-compose el backend se alcanza por el nombre del servicio.
+      API_PROXY_TARGET: http://backend:8000
+      VITE_MOCKS: "false"
     ports:
       - "5173:5173"
     volumes:
