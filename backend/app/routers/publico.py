@@ -1,18 +1,18 @@
 """Endpoints públicos sin autenticación — formulario de postulación — /api/publico/."""
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import EmailStr
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.database import get_db
+from app.core.despacho import TipoTarea, despachar_tarea
 from app.models.base import new_id
 from app.models.candidato import Candidato
 from app.models.usuario import Empresa
 from app.models.vacante import EstadoVacante, Vacante
 from app.schemas.publico import PostulacionResponse, VacantePublicaResponse
-from app.services.analisis_cv import analizar_cv_candidato
 from app.services.aws_services import subir_archivo
 
 router = APIRouter(prefix="/api/publico", tags=["publico"])
@@ -78,7 +78,6 @@ async def obtener_vacante_publica(
 @router.post("/postular/{codigo}/enviar", response_model=PostulacionResponse, status_code=status.HTTP_201_CREATED)
 async def enviar_postulacion(
     codigo: str,
-    background_tasks: BackgroundTasks,
     db: Annotated[AsyncSession, Depends(get_db)],
     nombre: Annotated[str, Form()],
     apellidos: Annotated[str, Form()],
@@ -114,7 +113,7 @@ async def enviar_postulacion(
     await db.commit()
     await db.refresh(candidato)
 
-    background_tasks.add_task(analizar_cv_candidato, candidato.id)
+    await despachar_tarea(TipoTarea.ANALISIS_CV, {"tenant_id": candidato.tenant_id, "candidato_id": candidato.id})
 
     return PostulacionResponse(candidato_id=candidato.id, mensaje="Postulación recibida correctamente")
 
