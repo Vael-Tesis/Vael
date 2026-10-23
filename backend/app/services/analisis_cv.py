@@ -10,6 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.database import async_session_factory
 from app.core.gemini import como_lista_str, consultar_gemini_json
+from app.core.logs import medir_operacion, tenant_actual
 from app.core.security import emitir_token_candidato
 from app.models.area import Area
 from app.models.base import utcnow
@@ -178,9 +179,11 @@ async def analizar_cv_candidato(candidato_id: str) -> None:
             return
 
         area = await db.get(Area, vacante.area_id)
+        tenant_actual.set(candidato.tenant_id)
 
         try:
-            await analizar_cv(candidato, vacante, area, db)
+            with medir_operacion(logger, "analisis_cv", candidato_id=candidato_id):
+                await analizar_cv(candidato, vacante, area, db)
         except Exception:
             logger.exception("Falló el análisis de CV del candidato %s", candidato_id)
             candidato.estado = EstadoCandidato.POSTULADO

@@ -1,6 +1,7 @@
 """Configuración de la aplicación cargada desde variables de entorno (.env)."""
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -62,6 +63,13 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Indica si el entorno actual es de producción."""
         return self.environment.lower() == "production"
+
+    @model_validator(mode="after")
+    def _sin_debug_en_produccion(self) -> "Settings":
+        """Impide arrancar con DEBUG=true en producción (expondría /docs y detalles de errores)."""
+        if self.is_production and self.debug:
+            raise ValueError("DEBUG debe ser false cuando ENVIRONMENT=production")
+        return self
 
 
 @lru_cache
