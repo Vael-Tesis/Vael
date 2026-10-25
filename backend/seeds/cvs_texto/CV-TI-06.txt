@@ -1,0 +1,16 @@
+Luis Fernández Vega
+luis.fernandez@example.com | +51 900 000 106 | Lima, Perú
+
+PERFIL
+Desarrollador web con 6 años de experiencia en PHP y Laravel. Sin experiencia en Python.
+
+EXPERIENCIA
+2020 - actualidad | Desarrollador PHP | Tienda Virtual Ejemplo (ficticia)
+- Desarrollo de un comercio electrónico con Laravel y MySQL.
+2019 - 2020 | Desarrollador WordPress | Freelance
+
+FORMACIÓN
+Computación e Informática, Instituto Superior de Ejemplo, 2018.
+
+HABILIDADES
+PHP, Laravel, MySQL, WordPress, JavaScript, jQuery.

@@ -70,11 +70,12 @@ backend/app/
   models/     un archivo por dominio (`docs/diseno/05_modelos_bd.md`)
   routers/    auth, areas, plantillas, vacantes, candidatos, evaluaciones, entrevista, publico
   schemas/
-  scripts/    crear_roles (DEC-010)
+  scripts/    crear_roles (DEC-010), crear_empresa (DEC-015), semillas y generar_cvs (doc 13)
   services/   analisis_cv, examen, entrevista_ia, decisiones (DEC-009), correos, vacante_ia,
               aws_services
   templates/emails/
 backend/alembic/versions/
+backend/seeds/cvs_texto/   textos de los CV ficticios (los PDF se generan)
 backend/tests/
 frontend/src/
 docs/decisiones/   ADRs
@@ -133,6 +134,7 @@ docker-compose up -d db
 cd backend && pip install -r requirements.txt -r requirements-dev.txt
 python -m app.scripts.crear_roles   # crea vael_owner, vael_app y vael_system (DEC-010)
 alembic upgrade head                # migra como vael_owner
+python -m app.scripts.semillas       # datos del doc 13; requiere SEED_PASSWORD en el entorno
 uvicorn app.main:app --reload --port 8000
 cd ../frontend && npm install && npm run dev
 ```

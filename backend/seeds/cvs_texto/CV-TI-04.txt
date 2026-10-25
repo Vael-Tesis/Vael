@@ -1,0 +1,16 @@
+Rosa Mendoza Quispe
+rosa.mendoza@example.com | +51 900 000 104 | Lima, Perú
+
+PERFIL
+Desarrolladora con 2 años de experiencia, principalmente en Java, y algo de Python.
+
+EXPERIENCIA
+2023 - actualidad | Desarrolladora Java | Seguros Ejemplo S.A. (ficticia)
+- Mantenimiento de servicios en Spring Boot y Oracle.
+- Scripts de automatización en Python para reportes internos.
+
+FORMACIÓN
+Ingeniería de Sistemas, Universidad Nacional de Ejemplo, 2022.
+
+HABILIDADES
+Java, Spring Boot, Oracle, Python básico, Git.

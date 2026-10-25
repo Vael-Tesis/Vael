@@ -1,0 +1,15 @@
+Kevin Torres Alvarado
+kevin.torres@example.com | +51 900 000 105 | Cusco, Perú
+
+PERFIL
+Recién egresado con prácticas profesionales en desarrollo con Python.
+
+EXPERIENCIA
+2025 - 2026 | Practicante de desarrollo | Municipalidad de Ejemplo (ficticia)
+- Apoyó en una API interna con Flask y SQLite.
+
+FORMACIÓN
+Ingeniería Informática, Universidad Andina de Ejemplo, 2026.
+
+HABILIDADES
+Python, Flask, SQL, Git, HTML, CSS.
