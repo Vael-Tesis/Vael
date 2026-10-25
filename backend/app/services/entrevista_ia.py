@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.database import async_session_factory
 from app.core.gemini import consultar_gemini_json
 from app.core.logs import medir_operacion, tenant_actual
+from app.core.scoring import calcular_score_final
 from app.models.base import utcnow
 from app.models.candidato import Candidato, EstadoCandidato
 from app.models.entrevista import DimensionEvaluacion, EntrevistaIA, PlantillaEvaluacion
@@ -251,7 +252,7 @@ async def analizar_entrevista(
 
 async def analizar_entrevista_candidato(entrevista_id: str) -> None:
     """Punto de entrada para background tasks: analiza la entrevista finalizada, guarda su nota
-    y dimensiones, y calcula el score_final del candidato (sección 7 del CLAUDE.md).
+    y dimensiones, y calcula el score_final del candidato (DEC-007).
 
     Abre su propia sesión de BD porque corre después de que la sesión del request original
     ya se cerró.
@@ -293,15 +294,12 @@ async def analizar_entrevista_candidato(entrevista_id: str) -> None:
         examen_result = await db.exec(examen_statement)
         examen = examen_result.first()
 
-        # Score Final = CV×0.25 + Examen×0.40 + Entrevista×0.35 (sección 7) — la fórmula no
-        # normaliza escalas (score_cv es sobre 100, las notas de examen/entrevista sobre 20),
-        # así que el resultado no queda en 0-100 ni 0-20 limpio; solo sirve para el orden
-        # relativo del ranking (GET /candidatos/ranking), no como puntaje absoluto.
-        if candidato.score_cv is not None and examen is not None and examen.nota is not None:
-            candidato.score_final = round(
-                candidato.score_cv * 0.25 + examen.nota * 0.40 + nota_entrevista * 0.35,
-                2,
-            )
+        # DEC-007: escala 0-20; queda en None si falta alguna de las tres notas
+        candidato.score_final = calcular_score_final(
+            candidato.score_cv,
+            examen.nota if examen is not None else None,
+            nota_entrevista,
+        )
 
         candidato.estado = EstadoCandidato.ENTREVISTA_REALIZADA
         candidato.updated_at = utcnow()
