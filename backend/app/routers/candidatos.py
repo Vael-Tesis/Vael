@@ -2,12 +2,13 @@
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import EmailStr
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.database import get_db
+from app.core.despacho import TipoTarea, despachar_tarea
 from app.core.dependencies import get_current_user, require_rol
 from app.core.security import emitir_token_candidato
 from app.models.base import new_id, utcnow
@@ -26,7 +27,6 @@ from app.schemas.candidato import (
     NotaResponse,
     RankingCandidatoResponse,
 )
-from app.services.analisis_cv import analizar_cv_candidato
 from app.services.aws_services import subir_archivo
 from app.services.correos import correo_bienvenida_examen, correo_finalista, correo_invitacion_entrevista
 
@@ -77,7 +77,6 @@ async def listar_candidatos(
 
 @router.post("", response_model=CandidatoResponse, status_code=status.HTTP_201_CREATED)
 async def crear_candidato(
-    background_tasks: BackgroundTasks,
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
     vacante_id: Annotated[str, Form()],
@@ -117,7 +116,7 @@ async def crear_candidato(
     await db.commit()
     await db.refresh(candidato)
 
-    background_tasks.add_task(analizar_cv_candidato, candidato.id)
+    await despachar_tarea(TipoTarea.ANALISIS_CV, {"tenant_id": candidato.tenant_id, "candidato_id": candidato.id})
     return candidato
 
 
@@ -184,7 +183,6 @@ async def banco_talento(
 
 @router.post("/carga-masiva", response_model=CargaMasivaResponse, status_code=status.HTTP_202_ACCEPTED)
 async def carga_masiva_candidatos(
-    background_tasks: BackgroundTasks,
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
     vacante_id: Annotated[str, Form()],
@@ -222,7 +220,7 @@ async def carga_masiva_candidatos(
         await db.refresh(candidato)
 
         candidato_ids.append(candidato.id)
-        background_tasks.add_task(analizar_cv_candidato, candidato.id)
+        await despachar_tarea(TipoTarea.ANALISIS_CV, {"tenant_id": candidato.tenant_id, "candidato_id": candidato.id})
 
     return CargaMasivaResponse(creados=len(candidato_ids), candidato_ids=candidato_ids)
 
@@ -260,7 +258,6 @@ async def editar_candidato(
 @router.post("/{candidato_id}/analizar", response_model=MensajeResponse, status_code=status.HTTP_202_ACCEPTED)
 async def analizar_candidato(
     candidato_id: str,
-    background_tasks: BackgroundTasks,
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MensajeResponse:
@@ -272,7 +269,7 @@ async def analizar_candidato(
     db.add(candidato)
     await db.commit()
 
-    background_tasks.add_task(analizar_cv_candidato, candidato.id)
+    await despachar_tarea(TipoTarea.ANALISIS_CV, {"tenant_id": candidato.tenant_id, "candidato_id": candidato.id})
 
     return MensajeResponse(detail="Análisis de CV en curso")
 

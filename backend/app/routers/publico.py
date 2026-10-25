@@ -5,18 +5,18 @@ obtener la empresa, la vacante se ubica por su código o por su estado público.
 """
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import EmailStr
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.database import fijar_tenant, get_system_db
+from app.core.database import get_system_db
+from app.core.despacho import TipoTarea, despachar_tarea
 from app.models.base import new_id
 from app.models.candidato import Candidato
 from app.models.usuario import Empresa
 from app.models.vacante import EstadoVacante, Vacante
 from app.schemas.publico import PostulacionResponse, VacantePublicaResponse
-from app.services.analisis_cv import analizar_cv_candidato
 from app.services.aws_services import subir_archivo
 
 router = APIRouter(prefix="/api/publico", tags=["publico"])
@@ -82,7 +82,6 @@ async def obtener_vacante_publica(
 @router.post("/postular/{codigo}/enviar", response_model=PostulacionResponse, status_code=status.HTTP_201_CREATED)
 async def enviar_postulacion(
     codigo: str,
-    background_tasks: BackgroundTasks,
     db: Annotated[AsyncSession, Depends(get_system_db)],
     nombre: Annotated[str, Form()],
     apellidos: Annotated[str, Form()],
@@ -96,8 +95,6 @@ async def enviar_postulacion(
 ) -> PostulacionResponse:
     """Recibe la postulación de un candidato (datos + CV) y dispara su análisis IA en background."""
     vacante = await _obtener_vacante_publica_por_codigo(codigo, db)
-    # El análisis en background corre con la sesión normal: hereda el tenant de la vacante.
-    fijar_tenant(vacante.tenant_id)
 
     contenido = await cv.read()
     clave = f"cvs/{vacante.tenant_id}/{vacante.id}/{new_id()}_{cv.filename}"
@@ -120,7 +117,7 @@ async def enviar_postulacion(
     await db.commit()
     await db.refresh(candidato)
 
-    background_tasks.add_task(analizar_cv_candidato, candidato.id)
+    await despachar_tarea(TipoTarea.ANALISIS_CV, {"tenant_id": candidato.tenant_id, "candidato_id": candidato.id})
 
     return PostulacionResponse(candidato_id=candidato.id, mensaje="Postulación recibida correctamente")
 

@@ -1,4 +1,9 @@
-"""Servicios de AWS: Rekognition, Transcribe, Comprehend, S3, SES y SQS — todo vía aioboto3."""
+"""Servicios de AWS: Rekognition, Transcribe, S3, SES y SQS — todo vía aioboto3.
+
+Rekognition se usa solo para presencia de rostro y segunda persona, con consentimiento
+previo (DEC-002). La inferencia de emociones y el análisis de sentimiento están excluidos
+del alcance (DEC-001).
+"""
 import asyncio
 import json
 import logging
@@ -30,18 +35,6 @@ def _cliente(servicio: str, region_name: str | None = None) -> Any:
 
 
 # --- Rekognition ----------------------------------------------------------
-
-
-async def detectar_emociones(imagen_bytes: bytes) -> dict[str, float]:
-    """Detecta las 8 emociones de Rekognition en el primer rostro de la imagen (confianza 0-100)."""
-    async with _cliente("rekognition") as rekognition:
-        respuesta = await rekognition.detect_faces(Image={"Bytes": imagen_bytes}, Attributes=["ALL"])
-
-    rostros = respuesta.get("FaceDetails", [])
-    if not rostros:
-        return {}
-
-    return {emocion["Type"].lower(): emocion["Confidence"] for emocion in rostros[0].get("Emotions", [])}
 
 
 async def validar_identidad(imagen_bytes: bytes) -> bool:
@@ -144,24 +137,6 @@ async def transcribir_audio(audio_url: str, idioma: str = "es-ES", max_espera_se
             transcurrido += intervalo
 
     raise TimeoutError(f"Transcribe no terminó el job {nombre_job} en {max_espera_segundos}s")
-
-
-# --- Comprehend ---------------------------------------------------------
-
-
-async def analizar_sentimiento(texto: str) -> dict[str, float]:
-    """Analiza el sentimiento de un texto con Comprehend — retorna los 4 scores (0-1)."""
-    async with _cliente("comprehend") as comprehend:
-        # DetectSentiment acepta hasta 5000 bytes UTF-8; se trunca de forma defensiva.
-        respuesta = await comprehend.detect_sentiment(Text=texto[:5000], LanguageCode="es")
-
-    scores = respuesta.get("SentimentScore", {})
-    return {
-        "positivo": scores.get("Positive", 0.0),
-        "negativo": scores.get("Negative", 0.0),
-        "neutral": scores.get("Neutral", 0.0),
-        "mixto": scores.get("Mixed", 0.0),
-    }
 
 
 # --- S3 -------------------------------------------------------------------

@@ -1,6 +1,7 @@
 """Configuración de la aplicación cargada desde variables de entorno (.env)."""
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,7 +29,9 @@ class Settings(BaseSettings):
 
     # Google Gemini
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3-flash"
+    # ID verificado contra la API en DEV-C-04 (gemini-3-flash no existe). Se fija una versión
+    # concreta, no un alias como -latest, para que las mediciones del OE2 sean reproducibles.
+    gemini_model: str = "gemini-3.8-flash"
     gemini_live_model: str = "gemini-2.5-flash-native-audio-preview-12-2025"
 
     # AWS
@@ -66,6 +69,13 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Indica si el entorno actual es de producción."""
         return self.environment.lower() == "production"
+
+    @model_validator(mode="after")
+    def _sin_debug_en_produccion(self) -> "Settings":
+        """Impide arrancar con DEBUG=true en producción (expondría /docs y detalles de errores)."""
+        if self.is_production and self.debug:
+            raise ValueError("DEBUG debe ser false cuando ENVIRONMENT=production")
+        return self
 
 
 @lru_cache

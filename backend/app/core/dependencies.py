@@ -2,12 +2,13 @@
 from collections.abc import Callable
 from typing import Annotated, Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.database import fijar_tenant, get_db
+from app.core.logs import tenant_actual
 from app.core.security import decode_token
 from app.models.candidato import Candidato
 from app.models.usuario import Usuario
@@ -32,7 +33,15 @@ async def _get_token_claims(
     return claims
 
 
+def _fijar_tenant_en_logs(request: Request, tenant_id: str | None) -> None:
+    """Deja el tenant disponible para el log de la petición y para los logs del handler."""
+    if tenant_id:
+        request.state.tenant_id = tenant_id
+        tenant_actual.set(tenant_id)
+
+
 async def get_current_user(
+    request: Request,
     claims: Annotated[dict[str, Any], Depends(_get_token_claims)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Usuario:
@@ -53,18 +62,21 @@ async def get_current_user(
     if usuario is None or not usuario.activo:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado o inactivo")
 
+    _fijar_tenant_en_logs(request, usuario.tenant_id)
     return usuario
 
 
-async def get_tenant(claims: Annotated[dict[str, Any], Depends(_get_token_claims)]) -> str:
+async def get_tenant(request: Request, claims: Annotated[dict[str, Any], Depends(_get_token_claims)]) -> str:
     """Extrae el tenant_id del JWT — usado para filtrar todos los queries por tenant."""
     tenant_id = claims.get("tenant_id")
     if tenant_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="El token no contiene tenant_id")
+    _fijar_tenant_en_logs(request, tenant_id)
     return tenant_id
 
 
 async def get_current_candidate(
+    request: Request,
     claims: Annotated[dict[str, Any], Depends(_get_token_claims)],
 ) -> dict[str, Any]:
     """Valida el token de acceso de un candidato (examen o entrevista) y retorna sus claims."""
@@ -73,6 +85,7 @@ async def get_current_candidate(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="El token no es un token de candidato",
         )
+    _fijar_tenant_en_logs(request, claims.get("tenant_id"))
     return claims
 
 
