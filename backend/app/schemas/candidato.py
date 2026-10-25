@@ -88,8 +88,10 @@ class NotaResponse(BaseModel):
     tenant_id: str
     candidato_id: str
     autor_id: str
+    autor_nombre: str | None = None
     contenido: str
     created_at: datetime
+    updated_at: datetime | None = None
 
 
 class CargaMasivaResponse(BaseModel):

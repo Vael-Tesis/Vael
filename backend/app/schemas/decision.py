@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.decision import EtapaDecision, TipoDecision
 from app.schemas.candidato import CandidatoResponse
+from app.schemas.tag import TagResponse
 
 
 class DecisionRequest(BaseModel):
@@ -68,6 +69,7 @@ class RecomendacionPendienteResponse(BaseModel):
 
 
 class CandidatoDetalleResponse(CandidatoResponse):
-    """Detalle del candidato con su historial de decisiones (HU-16)."""
+    """Detalle del candidato con su historial de decisiones (HU-16) y sus etiquetas (HU-13)."""
 
     decisiones: list[DecisionResponse] = []
+    tags: list[TagResponse] = []

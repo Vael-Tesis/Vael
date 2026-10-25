@@ -197,6 +197,20 @@
         "title": "AreaUpdateRequest",
         "type": "object"
       },
+      "AsignarTagRequest": {
+        "description": "Etiqueta a asignar a un candidato.",
+        "properties": {
+          "tag_id": {
+            "title": "Tag Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag_id"
+        ],
+        "title": "AsignarTagRequest",
+        "type": "object"
+      },
       "Body_carga_masiva_candidatos_api_candidatos_carga_masiva_post": {
         "properties": {
           "archivos": {
@@ -479,7 +493,7 @@
         "type": "object"
       },
       "CandidatoDetalleResponse": {
-        "description": "Detalle del candidato con su historial de decisiones (HU-16).",
+        "description": "Detalle del candidato con su historial de decisiones (HU-16) y sus etiquetas (HU-13).",
         "properties": {
           "analizado_en": {
             "anyOf": [
@@ -657,6 +671,14 @@
               }
             ],
             "title": "Score Final"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TagResponse"
+            },
+            "title": "Tags",
+            "type": "array"
           },
           "telefono": {
             "anyOf": [
@@ -2405,6 +2427,17 @@
             "title": "Autor Id",
             "type": "string"
           },
+          "autor_nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Autor Nombre"
+          },
           "candidato_id": {
             "title": "Candidato Id",
             "type": "string"
@@ -2425,6 +2458,18 @@
           "tenant_id": {
             "title": "Tenant Id",
             "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
           }
         },
         "required": [
@@ -3229,6 +3274,98 @@
         ],
         "title": "SeveridadEvento",
         "type": "string"
+      },
+      "TagCreateRequest": {
+        "description": "Nueva etiqueta de la empresa.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Color en formato #RRGGBB",
+            "title": "Color"
+          },
+          "nombre": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Nombre",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nombre"
+        ],
+        "title": "TagCreateRequest",
+        "type": "object"
+      },
+      "TagResponse": {
+        "description": "Etiqueta de la empresa.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "color"
+        ],
+        "title": "TagResponse",
+        "type": "object"
+      },
+      "TagUpdateRequest": {
+        "description": "Datos editables de una etiqueta — todos opcionales.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "nombre": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          }
+        },
+        "title": "TagUpdateRequest",
+        "type": "object"
       },
       "TextosMarketingResponse": {
         "description": "Textos de difusión generados por IA para distintos canales (LinkedIn, WhatsApp, etc.).",
@@ -4521,6 +4658,20 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "app__schemas__area__MensajeResponse": {
+        "description": "Respuesta genérica de confirmación.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "MensajeResponse",
+        "type": "object"
+      },
       "app__schemas__auth__MensajeResponse": {
         "description": "Respuesta genérica de confirmación para acciones sin cuerpo de datos.",
         "properties": {
@@ -4664,7 +4815,7 @@
         ]
       },
       "post": {
-        "description": "Crea un área o departamento para el tenant actual.",
+        "description": "Crea un área o departamento para el tenant actual. 409 si el código corto ya existe.",
         "operationId": "crear_area_api_areas_post",
         "requestBody": {
           "content": {
@@ -4710,6 +4861,52 @@
       }
     },
     "/api/areas/{area_id}": {
+      "delete": {
+        "description": "Elimina un área solo si no tiene vacantes; si las tiene, 409 (CA-05): se desactiva en su lugar.",
+        "operationId": "eliminar_area_api_areas__area_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "area_id",
+            "required": true,
+            "schema": {
+              "title": "Area Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__area__MensajeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Eliminar Area",
+        "tags": [
+          "areas"
+        ]
+      },
       "get": {
         "description": "Retorna el detalle de un área.",
         "operationId": "obtener_area_api_areas__area_id__get",
@@ -4757,7 +4954,7 @@
         ]
       },
       "put": {
-        "description": "Edita los campos provistos de un área (actualización parcial).\n\nSin DELETE: las vacantes referencian area_id, así que desactivar (activa=false)\nes la forma de retirar un área sin dejar huérfanas las vacantes existentes.",
+        "description": "Edita los campos provistos de un área (actualización parcial). 409 si el código corto ya existe.",
         "operationId": "editar_area_api_areas__area_id__put",
         "parameters": [
           {
@@ -4808,6 +5005,102 @@
           }
         ],
         "summary": "Editar Area",
+        "tags": [
+          "areas"
+        ]
+      }
+    },
+    "/api/areas/{area_id}/activar": {
+      "post": {
+        "description": "Activa un área (HU-05).",
+        "operationId": "activar_area_api_areas__area_id__activar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "area_id",
+            "required": true,
+            "schema": {
+              "title": "Area Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Activar Area",
+        "tags": [
+          "areas"
+        ]
+      }
+    },
+    "/api/areas/{area_id}/desactivar": {
+      "post": {
+        "description": "Desactiva un área: deja de ofrecerse para vacantes nuevas, sin tocar las existentes (HU-05).",
+        "operationId": "desactivar_area_api_areas__area_id__desactivar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "area_id",
+            "required": true,
+            "schema": {
+              "title": "Area Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Desactivar Area",
         "tags": [
           "areas"
         ]
@@ -5981,7 +6274,7 @@
     },
     "/api/candidatos/{candidato_id}/notas": {
       "get": {
-        "description": "Lista las notas internas de un candidato, de la más reciente a la más antigua.",
+        "description": "Lista las notas internas de un candidato, de la más reciente a la más antigua, con su autor.",
         "operationId": "listar_notas_candidato_api_candidatos__candidato_id__notas_get",
         "parameters": [
           {
@@ -6087,6 +6380,128 @@
         ]
       }
     },
+    "/api/candidatos/{candidato_id}/notas/{nota_id}": {
+      "delete": {
+        "description": "Elimina una nota; puede hacerlo su autor o un admin (HU-13).",
+        "operationId": "eliminar_nota_candidato_api_candidatos__candidato_id__notas__nota_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidato_id",
+            "required": true,
+            "schema": {
+              "title": "Candidato Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "nota_id",
+            "required": true,
+            "schema": {
+              "title": "Nota Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__candidato__MensajeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Eliminar Nota Candidato",
+        "tags": [
+          "candidatos"
+        ]
+      },
+      "put": {
+        "description": "Edita una nota propia; solo el autor puede hacerlo (HU-13).",
+        "operationId": "editar_nota_candidato_api_candidatos__candidato_id__notas__nota_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidato_id",
+            "required": true,
+            "schema": {
+              "title": "Candidato Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "nota_id",
+            "required": true,
+            "schema": {
+              "title": "Nota Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotaCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Editar Nota Candidato",
+        "tags": [
+          "candidatos"
+        ]
+      }
+    },
     "/api/candidatos/{candidato_id}/reenviar-correo-etapa": {
       "post": {
         "description": "Reenvía el correo de la etapa actual del candidato (emite un token nuevo si corresponde).\n\nA un candidato descartado solo se le reenvía el correo de cierre (DEC-013).",
@@ -6130,6 +6545,129 @@
           }
         ],
         "summary": "Reenviar Correo Etapa",
+        "tags": [
+          "candidatos"
+        ]
+      }
+    },
+    "/api/candidatos/{candidato_id}/tags": {
+      "post": {
+        "description": "Asigna una etiqueta al candidato (idempotente) y devuelve sus etiquetas.",
+        "operationId": "asignar_tag_candidato_api_candidatos__candidato_id__tags_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidato_id",
+            "required": true,
+            "schema": {
+              "title": "Candidato Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarTagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponse"
+                  },
+                  "title": "Response Asignar Tag Candidato Api Candidatos  Candidato Id  Tags Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Asignar Tag Candidato",
+        "tags": [
+          "candidatos"
+        ]
+      }
+    },
+    "/api/candidatos/{candidato_id}/tags/{tag_id}": {
+      "delete": {
+        "description": "Quita una etiqueta del candidato y devuelve las que le quedan.",
+        "operationId": "quitar_tag_candidato_api_candidatos__candidato_id__tags__tag_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidato_id",
+            "required": true,
+            "schema": {
+              "title": "Candidato Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tag_id",
+            "required": true,
+            "schema": {
+              "title": "Tag Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponse"
+                  },
+                  "title": "Response Quitar Tag Candidato Api Candidatos  Candidato Id  Tags  Tag Id  Delete",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Quitar Tag Candidato",
         "tags": [
           "candidatos"
         ]
@@ -7522,6 +8060,186 @@
         "summary": "Listar Vacantes Publicas",
         "tags": [
           "publico"
+        ]
+      }
+    },
+    "/api/tags": {
+      "get": {
+        "description": "Lista las etiquetas de la empresa, por nombre.",
+        "operationId": "listar_tags_api_tags_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TagResponse"
+                  },
+                  "title": "Response Listar Tags Api Tags Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Listar Tags",
+        "tags": [
+          "tags"
+        ]
+      },
+      "post": {
+        "description": "Crea una etiqueta; 409 si el nombre ya existe en la empresa.",
+        "operationId": "crear_tag_api_tags_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Crear Tag",
+        "tags": [
+          "tags"
+        ]
+      }
+    },
+    "/api/tags/{tag_id}": {
+      "delete": {
+        "description": "Elimina la etiqueta y sus asignaciones.",
+        "operationId": "eliminar_tag_api_tags__tag_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tag_id",
+            "required": true,
+            "schema": {
+              "title": "Tag Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__candidato__MensajeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Eliminar Tag",
+        "tags": [
+          "tags"
+        ]
+      },
+      "put": {
+        "description": "Edita el nombre o el color de una etiqueta.",
+        "operationId": "editar_tag_api_tags__tag_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tag_id",
+            "required": true,
+            "schema": {
+              "title": "Tag Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Editar Tag",
+        "tags": [
+          "tags"
         ]
       }
     },

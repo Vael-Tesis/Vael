@@ -19,7 +19,7 @@ export interface paths {
         put?: never;
         /**
          * Crear Area
-         * @description Crea un área o departamento para el tenant actual.
+         * @description Crea un área o departamento para el tenant actual. 409 si el código corto ya existe.
          */
         post: operations["crear_area_api_areas_post"];
         delete?: never;
@@ -42,13 +42,54 @@ export interface paths {
         get: operations["obtener_area_api_areas__area_id__get"];
         /**
          * Editar Area
-         * @description Edita los campos provistos de un área (actualización parcial).
-         *
-         *     Sin DELETE: las vacantes referencian area_id, así que desactivar (activa=false)
-         *     es la forma de retirar un área sin dejar huérfanas las vacantes existentes.
+         * @description Edita los campos provistos de un área (actualización parcial). 409 si el código corto ya existe.
          */
         put: operations["editar_area_api_areas__area_id__put"];
         post?: never;
+        /**
+         * Eliminar Area
+         * @description Elimina un área solo si no tiene vacantes; si las tiene, 409 (CA-05): se desactiva en su lugar.
+         */
+        delete: operations["eliminar_area_api_areas__area_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/areas/{area_id}/activar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activar Area
+         * @description Activa un área (HU-05).
+         */
+        post: operations["activar_area_api_areas__area_id__activar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/areas/{area_id}/desactivar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desactivar Area
+         * @description Desactiva un área: deja de ofrecerse para vacantes nuevas, sin tocar las existentes (HU-05).
+         */
+        post: operations["desactivar_area_api_areas__area_id__desactivar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -520,7 +561,7 @@ export interface paths {
         };
         /**
          * Listar Notas Candidato
-         * @description Lista las notas internas de un candidato, de la más reciente a la más antigua.
+         * @description Lista las notas internas de un candidato, de la más reciente a la más antigua, con su autor.
          */
         get: operations["listar_notas_candidato_api_candidatos__candidato_id__notas_get"];
         put?: never;
@@ -530,6 +571,30 @@ export interface paths {
          */
         post: operations["crear_nota_candidato_api_candidatos__candidato_id__notas_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/candidatos/{candidato_id}/notas/{nota_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Editar Nota Candidato
+         * @description Edita una nota propia; solo el autor puede hacerlo (HU-13).
+         */
+        put: operations["editar_nota_candidato_api_candidatos__candidato_id__notas__nota_id__put"];
+        post?: never;
+        /**
+         * Eliminar Nota Candidato
+         * @description Elimina una nota; puede hacerlo su autor o un admin (HU-13).
+         */
+        delete: operations["eliminar_nota_candidato_api_candidatos__candidato_id__notas__nota_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -552,6 +617,46 @@ export interface paths {
          */
         post: operations["reenviar_correo_etapa_api_candidatos__candidato_id__reenviar_correo_etapa_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/candidatos/{candidato_id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Asignar Tag Candidato
+         * @description Asigna una etiqueta al candidato (idempotente) y devuelve sus etiquetas.
+         */
+        post: operations["asignar_tag_candidato_api_candidatos__candidato_id__tags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/candidatos/{candidato_id}/tags/{tag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Quitar Tag Candidato
+         * @description Quita una etiqueta del candidato y devuelve las que le quedan.
+         */
+        delete: operations["quitar_tag_candidato_api_candidatos__candidato_id__tags__tag_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1082,6 +1187,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar Tags
+         * @description Lista las etiquetas de la empresa, por nombre.
+         */
+        get: operations["listar_tags_api_tags_get"];
+        put?: never;
+        /**
+         * Crear Tag
+         * @description Crea una etiqueta; 409 si el nombre ya existe en la empresa.
+         */
+        post: operations["crear_tag_api_tags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tags/{tag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Editar Tag
+         * @description Edita el nombre o el color de una etiqueta.
+         */
+        put: operations["editar_tag_api_tags__tag_id__put"];
+        post?: never;
+        /**
+         * Eliminar Tag
+         * @description Elimina la etiqueta y sus asignaciones.
+         */
+        delete: operations["eliminar_tag_api_tags__tag_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vacantes": {
         parameters: {
             query?: never;
@@ -1349,6 +1502,14 @@ export interface components {
             /** Nombre */
             nombre?: string | null;
         };
+        /**
+         * AsignarTagRequest
+         * @description Etiqueta a asignar a un candidato.
+         */
+        AsignarTagRequest: {
+            /** Tag Id */
+            tag_id: string;
+        };
         /** Body_carga_masiva_candidatos_api_candidatos_carga_masiva_post */
         Body_carga_masiva_candidatos_api_candidatos_carga_masiva_post: {
             /** Archivos */
@@ -1455,7 +1616,7 @@ export interface components {
         };
         /**
          * CandidatoDetalleResponse
-         * @description Detalle del candidato con su historial de decisiones (HU-16).
+         * @description Detalle del candidato con su historial de decisiones (HU-16) y sus etiquetas (HU-13).
          */
         CandidatoDetalleResponse: {
             /** Analizado En */
@@ -1512,6 +1673,11 @@ export interface components {
             score_cv: number | null;
             /** Score Final */
             score_final: number | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: components["schemas"]["TagResponse"][];
             /** Telefono */
             telefono: string | null;
             /** Tenant Id */
@@ -2120,6 +2286,8 @@ export interface components {
         NotaResponse: {
             /** Autor Id */
             autor_id: string;
+            /** Autor Nombre */
+            autor_nombre?: string | null;
             /** Candidato Id */
             candidato_id: string;
             /** Contenido */
@@ -2133,6 +2301,8 @@ export interface components {
             id: string;
             /** Tenant Id */
             tenant_id: string;
+            /** Updated At */
+            updated_at?: string | null;
         };
         /**
          * PlantillaCreateRequest
@@ -2421,6 +2591,41 @@ export interface components {
          * @enum {string}
          */
         SeveridadEvento: "baja" | "media" | "alta";
+        /**
+         * TagCreateRequest
+         * @description Nueva etiqueta de la empresa.
+         */
+        TagCreateRequest: {
+            /**
+             * Color
+             * @description Color en formato #RRGGBB
+             */
+            color?: string | null;
+            /** Nombre */
+            nombre: string;
+        };
+        /**
+         * TagResponse
+         * @description Etiqueta de la empresa.
+         */
+        TagResponse: {
+            /** Color */
+            color: string | null;
+            /** Id */
+            id: string;
+            /** Nombre */
+            nombre: string;
+        };
+        /**
+         * TagUpdateRequest
+         * @description Datos editables de una etiqueta — todos opcionales.
+         */
+        TagUpdateRequest: {
+            /** Color */
+            color?: string | null;
+            /** Nombre */
+            nombre?: string | null;
+        };
         /**
          * TextosMarketingResponse
          * @description Textos de difusión generados por IA para distintos canales (LinkedIn, WhatsApp, etc.).
@@ -2773,6 +2978,14 @@ export interface components {
         };
         /**
          * MensajeResponse
+         * @description Respuesta genérica de confirmación.
+         */
+        app__schemas__area__MensajeResponse: {
+            /** Detail */
+            detail: string;
+        };
+        /**
+         * MensajeResponse
          * @description Respuesta genérica de confirmación para acciones sin cuerpo de datos.
          */
         app__schemas__auth__MensajeResponse: {
@@ -2929,6 +3142,99 @@ export interface operations {
                 "application/json": components["schemas"]["AreaUpdateRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AreaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_area_api_areas__area_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                area_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__area__MensajeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activar_area_api_areas__area_id__activar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                area_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AreaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    desactivar_area_api_areas__area_id__desactivar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                area_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -3719,6 +4025,74 @@ export interface operations {
             };
         };
     };
+    editar_nota_candidato_api_candidatos__candidato_id__notas__nota_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidato_id: string;
+                nota_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotaCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_nota_candidato_api_candidatos__candidato_id__notas__nota_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidato_id: string;
+                nota_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__candidato__MensajeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reenviar_correo_etapa_api_candidatos__candidato_id__reenviar_correo_etapa_post: {
         parameters: {
             query?: never;
@@ -3737,6 +4111,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["app__schemas__candidato__MensajeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    asignar_tag_candidato_api_candidatos__candidato_id__tags_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidato_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AsignarTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quitar_tag_candidato_api_candidatos__candidato_id__tags__tag_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidato_id: string;
+                tag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -4577,6 +5018,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VacantePublicaResponse"][];
+                };
+            };
+        };
+    };
+    listar_tags_api_tags_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagResponse"][];
+                };
+            };
+        };
+    };
+    crear_tag_api_tags_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    editar_tag_api_tags__tag_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_tag_api_tags__tag_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__candidato__MensajeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
