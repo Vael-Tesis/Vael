@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import api from '../services/api.js'
+import api from '../services/api'
 
 export default function Login() {
   const navigate = useNavigate()

@@ -9,11 +9,11 @@ export default function CandidatoLayout() {
         padding: '0 24px', height: 52, display: 'flex', alignItems: 'center',
       }}>
         <div style={{
-          width: 26, height: 26, background: 'var(--text-primary)',
+          width: 26, height: 26, background: 'var(--brand)',
           borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
           marginRight: 8,
         }}>
-          <span style={{ color: 'var(--bg-card)', fontSize: 10, fontWeight: 600 }}>VA</span>
+          <span style={{ color: 'var(--on-brand)', fontSize: 10, fontWeight: 600 }}>VA</span>
         </div>
         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>VAEL</span>
       </nav>

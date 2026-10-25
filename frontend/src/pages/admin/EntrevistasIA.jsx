@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import api from '../../services/api.js'
-import { sinBackend } from '../../utils/devFallback.js'
-import PageHeader from '../../components/ui/PageHeader.jsx'
-import Card from '../../components/ui/Card.jsx'
-import Badge from '../../components/ui/Badge.jsx'
-import EmptyState from '../../components/ui/EmptyState.jsx'
+import api from '../../services/api'
+import { sinBackend } from '../../utils/devFallback'
+import PageHeader from '../../components/ui/PageHeader'
+import Card from '../../components/ui/Card'
+import Badge from '../../components/ui/Badge'
+import EmptyState from '../../components/ui/EmptyState'
 import { useNavigate } from 'react-router-dom'
 
 const DEMO = [

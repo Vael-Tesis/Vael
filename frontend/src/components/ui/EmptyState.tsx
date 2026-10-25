@@ -1,4 +1,9 @@
-export default function EmptyState({ title = 'Sin resultados', description = '' }) {
+interface EmptyStateProps {
+  title?: string
+  description?: string
+}
+
+export default function EmptyState({ title = 'Sin resultados', description = '' }: EmptyStateProps) {
   return (
     <div style={{
       padding: '48px 24px', textAlign: 'center',
