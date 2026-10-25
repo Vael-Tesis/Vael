@@ -1,4 +1,4 @@
-"""Modelos: Candidato, Tag, NotaCandidato."""
+"""Modelos: Candidato, Tag, CandidatoTag, NotaCandidato."""
 from datetime import datetime
 from enum import Enum
 
@@ -77,6 +77,19 @@ class Tag(TenantBase, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     nombre: str = Field(nullable=False, max_length=50)
     color: str | None = Field(default=None, max_length=20)
+
+
+class CandidatoTag(TenantBase, table=True):
+    """Asignación de una etiqueta a un candidato (DEV-C-05).
+
+    Al borrar el candidato o la etiqueta se borran sus asignaciones; DELETE /tags/{id}
+    elimina la etiqueta "y sus asignaciones" (doc 06).
+    """
+
+    __tablename__ = "candidato_tags"
+
+    candidato_id: str = Field(primary_key=True, foreign_key="candidatos.id", ondelete="CASCADE")
+    tag_id: str = Field(primary_key=True, foreign_key="tags.id", ondelete="CASCADE", index=True)
 
 
 class NotaCandidato(TenantBase, table=True):

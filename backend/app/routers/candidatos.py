@@ -12,7 +12,7 @@ from app.core.despacho import TipoTarea, despachar_tarea
 from app.core.dependencies import get_current_user, require_rol
 from app.core.security import emitir_token_candidato
 from app.models.base import new_id, utcnow
-from app.models.candidato import Candidato, ClasificacionIA, EstadoCandidato, NotaCandidato
+from app.models.candidato import Candidato, CandidatoTag, ClasificacionIA, EstadoCandidato, NotaCandidato
 from app.models.entrevista import EntrevistaIA
 from app.models.evaluacion import Examen
 from app.models.usuario import RolUsuario, TipoToken, Usuario
@@ -56,10 +56,11 @@ async def listar_candidatos(
     vacante_id: str | None = None,
     estado: EstadoCandidato | None = None,
     clasificacion_ia: ClasificacionIA | None = None,
+    tag_id: str | None = None,
     skip: int = 0,
     limit: int = 100,
 ) -> list[Candidato]:
-    """Lista los candidatos del tenant, con filtros opcionales por vacante, estado y clasificación IA."""
+    """Lista los candidatos del tenant, con filtros opcionales por vacante, estado, clasificación IA y etiqueta."""
     statement = select(Candidato).where(Candidato.tenant_id == actor.tenant_id)
 
     if vacante_id is not None:
@@ -68,6 +69,11 @@ async def listar_candidatos(
         statement = statement.where(Candidato.estado == estado)
     if clasificacion_ia is not None:
         statement = statement.where(Candidato.clasificacion_ia == clasificacion_ia)
+    if tag_id is not None:
+        con_tag = select(CandidatoTag.candidato_id).where(
+            CandidatoTag.tenant_id == actor.tenant_id, CandidatoTag.tag_id == tag_id
+        )
+        statement = statement.where(Candidato.id.in_(con_tag))
 
     statement = statement.offset(skip).limit(limit)
 
