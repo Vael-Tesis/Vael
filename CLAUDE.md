@@ -50,7 +50,7 @@ Plataforma SaaS multiempresa de apoyo a la preselección de personal para empres
 
 ## 6. Reglas del frontend (DEC-008)
 
-- Una pantalla migrada es `.tsx`, usa solo el cliente tipado generado desde `/openapi.json`, no tiene `any` explícito sin justificar y no usa mocks.
+- Una pantalla migrada es `.tsx`, usa solo el cliente tipado (`src/api/cliente.ts`, generado desde `/openapi.json`), no tiene `any` explícito sin justificar y no usa mocks.
 - Los datos simulados (`devFallback`) solo se activan con `VITE_MOCKS=true`, desactivado por defecto.
 - Si el frontend necesita una ruta o un campo que no existe en el OpenAPI, **no lo inventes**: se agrega primero en el backend y en el doc 06 del Drive (y su copia en `docs/diseno/`).
 - Colores solo mediante las variables CSS de la paleta de VAEL; el Figma prevalece sobre la landing.
@@ -70,7 +70,8 @@ backend/app/
   models/     un archivo por dominio (`docs/diseno/05_modelos_bd.md`)
   routers/    auth, areas, plantillas, vacantes, candidatos, evaluaciones, entrevista, publico
   schemas/
-  scripts/    crear_roles (DEC-010), crear_empresa (DEC-015), semillas y generar_cvs (doc 13)
+  scripts/    crear_roles (DEC-010), crear_empresa (DEC-015), semillas y generar_cvs (doc 13),
+              exportar_openapi (DEC-008)
   services/   analisis_cv, examen, entrevista_ia, decisiones (DEC-009), correos, vacante_ia,
               aws_services
   templates/emails/
@@ -108,6 +109,10 @@ Semáforo: verde ≤ 6, amarillo 7–18, rojo ≥ 19. Es informativo: nunca desc
 cd backend
 ruff check .          # todo el backend, incluida alembic/
 pytest -v
+
+# contrato tipado (DEC-008): si cambió una ruta o un schema del backend
+cd backend && python -m app.scripts.exportar_openapi
+cd frontend && npm run api:generar      # commitea openapi.json y src/api/esquema.d.ts
 
 # frontend
 cd frontend
