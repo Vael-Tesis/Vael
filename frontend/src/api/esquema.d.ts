@@ -1050,7 +1050,7 @@ export interface paths {
         put?: never;
         /**
          * Crear Plantilla
-         * @description Crea una plantilla de evaluación junto con sus dimensiones iniciales.
+         * @description Crea una plantilla de evaluación con sus dimensiones; los pesos deben sumar 100 (422).
          */
         post: operations["crear_plantilla_api_plantillas_post"];
         delete?: never;
@@ -1073,7 +1073,9 @@ export interface paths {
         get: operations["obtener_plantilla_api_plantillas__plantilla_id__get"];
         /**
          * Editar Plantilla
-         * @description Edita los campos provistos de una plantilla (actualización parcial, sin tocar dimensiones).
+         * @description Edita los campos provistos de una plantilla (actualización parcial).
+         *
+         *     Con `dimensiones`, reemplaza todas las dimensiones; los pesos deben sumar 100 (422).
          */
         put: operations["editar_plantilla_api_plantillas__plantilla_id__put"];
         post?: never;
@@ -1094,7 +1096,7 @@ export interface paths {
         put?: never;
         /**
          * Agregar Dimension
-         * @description Agrega una dimensión a evaluar dentro de una plantilla.
+         * @description Agrega una dimensión a una plantilla; el resultado debe seguir sumando 100 (422).
          */
         post: operations["agregar_dimension_api_plantillas__plantilla_id__dimensiones_post"];
         delete?: never;
@@ -1113,13 +1115,17 @@ export interface paths {
         get?: never;
         /**
          * Editar Dimension
-         * @description Edita los campos provistos de una dimensión (actualización parcial).
+         * @description Edita una dimensión (actualización parcial); la plantilla debe seguir sumando 100 (422).
+         *
+         *     Para cambiar varios pesos a la vez, usar PUT /plantillas/{id} con `dimensiones`.
          */
         put: operations["editar_dimension_api_plantillas__plantilla_id__dimensiones__dimension_id__put"];
         post?: never;
         /**
          * Eliminar Dimension
-         * @description Elimina una dimensión de una plantilla.
+         * @description Elimina una dimensión; la plantilla debe seguir sumando 100 (422).
+         *
+         *     Para quitar una dimensión y repartir su peso, usar PUT /plantillas/{id} con `dimensiones`.
          */
         delete: operations["eliminar_dimension_api_plantillas__plantilla_id__dimensiones__dimension_id__delete"];
         options?: never;
@@ -2367,14 +2373,19 @@ export interface components {
          * PlantillaUpdateRequest
          * @description Datos editables de una plantilla — todos opcionales (actualización parcial).
          *
-         *     No incluye dimensiones: se administran con los endpoints dedicados de
-         *     /api/plantillas/{id}/dimensiones para no pisar altas/bajas concurrentes.
+         *     `dimensiones`, si se envía, reemplaza el conjunto completo en una sola operación: así se
+         *     pueden cambiar varios pesos a la vez sin que la plantilla deje de sumar 100 (CA-06).
          */
         PlantillaUpdateRequest: {
             /** Activa */
             activa?: boolean | null;
             /** Descripcion */
             descripcion?: string | null;
+            /**
+             * Dimensiones
+             * @description Si se envía, reemplaza todas las dimensiones de una vez; los pesos deben sumar 100
+             */
+            dimensiones?: components["schemas"]["DimensionCreateRequest"][] | null;
             /** Nombre */
             nombre?: string | null;
         };

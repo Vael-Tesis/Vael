@@ -70,3 +70,33 @@ export function mensajeDeError(error: unknown, porDefecto: string): string {
   }
   return porDefecto
 }
+
+/** Error de una llamada a la API, con el estado HTTP y el mensaje del backend. */
+export class ErrorApi extends Error {
+  readonly estado: number
+
+  constructor(estado: number, mensaje: string) {
+    super(mensaje)
+    this.estado = estado
+  }
+}
+
+interface ResultadoApi<T> {
+  data?: T
+  error?: unknown
+  response: Response
+}
+
+/** Datos de una respuesta del cliente tipado; si la API respondió con error, lo lanza como ErrorApi. */
+export function datos<T>(resultado: ResultadoApi<T>, porDefecto = 'No se pudo completar la operación'): T {
+  if (resultado.data === undefined) {
+    throw new ErrorApi(resultado.response.status, mensajeDeError(resultado.error, porDefecto))
+  }
+  return resultado.data
+}
+
+/** Mensaje de un error capturado (ErrorApi, error de red u otro). */
+export function mensajeDe(error: unknown, porDefecto: string): string {
+  if (error instanceof ErrorApi) return error.message
+  return porDefecto
+}

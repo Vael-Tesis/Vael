@@ -48,13 +48,17 @@ class PlantillaCreateRequest(BaseModel):
 class PlantillaUpdateRequest(BaseModel):
     """Datos editables de una plantilla — todos opcionales (actualización parcial).
 
-    No incluye dimensiones: se administran con los endpoints dedicados de
-    /api/plantillas/{id}/dimensiones para no pisar altas/bajas concurrentes.
+    `dimensiones`, si se envía, reemplaza el conjunto completo en una sola operación: así se
+    pueden cambiar varios pesos a la vez sin que la plantilla deje de sumar 100 (CA-06).
     """
 
     nombre: str | None = None
     descripcion: str | None = None
     activa: bool | None = None
+    dimensiones: list[DimensionCreateRequest] | None = Field(
+        default=None,
+        description="Si se envía, reemplaza todas las dimensiones de una vez; los pesos deben sumar 100",
+    )
 
 
 class PlantillaResponse(BaseModel):

@@ -2619,7 +2619,7 @@
         "type": "object"
       },
       "PlantillaUpdateRequest": {
-        "description": "Datos editables de una plantilla — todos opcionales (actualización parcial).\n\nNo incluye dimensiones: se administran con los endpoints dedicados de\n/api/plantillas/{id}/dimensiones para no pisar altas/bajas concurrentes.",
+        "description": "Datos editables de una plantilla — todos opcionales (actualización parcial).\n\n`dimensiones`, si se envía, reemplaza el conjunto completo en una sola operación: así se\npueden cambiar varios pesos a la vez sin que la plantilla deje de sumar 100 (CA-06).",
         "properties": {
           "activa": {
             "anyOf": [
@@ -2642,6 +2642,21 @@
               }
             ],
             "title": "Descripcion"
+          },
+          "dimensiones": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DimensionCreateRequest"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Si se envía, reemplaza todas las dimensiones de una vez; los pesos deben sumar 100",
+            "title": "Dimensiones"
           },
           "nombre": {
             "anyOf": [
@@ -7627,7 +7642,7 @@
         ]
       },
       "post": {
-        "description": "Crea una plantilla de evaluación junto con sus dimensiones iniciales.",
+        "description": "Crea una plantilla de evaluación con sus dimensiones; los pesos deben sumar 100 (422).",
         "operationId": "crear_plantilla_api_plantillas_post",
         "requestBody": {
           "content": {
@@ -7720,7 +7735,7 @@
         ]
       },
       "put": {
-        "description": "Edita los campos provistos de una plantilla (actualización parcial, sin tocar dimensiones).",
+        "description": "Edita los campos provistos de una plantilla (actualización parcial).\n\nCon `dimensiones`, reemplaza todas las dimensiones; los pesos deben sumar 100 (422).",
         "operationId": "editar_plantilla_api_plantillas__plantilla_id__put",
         "parameters": [
           {
@@ -7778,7 +7793,7 @@
     },
     "/api/plantillas/{plantilla_id}/dimensiones": {
       "post": {
-        "description": "Agrega una dimensión a evaluar dentro de una plantilla.",
+        "description": "Agrega una dimensión a una plantilla; el resultado debe seguir sumando 100 (422).",
         "operationId": "agregar_dimension_api_plantillas__plantilla_id__dimensiones_post",
         "parameters": [
           {
@@ -7836,7 +7851,7 @@
     },
     "/api/plantillas/{plantilla_id}/dimensiones/{dimension_id}": {
       "delete": {
-        "description": "Elimina una dimensión de una plantilla.",
+        "description": "Elimina una dimensión; la plantilla debe seguir sumando 100 (422).\n\nPara quitar una dimensión y repartir su peso, usar PUT /plantillas/{id} con `dimensiones`.",
         "operationId": "eliminar_dimension_api_plantillas__plantilla_id__dimensiones__dimension_id__delete",
         "parameters": [
           {
@@ -7891,7 +7906,7 @@
         ]
       },
       "put": {
-        "description": "Edita los campos provistos de una dimensión (actualización parcial).",
+        "description": "Edita una dimensión (actualización parcial); la plantilla debe seguir sumando 100 (422).\n\nPara cambiar varios pesos a la vez, usar PUT /plantillas/{id} con `dimensiones`.",
         "operationId": "editar_dimension_api_plantillas__plantilla_id__dimensiones__dimension_id__put",
         "parameters": [
           {

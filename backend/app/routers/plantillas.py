@@ -24,6 +24,24 @@ router = APIRouter(prefix="/api/plantillas", tags=["plantillas"])
 
 _ADMIN_O_GERENTE = (RolUsuario.ADMIN, RolUsuario.GERENTE)
 
+# Regla del doc 06 y CA-06: los pesos de una plantilla suman 100
+SUMA_DE_PESOS = 100.0
+_TOLERANCIA = 0.01
+
+
+def _exigir_suma_100(pesos: list[float]) -> None:
+    """Rechaza con 422 y un mensaje claro una plantilla cuyos pesos no suman 100."""
+    if not pesos:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La plantilla necesita al menos una dimensión"
+        )
+    total = sum(pesos)
+    if abs(total - SUMA_DE_PESOS) > _TOLERANCIA:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Los pesos de las dimensiones deben sumar 100; ahora suman {total:g}",
+        )
+
 
 async def _obtener_plantilla_del_tenant(plantilla_id: str, tenant_id: str, db: AsyncSession) -> PlantillaEvaluacion:
     """Busca una plantilla por id dentro del tenant actual, o lanza 404 si no existe."""
@@ -86,7 +104,8 @@ async def crear_plantilla(
     actor: Annotated[Usuario, Depends(require_rol(*_ADMIN_O_GERENTE))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> PlantillaDetalleResponse:
-    """Crea una plantilla de evaluación junto con sus dimensiones iniciales."""
+    """Crea una plantilla de evaluación con sus dimensiones; los pesos deben sumar 100 (422)."""
+    _exigir_suma_100([d.peso for d in body.dimensiones])
     plantilla = PlantillaEvaluacion(
         tenant_id=actor.tenant_id,
         nombre=body.nombre,
@@ -137,13 +156,25 @@ async def editar_plantilla(
     actor: Annotated[Usuario, Depends(require_rol(*_ADMIN_O_GERENTE))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> PlantillaDetalleResponse:
-    """Edita los campos provistos de una plantilla (actualización parcial, sin tocar dimensiones)."""
+    """Edita los campos provistos de una plantilla (actualización parcial).
+
+    Con `dimensiones`, reemplaza todas las dimensiones; los pesos deben sumar 100 (422).
+    """
     plantilla = await _obtener_plantilla_del_tenant(plantilla_id, actor.tenant_id, db)
+    if body.dimensiones is not None:
+        _exigir_suma_100([d.peso for d in body.dimensiones])
 
-    for campo, valor in body.model_dump(exclude_unset=True).items():
+    for campo, valor in body.model_dump(exclude_unset=True, exclude={"dimensiones"}).items():
         setattr(plantilla, campo, valor)
-
     db.add(plantilla)
+
+    if body.dimensiones is not None:
+        for anterior in await _listar_dimensiones(plantilla.id, db):
+            await db.delete(anterior)
+        db.add_all(
+            DimensionEvaluacion(tenant_id=actor.tenant_id, plantilla_id=plantilla.id, **dim.model_dump())
+            for dim in body.dimensiones
+        )
     await db.commit()
     await db.refresh(plantilla)
 
@@ -163,8 +194,9 @@ async def agregar_dimension(
     actor: Annotated[Usuario, Depends(require_rol(*_ADMIN_O_GERENTE))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DimensionEvaluacion:
-    """Agrega una dimensión a evaluar dentro de una plantilla."""
+    """Agrega una dimensión a una plantilla; el resultado debe seguir sumando 100 (422)."""
     plantilla = await _obtener_plantilla_del_tenant(plantilla_id, actor.tenant_id, db)
+    _exigir_suma_100([d.peso for d in await _listar_dimensiones(plantilla.id, db)] + [body.peso])
 
     dimension = DimensionEvaluacion(tenant_id=actor.tenant_id, plantilla_id=plantilla.id, **body.model_dump())
     db.add(dimension)
@@ -181,8 +213,14 @@ async def editar_dimension(
     actor: Annotated[Usuario, Depends(require_rol(*_ADMIN_O_GERENTE))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DimensionEvaluacion:
-    """Edita los campos provistos de una dimensión (actualización parcial)."""
+    """Edita una dimensión (actualización parcial); la plantilla debe seguir sumando 100 (422).
+
+    Para cambiar varios pesos a la vez, usar PUT /plantillas/{id} con `dimensiones`.
+    """
     dimension = await _obtener_dimension_del_tenant(plantilla_id, dimension_id, actor.tenant_id, db)
+    if body.peso is not None:
+        otras = [d.peso for d in await _listar_dimensiones(plantilla_id, db) if d.id != dimension.id]
+        _exigir_suma_100(otras + [body.peso])
 
     for campo, valor in body.model_dump(exclude_unset=True).items():
         setattr(dimension, campo, valor)
@@ -200,8 +238,12 @@ async def eliminar_dimension(
     actor: Annotated[Usuario, Depends(require_rol(*_ADMIN_O_GERENTE))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MensajeResponse:
-    """Elimina una dimensión de una plantilla."""
+    """Elimina una dimensión; la plantilla debe seguir sumando 100 (422).
+
+    Para quitar una dimensión y repartir su peso, usar PUT /plantillas/{id} con `dimensiones`.
+    """
     dimension = await _obtener_dimension_del_tenant(plantilla_id, dimension_id, actor.tenant_id, db)
+    _exigir_suma_100([d.peso for d in await _listar_dimensiones(plantilla_id, db) if d.id != dimension.id])
 
     await db.delete(dimension)
     await db.commit()
