@@ -9,14 +9,20 @@ from app.models.base import TenantBase, TimestampMixin, new_id, utcnow
 
 
 class EstadoCandidato(str, Enum):
-    """Estado del candidato a lo largo del proceso de selección."""
+    """Estado del candidato a lo largo del proceso de selección.
+
+    Los análisis de IA dejan al candidato en `*_por_confirmar`; los estados de avance y de
+    descarte solo los asigna el servicio de decisiones (DEC-009).
+    """
 
     POSTULADO = "postulado"
     CV_ANALIZANDO = "cv_analizando"
+    CV_POR_CONFIRMAR = "cv_por_confirmar"
     CV_APROBADO = "cv_aprobado"
     CV_RECHAZADO = "cv_rechazado"
     EXAMEN_PENDIENTE = "examen_pendiente"
     EXAMEN_RENDIDO = "examen_rendido"
+    EXAMEN_POR_CONFIRMAR = "examen_por_confirmar"
     EXAMEN_APROBADO = "examen_aprobado"
     EXAMEN_RECHAZADO = "examen_rechazado"
     ENTREVISTA_PENDIENTE = "entrevista_pendiente"

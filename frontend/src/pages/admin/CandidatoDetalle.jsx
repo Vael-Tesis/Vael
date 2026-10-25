@@ -44,11 +44,12 @@ const CLASIFICACION_CONFIG = {
   no_apto:               { label: 'No apto',               variant: 'danger' },
 }
 
+// Estados asignables a mano. Los de avance y descarte solo se alcanzan con una decisión
+// humana registrada (DEC-009); el backend los rechaza en cambiar-estado.
 const ESTADOS_CANDIDATO = [
-  'postulado', 'cv_analizando', 'cv_aprobado', 'cv_rechazado',
-  'examen_pendiente', 'examen_rendido', 'examen_aprobado', 'examen_rechazado',
-  'entrevista_pendiente', 'entrevista_realizada',
-  'finalista', 'contratado', 'descartado',
+  'postulado', 'cv_analizando', 'cv_por_confirmar',
+  'examen_pendiente', 'examen_rendido', 'examen_por_confirmar',
+  'entrevista_pendiente', 'entrevista_realizada', 'contratado',
 ]
 
 function ScoreCircle({ value, max = 100, label }) {
@@ -112,11 +113,11 @@ export default function CandidatoDetalle() {
   async function handleMarcarFinalista() {
     setMarcandoFinalista(true)
     try {
-      await api.post(`/candidatos/${id}/marcar-finalista`)
+      await api.post(`/candidatos/${id}/decision`, { etapa: 'entrevista', decision: 'avanzar' })
       toast.success('Candidato marcado como finalista')
       invalidarCandidato()
-    } catch {
-      toast.error('No se pudo marcar como finalista')
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'No se pudo marcar como finalista')
     } finally {
       setMarcandoFinalista(false)
     }

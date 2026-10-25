@@ -11,7 +11,7 @@ from alembic import context
 from app.core.config import settings
 
 # Importa todos los modelos existentes para que sus tablas se registren en SQLModel.metadata
-from app.models import area, candidato, entrevista, evaluacion, usuario, vacante  # noqa: F401
+from app.models import area, candidato, decision, entrevista, evaluacion, usuario, vacante  # noqa: F401
 
 # Objeto de configuración de Alembic (lee alembic.ini)
 config = context.config

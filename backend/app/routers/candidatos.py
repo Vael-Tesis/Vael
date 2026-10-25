@@ -15,8 +15,9 @@ from app.models.base import new_id, utcnow
 from app.models.candidato import Candidato, CandidatoTag, ClasificacionIA, EstadoCandidato, NotaCandidato
 from app.models.entrevista import EntrevistaIA
 from app.models.evaluacion import Examen
-from app.models.usuario import RolUsuario, TipoToken, Usuario
+from app.models.usuario import Empresa, RolUsuario, TipoToken, Usuario
 from app.models.vacante import Vacante
+from app.models.decision import DecisionCandidato, EtapaDecision
 from app.schemas.candidato import (
     CambiarEstadoRequest,
     CandidatoResponse,
@@ -27,8 +28,22 @@ from app.schemas.candidato import (
     NotaResponse,
     RankingCandidatoResponse,
 )
+from app.schemas.decision import (
+    CandidatoDetalleResponse,
+    DecisionLoteRequest,
+    DecisionRequest,
+    DecisionResponse,
+    RecomendacionPendienteResponse,
+)
+from app.services import decisiones as servicio_decisiones
 from app.services.aws_services import subir_archivo
-from app.services.correos import correo_bienvenida_examen, correo_finalista, correo_invitacion_entrevista
+from app.services.correos import (
+    ESTADOS_DESCARTE,
+    correo_bienvenida_examen,
+    correo_cierre_proceso,
+    correo_finalista,
+    correo_invitacion_entrevista,
+)
 
 router = APIRouter(prefix="/api/candidatos", tags=["candidatos"])
 
@@ -47,6 +62,10 @@ async def _obtener_candidato_del_tenant(candidato_id: str, tenant_id: str, db: A
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidato no encontrado")
 
     return candidato
+
+
+def _como_http(error: servicio_decisiones.ErrorDecision) -> HTTPException:
+    return HTTPException(status_code=error.codigo, detail=error.detalle)
 
 
 @router.get("", response_model=list[CandidatoResponse])
@@ -231,14 +250,103 @@ async def carga_masiva_candidatos(
     return CargaMasivaResponse(creados=len(candidato_ids), candidato_ids=candidato_ids)
 
 
-@router.get("/{candidato_id}", response_model=CandidatoResponse)
+@router.get("/por-confirmar", response_model=list[RecomendacionPendienteResponse])
+async def bandeja_por_confirmar(
+    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    vacante_id: str | None = None,
+    etapa: EtapaDecision | None = None,
+) -> list[RecomendacionPendienteResponse]:
+    """Bandeja de recomendaciones de la IA pendientes de decisión humana (DEC-009, HU-15)."""
+    pendientes = await servicio_decisiones.recomendaciones_pendientes(
+        actor.tenant_id, db, vacante_id=vacante_id, etapa=etapa
+    )
+    return [
+        RecomendacionPendienteResponse(
+            candidato=CandidatoResponse.model_validate(candidato),
+            etapa=recomendacion.etapa,
+            recomendacion_ia=recomendacion.recomendacion,
+            puntaje=recomendacion.puntaje,
+            umbral=recomendacion.umbral,
+            justificacion_ia=recomendacion.justificacion,
+        )
+        for candidato, recomendacion in pendientes
+    ]
+
+
+@router.post("/decisiones/lote", response_model=list[DecisionResponse])
+async def decidir_en_lote(
+    body: DecisionLoteRequest,
+    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[DecisionCandidato]:
+    """Confirma varias recomendaciones de una etapa a la vez.
+
+    Solo acepta decisiones que coinciden con la IA; si una no cumple, responde 422 y no
+    ejecuta ninguna (DEC-009, punto 4).
+    """
+    try:
+        return await servicio_decisiones.registrar_decisiones_lote(
+            body.etapa,
+            [(item.candidato_id, item.decision) for item in body.decisiones],
+            body.revision_inicio,
+            actor,
+            db,
+        )
+    except servicio_decisiones.ErrorDecision as error:
+        raise _como_http(error) from error
+
+
+@router.get("/{candidato_id}", response_model=CandidatoDetalleResponse)
 async def obtener_candidato(
     candidato_id: str,
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> Candidato:
-    """Retorna el detalle completo de un candidato."""
-    return await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
+) -> CandidatoDetalleResponse:
+    """Retorna el detalle completo de un candidato, con su historial de decisiones (HU-16)."""
+    candidato = await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
+    historial = await servicio_decisiones.historial(candidato.id, actor.tenant_id, db)
+    return CandidatoDetalleResponse(
+        **CandidatoResponse.model_validate(candidato).model_dump(),
+        decisiones=[DecisionResponse.model_validate(d) for d in historial],
+    )
+
+
+@router.post("/{candidato_id}/decision", response_model=DecisionResponse)
+async def decidir_candidato(
+    candidato_id: str,
+    body: DecisionRequest,
+    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> DecisionCandidato:
+    """Registra la decisión de RRHH sobre la etapa pendiente y ejecuta su efecto (DEC-009, DEC-013).
+
+    Avanzar: estado, token y correo de la etapa siguiente. Descartar: estado y un único correo
+    de cierre. Una decisión contraria a la IA sin justificacion_humana responde 422. Repetir la
+    decisión vigente no duplica nada; cambiarla la revierte con una fila nueva (reemplaza_a).
+    """
+    try:
+        return await servicio_decisiones.registrar_decision(
+            candidato_id,
+            servicio_decisiones.DecisionSolicitada(
+                body.etapa, body.decision, body.justificacion_humana, body.revision_inicio
+            ),
+            actor,
+            db,
+        )
+    except servicio_decisiones.ErrorDecision as error:
+        raise _como_http(error) from error
+
+
+@router.get("/{candidato_id}/decisiones", response_model=list[DecisionResponse])
+async def historial_decisiones(
+    candidato_id: str,
+    actor: Annotated[Usuario, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[DecisionCandidato]:
+    """Historial de decisiones del candidato, en orden cronológico (HU-16, OE3)."""
+    await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
+    return await servicio_decisiones.historial(candidato_id, actor.tenant_id, db)
 
 
 @router.put("/{candidato_id}", response_model=CandidatoResponse)
@@ -287,26 +395,18 @@ async def cambiar_estado_candidato(
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Candidato:
-    """Cambia manualmente el estado de un candidato."""
+    """Cambia manualmente el estado de un candidato.
+
+    No asigna estados de avance ni de descarte: esos solo se alcanzan con una decisión humana
+    registrada en POST /{candidato_id}/decision (DEC-009, punto 5).
+    """
+    if body.estado in servicio_decisiones.ESTADOS_DE_DECISION_HUMANA:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"El estado {body.estado.value} solo se asigna con una decisión humana (POST /decision)",
+        )
     candidato = await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
     candidato.estado = body.estado
-    candidato.updated_at = utcnow()
-    db.add(candidato)
-    await db.commit()
-    await db.refresh(candidato)
-    return candidato
-
-
-@router.post("/{candidato_id}/marcar-finalista", response_model=CandidatoResponse)
-async def marcar_finalista(
-    candidato_id: str,
-    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> Candidato:
-    """Marca a un candidato como finalista."""
-    candidato = await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
-    candidato.es_finalista = True
-    candidato.estado = EstadoCandidato.FINALISTA
     candidato.updated_at = utcnow()
     db.add(candidato)
     await db.commit()
@@ -320,7 +420,10 @@ async def reenviar_correo_etapa(
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MensajeResponse:
-    """Reenvía el correo correspondiente a la etapa actual del candidato (emite un token nuevo)."""
+    """Reenvía el correo de la etapa actual del candidato (emite un token nuevo si corresponde).
+
+    A un candidato descartado solo se le reenvía el correo de cierre (DEC-013).
+    """
     candidato = await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
 
     if candidato.estado in (EstadoCandidato.CV_APROBADO, EstadoCandidato.EXAMEN_PENDIENTE):
@@ -332,6 +435,11 @@ async def reenviar_correo_etapa(
     elif candidato.estado == EstadoCandidato.FINALISTA:
         vacante = await db.get(Vacante, candidato.vacante_id)
         await correo_finalista(candidato, vacante)
+    elif candidato.estado in ESTADOS_DESCARTE:
+        # A un descartado solo se le reenvía el correo de cierre (DEC-013)
+        vacante = await db.get(Vacante, candidato.vacante_id)
+        empresa = (await db.exec(select(Empresa).where(Empresa.tenant_id == actor.tenant_id))).first()
+        await correo_cierre_proceso(candidato, vacante, empresa)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

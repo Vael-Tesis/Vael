@@ -11,13 +11,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.database import async_session_factory
 from app.core.gemini import como_lista_str, consultar_gemini_json
 from app.core.logs import medir_operacion, tenant_actual
-from app.core.security import emitir_token_candidato
 from app.models.area import Area
 from app.models.base import utcnow
 from app.models.candidato import Candidato, ClasificacionIA, EstadoCandidato
-from app.models.usuario import TipoToken
 from app.models.vacante import Vacante
-from app.services.correos import correo_bienvenida_examen
 
 logger = logging.getLogger(__name__)
 
@@ -128,8 +125,7 @@ async def analizar_cv(candidato: Candidato, vacante: Vacante, area: Area | None,
     4. Llama a Gemini 3 Flash
     5. Parsea la respuesta JSON
     6. Actualiza el candidato en BD
-    7. Si score >= score_cv_minimo de la vacante: genera el token de examen y envía el correo
-    8. Si score < score_cv_minimo: pasa a cv_rechazado, sin correo
+    7. Deja al candidato en cv_por_confirmar: avanzar o descartar lo decide RRHH (DEC-009)
     """
     if not candidato.cv_url:
         raise ValueError(f"El candidato {candidato.id} no tiene cv_url — no hay CV para analizar")
@@ -150,18 +146,11 @@ async def analizar_cv(candidato: Candidato, vacante: Vacante, area: Area | None,
     candidato.analizado_en = utcnow()
     candidato.updated_at = utcnow()
 
-    if candidato.score_cv >= vacante.score_cv_minimo:
-        candidato.estado = EstadoCandidato.CV_APROBADO
-        db.add(candidato)
-        await db.commit()
-        await db.refresh(candidato)
-
-        token = await emitir_token_candidato(candidato.id, candidato.tenant_id, TipoToken.EXAMEN, db)
-        await correo_bienvenida_examen(candidato, token)
-    else:
-        candidato.estado = EstadoCandidato.CV_RECHAZADO
-        db.add(candidato)
-        await db.commit()
+    # DEC-009: la IA recomienda; RRHH decide. La recomendación (score_cv frente a
+    # score_cv_minimo) la calcula el servicio de decisiones; aquí no se emiten tokens ni correos.
+    candidato.estado = EstadoCandidato.CV_POR_CONFIRMAR
+    db.add(candidato)
+    await db.commit()
 
 
 async def analizar_cv_candidato(candidato_id: str) -> None:
