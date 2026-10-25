@@ -16,8 +16,9 @@ from app.models import area, candidato, entrevista, evaluacion, usuario, vacante
 # Objeto de configuración de Alembic (lee alembic.ini)
 config = context.config
 
-# La URL de conexión viene de settings (.env), nunca hardcodeada en alembic.ini
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# La URL de conexión viene de settings (.env), nunca hardcodeada en alembic.ini.
+# Los tests pasan la URL de su base dedicada en config.attributes (ver tests/conftest.py).
+config.set_main_option("sqlalchemy.url", config.attributes.get("database_url", settings.database_url))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -29,7 +30,7 @@ target_metadata = SQLModel.metadata
 def run_migrations_offline() -> None:
     """Corre las migraciones en modo 'offline': genera SQL sin conectarse a la BD."""
     context.configure(
-        url=settings.database_url,
+        url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
