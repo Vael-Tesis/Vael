@@ -3394,6 +3394,23 @@
         "title": "TextosMarketingResponse",
         "type": "object"
       },
+      "TextosPublicacionRequest": {
+        "description": "Textos de difusión editados por RRHH, por canal (linkedin, whatsapp, indeed).",
+        "properties": {
+          "textos": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Textos",
+            "type": "object"
+          }
+        },
+        "required": [
+          "textos"
+        ],
+        "title": "TextosPublicacionRequest",
+        "type": "object"
+      },
       "TipoCaptura": {
         "description": "Tipo de foto de auditoría tomada durante la entrevista.",
         "enum": [
@@ -4252,6 +4269,20 @@
           "tenant_id": {
             "title": "Tenant Id",
             "type": "string"
+          },
+          "textos_publicacion": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Textos Publicacion"
           },
           "tipo_contrato": {
             "anyOf": [
@@ -8430,6 +8461,52 @@
       }
     },
     "/api/vacantes/{vacante_id}": {
+      "delete": {
+        "description": "Elimina una vacante solo en borrador y sin candidatos; 409 en otro caso (HU-08).",
+        "operationId": "eliminar_vacante_api_vacantes__vacante_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vacante_id",
+            "required": true,
+            "schema": {
+              "title": "Vacante Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__candidato__MensajeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Eliminar Vacante",
+        "tags": [
+          "vacantes"
+        ]
+      },
       "get": {
         "description": "Retorna el detalle completo de una vacante.",
         "operationId": "obtener_vacante_api_vacantes__vacante_id__get",
@@ -8535,7 +8612,7 @@
     },
     "/api/vacantes/{vacante_id}/cerrar": {
       "post": {
-        "description": "Cierra la vacante.",
+        "description": "Cierra una vacante abierta o pausada. Es final: para reabrir, se duplica.",
         "operationId": "cerrar_vacante_api_vacantes__vacante_id__cerrar_post",
         "parameters": [
           {
@@ -8672,7 +8749,7 @@
     },
     "/api/vacantes/{vacante_id}/generar-textos": {
       "post": {
-        "description": "Genera, con Gemini, textos de difusión de la vacante para distintos canales (LinkedIn, WhatsApp, etc.).",
+        "description": "Genera, con Gemini, textos de difusión para LinkedIn, WhatsApp e Indeed. No los guarda:\nRRHH los edita y los guarda con PUT /textos. Si la IA falla, responde 502 sin tocar la\nvacante (CA-10).",
         "operationId": "generar_textos_vacante_api_vacantes__vacante_id__generar_textos_post",
         "parameters": [
           {
@@ -8720,7 +8797,7 @@
     },
     "/api/vacantes/{vacante_id}/pausar": {
       "post": {
-        "description": "Pausa la vacante.",
+        "description": "Pausa una vacante abierta (\"despublicar\"): deja de aceptar postulaciones. 409 en otro estado.",
         "operationId": "pausar_vacante_api_vacantes__vacante_id__pausar_post",
         "parameters": [
           {
@@ -8768,7 +8845,7 @@
     },
     "/api/vacantes/{vacante_id}/publicar": {
       "post": {
-        "description": "Cambia el estado de la vacante a abierta.",
+        "description": "Abre la vacante a postulaciones, desde borrador o pausada (\"reactivar\"). 409 si está cerrada.",
         "operationId": "publicar_vacante_api_vacantes__vacante_id__publicar_post",
         "parameters": [
           {
@@ -8809,6 +8886,110 @@
           }
         ],
         "summary": "Publicar Vacante",
+        "tags": [
+          "vacantes"
+        ]
+      }
+    },
+    "/api/vacantes/{vacante_id}/textos": {
+      "get": {
+        "description": "Textos de publicación guardados de la vacante (vacío si aún no se guardaron).",
+        "operationId": "obtener_textos_vacante_api_vacantes__vacante_id__textos_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vacante_id",
+            "required": true,
+            "schema": {
+              "title": "Vacante Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextosMarketingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Obtener Textos Vacante",
+        "tags": [
+          "vacantes"
+        ]
+      },
+      "put": {
+        "description": "Guarda los textos de publicación editados por RRHH (HU-10).",
+        "operationId": "guardar_textos_vacante_api_vacantes__vacante_id__textos_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vacante_id",
+            "required": true,
+            "schema": {
+              "title": "Vacante Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextosPublicacionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextosMarketingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Guardar Textos Vacante",
         "tags": [
           "vacantes"
         ]

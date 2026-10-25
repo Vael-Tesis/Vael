@@ -132,6 +132,7 @@ class VacanteResponse(BaseModel):
     nota_minima_examen: int
     top_candidatos_finalistas: int
     instruccion_ia_extra: str | None
+    textos_publicacion: dict[str, str] | None = None
 
     created_at: datetime
     updated_at: datetime
@@ -139,5 +140,11 @@ class VacanteResponse(BaseModel):
 
 class TextosMarketingResponse(BaseModel):
     """Textos de difusión generados por IA para distintos canales (LinkedIn, WhatsApp, etc.)."""
+
+    textos: dict[str, str]
+
+
+class TextosPublicacionRequest(BaseModel):
+    """Textos de difusión editados por RRHH, por canal (linkedin, whatsapp, indeed)."""
 
     textos: dict[str, str]

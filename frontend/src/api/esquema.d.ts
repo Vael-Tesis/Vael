@@ -1286,7 +1286,11 @@ export interface paths {
          */
         put: operations["editar_vacante_api_vacantes__vacante_id__put"];
         post?: never;
-        delete?: never;
+        /**
+         * Eliminar Vacante
+         * @description Elimina una vacante solo en borrador y sin candidatos; 409 en otro caso (HU-08).
+         */
+        delete: operations["eliminar_vacante_api_vacantes__vacante_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1303,7 +1307,7 @@ export interface paths {
         put?: never;
         /**
          * Cerrar Vacante
-         * @description Cierra la vacante.
+         * @description Cierra una vacante abierta o pausada. Es final: para reabrir, se duplica.
          */
         post: operations["cerrar_vacante_api_vacantes__vacante_id__cerrar_post"];
         delete?: never;
@@ -1365,7 +1369,9 @@ export interface paths {
         put?: never;
         /**
          * Generar Textos Vacante
-         * @description Genera, con Gemini, textos de difusión de la vacante para distintos canales (LinkedIn, WhatsApp, etc.).
+         * @description Genera, con Gemini, textos de difusión para LinkedIn, WhatsApp e Indeed. No los guarda:
+         *     RRHH los edita y los guarda con PUT /textos. Si la IA falla, responde 502 sin tocar la
+         *     vacante (CA-10).
          */
         post: operations["generar_textos_vacante_api_vacantes__vacante_id__generar_textos_post"];
         delete?: never;
@@ -1385,7 +1391,7 @@ export interface paths {
         put?: never;
         /**
          * Pausar Vacante
-         * @description Pausa la vacante.
+         * @description Pausa una vacante abierta ("despublicar"): deja de aceptar postulaciones. 409 en otro estado.
          */
         post: operations["pausar_vacante_api_vacantes__vacante_id__pausar_post"];
         delete?: never;
@@ -1405,9 +1411,33 @@ export interface paths {
         put?: never;
         /**
          * Publicar Vacante
-         * @description Cambia el estado de la vacante a abierta.
+         * @description Abre la vacante a postulaciones, desde borrador o pausada ("reactivar"). 409 si está cerrada.
          */
         post: operations["publicar_vacante_api_vacantes__vacante_id__publicar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vacantes/{vacante_id}/textos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener Textos Vacante
+         * @description Textos de publicación guardados de la vacante (vacío si aún no se guardaron).
+         */
+        get: operations["obtener_textos_vacante_api_vacantes__vacante_id__textos_get"];
+        /**
+         * Guardar Textos Vacante
+         * @description Guarda los textos de publicación editados por RRHH (HU-10).
+         */
+        put: operations["guardar_textos_vacante_api_vacantes__vacante_id__textos_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2646,6 +2676,16 @@ export interface components {
             };
         };
         /**
+         * TextosPublicacionRequest
+         * @description Textos de difusión editados por RRHH, por canal (linkedin, whatsapp, indeed).
+         */
+        TextosPublicacionRequest: {
+            /** Textos */
+            textos: {
+                [key: string]: string;
+            };
+        };
+        /**
          * TipoCaptura
          * @description Tipo de foto de auditoría tomada durante la entrevista.
          * @enum {string}
@@ -2904,6 +2944,10 @@ export interface components {
             tecnologias: string[];
             /** Tenant Id */
             tenant_id: string;
+            /** Textos Publicacion */
+            textos_publicacion?: {
+                [key: string]: string;
+            } | null;
             tipo_contrato: components["schemas"]["TipoContrato"] | null;
             /** Titulo */
             titulo: string;
@@ -5297,6 +5341,37 @@ export interface operations {
             };
         };
     };
+    eliminar_vacante_api_vacantes__vacante_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vacante_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__candidato__MensajeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     cerrar_vacante_api_vacantes__vacante_id__cerrar_post: {
         parameters: {
             query?: never;
@@ -5470,6 +5545,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VacanteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_textos_vacante_api_vacantes__vacante_id__textos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vacante_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TextosMarketingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guardar_textos_vacante_api_vacantes__vacante_id__textos_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vacante_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TextosPublicacionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TextosMarketingResponse"];
                 };
             };
             /** @description Validation Error */
