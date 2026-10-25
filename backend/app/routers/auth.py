@@ -2,10 +2,11 @@
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import fijar_tenant, get_db, get_system_db
 from app.core.dependencies import get_current_user, require_rol
 from app.core.security import (
     create_access_token,
@@ -46,9 +47,13 @@ async def _obtener_usuario_del_tenant(usuario_id: str, tenant_id: str, db: Async
 @router.post("/login", response_model=TokenResponse)
 async def login(
     body: LoginRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_system_db)],
 ) -> TokenResponse:
-    """Autentica a un usuario RRHH por email y contraseña, y emite access_token + refresh_token."""
+    """Autentica a un usuario RRHH por email y contraseña, y emite access_token + refresh_token.
+
+    Usa la sesión del sistema (lista cerrada de DEC-010): busca por email antes de
+    conocer la empresa del usuario.
+    """
     statement = select(Usuario).where(Usuario.email == body.email)
     result = await db.exec(statement)
     usuario = result.first()
@@ -71,6 +76,11 @@ async def refresh(
     claims = await decode_token(body.refresh_token)
     if claims is None or claims.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token inválido o expirado")
+    tenant_id = claims.get("tenant_id")
+    if not isinstance(tenant_id, str) or not tenant_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token inválido o expirado")
+    # El refresh no pasa por _get_token_claims: fija aquí el tenant para la RLS (DEC-010).
+    fijar_tenant(tenant_id)
 
     statement = select(Usuario).where(
         Usuario.id == claims.get("sub"),
@@ -110,7 +120,12 @@ async def crear_usuario(
     admin: Annotated[Usuario, Depends(require_rol(RolUsuario.ADMIN))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Usuario:
-    """Crea un usuario RRHH con contraseña temporal autogenerada y la envía por correo."""
+    """Crea un usuario RRHH con contraseña temporal autogenerada y la envía por correo.
+
+    El email es único en toda la plataforma (el login lo busca sin conocer la empresa).
+    Con RLS, la consulta previa solo ve los usuarios del tenant; un email de otra empresa
+    lo detiene el índice único de la base al hacer commit.
+    """
     statement = select(Usuario).where(Usuario.email == body.email)
     result = await db.exec(statement)
     if result.first() is not None:
@@ -128,7 +143,11 @@ async def crear_usuario(
         telefono=body.telefono,
     )
     db.add(usuario)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El email ya está registrado") from exc
     await db.refresh(usuario)
 
     background_tasks.add_task(correo_credenciales_usuario, usuario, password_temporal)

@@ -13,8 +13,12 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
 
-    # PostgreSQL
-    database_url: str
+    # PostgreSQL, un rol por uso (DEC-010). Nunca un superusuario: ignora la RLS.
+    database_url: str  # vael_app: peticiones normales y procesos asíncronos
+    database_system_url: str  # vael_system (BYPASSRLS): solo la lista cerrada de operaciones
+    database_owner_url: str  # vael_owner: dueño de las tablas, solo para las migraciones
+    # Administrador del servidor: solo lo usa app.scripts.crear_roles; la app nunca se conecta con él.
+    database_admin_url: str | None = None
 
     # JWT
     secret_key: str

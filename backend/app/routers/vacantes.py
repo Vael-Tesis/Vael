@@ -9,7 +9,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import get_db, get_system_db
 from app.core.dependencies import get_current_user, require_rol
 from app.models.area import Area
 from app.models.base import utcnow
@@ -282,9 +282,12 @@ async def generar_textos_vacante(
 @router.get("/{vacante_id}/feed-xml")
 async def feed_xml_vacante(
     vacante_id: str,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_system_db)],
 ) -> Response:
-    """Feed XML de la vacante para bolsas de empleo externas (Indeed) — público, sin autenticación."""
+    """Feed XML de la vacante para bolsas de empleo externas (Indeed) — público, sin autenticación.
+
+    Usa la sesión del sistema (DEC-014): solo lectura y solo vacantes abiertas y no confidenciales.
+    """
     statement = select(Vacante).where(Vacante.id == vacante_id)
     result = await db.exec(statement)
     vacante = result.first()

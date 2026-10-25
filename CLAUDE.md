@@ -34,7 +34,7 @@ Plataforma SaaS multiempresa de apoyo a la preselección de personal para empres
 | 1 | Toda tabla con datos de una empresa tiene `tenant_id` y su política de RLS **en la misma migración** que la crea | DEC-010 |
 | 2 | Toda consulta filtra por `tenant_id` en la aplicación, aunque exista RLS | DEC-010 |
 | 3 | El backend se conecta como `vael_app`; las migraciones, como `vael_owner`. **Nunca como superusuario** (ignora la RLS) | DEC-010 |
-| 4 | La sesión del sistema (`vael_system`, con `BYPASSRLS`) solo se usa en la lista cerrada: login, postulación pública por código, listado público de vacantes y feed XML. Ampliarla requiere un ADR | DEC-010, DEC-014 |
+| 4 | La sesión del sistema (`vael_system`, con `BYPASSRLS`) solo se usa en la lista cerrada: login, postulación pública por código, listado público de vacantes, feed XML y resolución del código del candidato. Ampliarla requiere un ADR | DEC-010, DEC-014, DEC-021 |
 | 5 | Las tareas asíncronas se publican con `despachar_tarea(tipo, payload)`, nunca llamando a SQS o a `BackgroundTasks` directamente. Cada mensaje lleva el `tenant_id` | DEC-016 |
 | 6 | **Las Lambdas no acceden a la base de datos.** Procesan con Gemini y entregan el resultado al backend por `/api/interno/...`, firmado con HMAC-SHA256 y marca de tiempo (máximo 5 minutos). El backend fija el tenant, persiste con RLS y verifica la idempotencia | DEC-018 |
 | 7 | El alta de una empresa se hace con `python -m app.scripts.crear_empresa`, nunca con un endpoint | DEC-015 |
@@ -129,7 +129,8 @@ Ver `backend/.env.example`; el detalle de infraestructura está en el doc 09 del
 ```bash
 docker-compose up -d db
 cd backend && pip install -r requirements.txt -r requirements-dev.txt
-alembic upgrade head
+python -m app.scripts.crear_roles   # crea vael_owner, vael_app y vael_system (DEC-010)
+alembic upgrade head                # migra como vael_owner
 uvicorn app.main:app --reload --port 8000
 cd ../frontend && npm install && npm run dev
 ```
