@@ -30,11 +30,9 @@ pydantic==2.13.5
 # Validación de emails (EmailStr) — usada en schemas/auth.py y schemas/candidato.py
 email-validator==2.2.0
 
-# Google Gemini — análisis de CV, exámenes, calificación (SDK estándar)
-google-generativeai==0.8.0
-
-# Google Gemini Live — tokens efímeros para la entrevista por voz (SDK nuevo, distinto del
-# de arriba; google-generativeai no soporta auth_tokens.create todavía).
+# Google Gemini — único SDK del proyecto (DEV-C-04): análisis de CV, exámenes, calificación,
+# textos de vacantes (core/gemini.py) y tokens efímeros de Gemini Live (services/entrevista_ia.py).
+# google-generativeai está deprecado y se eliminó.
 # OJO: estaba pineado en 0.2.2 (una versión temprana que NO tiene client.aio.auth_tokens
 # en absoluto — se agregó después). Verificado durante esta auditoría contra el paquete
 # real: 2.24.0 sí expone auth_tokens.create, CreateAuthTokenConfig y LiveConnectConstraints

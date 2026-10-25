@@ -71,7 +71,7 @@ async def generar_token_efimero_live(
     las restricciones del token (live_connect_constraints) para que el frontend no pueda alterarlo.
 
     NOTA: los tokens efímeros de Gemini Live son del SDK google-genai (client.aio.auth_tokens),
-    no del SDK google-generativeai que usan los demás servicios — requiere google-genai>=2.24.0
+    el mismo que usa core/gemini.py para las demás llamadas — requiere google-genai>=2.24.0
     (la versión con la que se pineó al principio, 0.2.2, es anterior a que existiera esta
     función). Los nombres de client.aio.auth_tokens.create, CreateAuthTokenConfig,
     LiveConnectConstraints y sus campos (uses, expire_time, new_session_expire_time,
