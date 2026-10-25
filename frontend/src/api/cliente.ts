@@ -1,4 +1,5 @@
 import createClient, { type Middleware } from 'openapi-fetch'
+import { irAlLogin, renovarSesion, tokenAcceso } from '../auth/sesion'
 import type { components, paths } from './esquema'
 
 /**
@@ -9,30 +10,48 @@ import type { components, paths } from './esquema'
 
 export type Esquemas = components['schemas']
 
-export const CLAVE_TOKEN_USUARIO = 'vael_token'
-export const CLAVE_USUARIO = 'vael_user'
 export const CLAVE_TOKEN_CANDIDATO = 'vael_candidate_token'
 
 const RUTAS_CANDIDATO = [/^\/api\/evaluaciones\/candidato\//, /^\/api\/entrevista\/(acceso|iniciar|finalizar|captura|evento)/]
+const RUTAS_DE_SESION = /^\/api\/auth\/(login|refresh|logout)$/
 
-function tokenPara(ruta: string): string | null {
-  const esRutaCandidato = RUTAS_CANDIDATO.some((patron) => patron.test(ruta))
-  return esRutaCandidato ? sessionStorage.getItem(CLAVE_TOKEN_CANDIDATO) : localStorage.getItem(CLAVE_TOKEN_USUARIO)
+function esRutaCandidato(ruta: string): boolean {
+  return RUTAS_CANDIDATO.some((patron) => patron.test(ruta))
 }
 
+function tokenPara(ruta: string): string | null {
+  return esRutaCandidato(ruta) ? sessionStorage.getItem(CLAVE_TOKEN_CANDIDATO) : tokenAcceso()
+}
+
+// Copia de cada petición antes de enviarla: si responde 401, se reintenta con el token renovado.
+const pendientes = new Map<string, Request>()
+
 const autenticacion: Middleware = {
-  onRequest({ request }) {
+  onRequest({ request, id }) {
     const token = tokenPara(new URL(request.url).pathname)
     if (token) request.headers.set('Authorization', `Bearer ${token}`)
+    pendientes.set(id, request.clone())
     return request
   },
-  onResponse({ response }) {
-    if (response.status === 401 && !tokenPara('/api/evaluaciones/candidato/')) {
-      localStorage.removeItem(CLAVE_TOKEN_USUARIO)
-      localStorage.removeItem(CLAVE_USUARIO)
-      if (window.location.pathname !== '/login') window.location.href = '/login'
+  async onResponse({ response, id }) {
+    const original = pendientes.get(id)
+    pendientes.delete(id)
+    const ruta = original ? new URL(original.url).pathname : ''
+    if (response.status !== 401 || !original || esRutaCandidato(ruta) || RUTAS_DE_SESION.test(ruta)) {
+      return response
     }
-    return response
+    // Renovación transparente (DEC-011): un intento con el refresh token y se reintenta.
+    const nuevoToken = await renovarSesion()
+    if (!nuevoToken) {
+      irAlLogin()
+      return response
+    }
+    const reintento = new Request(original, { headers: new Headers(original.headers) })
+    reintento.headers.set('Authorization', `Bearer ${nuevoToken}`)
+    return fetch(reintento)
+  },
+  onError({ id }) {
+    pendientes.delete(id)
   },
 }
 

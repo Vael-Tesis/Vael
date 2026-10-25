@@ -1,12 +1,14 @@
 import { useState, useEffect, type ReactNode } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { puedeVer } from './auth/permisos'
+import { tokenAcceso, usuarioActual } from './auth/sesion'
 
 // Layouts
 import AdminLayout, { type Tema } from './layouts/AdminLayout'
 import CandidatoLayout from './layouts/CandidatoLayout'
 
 // Públicas
-import Login from './pages/Login.jsx'
+import Login from './pages/Login'
 import Postular from './pages/Postular.jsx'
 
 // Portal candidato
@@ -38,9 +40,16 @@ import Plantillas from './pages/admin/Plantillas.jsx'
 import Areas from './pages/admin/Areas.jsx'
 import Usuarios from './pages/admin/Usuarios.jsx'
 
+/** Exige sesión iniciada (HU-01). */
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const token = localStorage.getItem('vael_token')
-  if (!token) return <Navigate to="/login" replace />
+  if (!tokenAcceso() || !usuarioActual()) return <Navigate to="/login" replace />
+  return children
+}
+
+/** Exige que el rol pueda abrir la ruta (HU-03); si no, vuelve al dashboard. */
+function RutaPorRol({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation()
+  if (!puedeVer(usuarioActual()?.rol, pathname)) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -76,7 +85,9 @@ export default function App() {
       {/* Panel admin */}
       <Route path="/" element={
         <ProtectedRoute>
-          <AdminLayout theme={theme} setTheme={setTheme} />
+          <RutaPorRol>
+            <AdminLayout theme={theme} setTheme={setTheme} />
+          </RutaPorRol>
         </ProtectedRoute>
       }>
         <Route index element={<Navigate to="/dashboard" replace />} />

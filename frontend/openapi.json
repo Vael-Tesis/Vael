@@ -1,25 +1,6 @@
 {
   "components": {
     "schemas": {
-      "AccessTokenResponse": {
-        "description": "Nuevo access_token emitido al renovar la sesión.",
-        "properties": {
-          "access_token": {
-            "title": "Access Token",
-            "type": "string"
-          },
-          "token_type": {
-            "default": "bearer",
-            "title": "Token Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "access_token"
-        ],
-        "title": "AccessTokenResponse",
-        "type": "object"
-      },
       "AreaCreateRequest": {
         "description": "Datos para crear un área o departamento.",
         "properties": {
@@ -2383,6 +2364,20 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "LogoutRequest": {
+        "description": "Refresh token de la sesión que se cierra.",
+        "properties": {
+          "refresh_token": {
+            "title": "Refresh Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_token"
+        ],
+        "title": "LogoutRequest",
+        "type": "object"
+      },
       "Modalidad": {
         "description": "Modalidad de trabajo de una vacante.",
         "enum": [
@@ -3425,7 +3420,7 @@
         "type": "string"
       },
       "TokenResponse": {
-        "description": "Par de tokens emitido al iniciar sesión.",
+        "description": "Par de tokens emitido al iniciar sesión y en cada renovación (el refresh rota, DEC-011).",
         "properties": {
           "access_token": {
             "title": "Access Token",
@@ -5108,7 +5103,7 @@
     },
     "/api/auth/login": {
       "post": {
-        "description": "Autentica a un usuario RRHH por email y contraseña, y emite access_token + refresh_token.\n\nUsa la sesión del sistema (lista cerrada de DEC-010): busca por email antes de\nconocer la empresa del usuario.",
+        "description": "Autentica a un usuario RRHH por email y contraseña, y emite access_token + refresh_token.\n\nUsa la sesión del sistema (lista cerrada de DEC-010): busca por email antes de\nconocer la empresa del usuario. Crea la fila de la sesión con el hash del refresh token\n(DEC-011). Credenciales incorrectas: 401; usuario inactivo: 403.",
         "operationId": "login_api_auth_login_post",
         "requestBody": {
           "content": {
@@ -5150,8 +5145,18 @@
     },
     "/api/auth/logout": {
       "post": {
-        "description": "Cierra la sesión del usuario autenticado.\n\nNOTA: sin blacklist en Redis (no está entre las variables de la sección 12 ni en\nel stack configurado todavía), este endpoint valida el token pero no lo invalida\nserver-side — seguirá siendo válido hasta su expiración natural.",
+        "description": "Cierra la sesión: revoca su refresh token, que deja de servir para renovar (DEC-011).\n\nEl access token vigente expira solo, en 15 minutos como máximo (trade-off de DEC-011).",
         "operationId": "logout_api_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -5162,6 +5167,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -5204,7 +5219,7 @@
     },
     "/api/auth/refresh": {
       "post": {
-        "description": "Emite un nuevo access_token a partir de un refresh_token válido y vigente.",
+        "description": "Renueva la sesión: revoca el refresh token usado y emite un par nuevo (rotación, DEC-011).\n\nSi el refresh token ya estaba revocado, revoca todas las sesiones del usuario (401).",
         "operationId": "refresh_api_auth_refresh_post",
         "requestBody": {
           "content": {
@@ -5221,7 +5236,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AccessTokenResponse"
+                  "$ref": "#/components/schemas/TokenResponse"
                 }
               }
             },
@@ -5372,7 +5387,7 @@
     },
     "/api/auth/usuarios/{usuario_id}/cambiar-password": {
       "put": {
-        "description": "Cambia la contraseña de un usuario del tenant a un valor definido por el administrador.",
+        "description": "Cambia la contraseña de un usuario e invalida sus tokens y sesiones (DEC-011).",
         "operationId": "cambiar_password_api_auth_usuarios__usuario_id__cambiar_password_put",
         "parameters": [
           {
@@ -5430,7 +5445,7 @@
     },
     "/api/auth/usuarios/{usuario_id}/desactivar": {
       "put": {
-        "description": "Desactiva a un usuario del tenant.",
+        "description": "Desactiva a un usuario del tenant e invalida al instante sus tokens y sesiones (DEC-011).",
         "operationId": "desactivar_usuario_api_auth_usuarios__usuario_id__desactivar_put",
         "parameters": [
           {
@@ -5478,7 +5493,7 @@
     },
     "/api/auth/usuarios/{usuario_id}/reenviar-credenciales": {
       "post": {
-        "description": "Genera una nueva contraseña temporal para el usuario y la reenvía por correo.",
+        "description": "Genera una nueva contraseña temporal para el usuario y la reenvía por correo.\n\nEs un cambio de contraseña: invalida los tokens y las sesiones anteriores (DEC-011).",
         "operationId": "reenviar_credenciales_api_auth_usuarios__usuario_id__reenviar_credenciales_post",
         "parameters": [
           {

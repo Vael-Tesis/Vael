@@ -1,11 +1,12 @@
-"""Utilidades de seguridad: hashing de contraseñas y manejo de JWT."""
+"""Utilidades de seguridad: hashing de contraseñas y JWT con PyJWT (DEC-011)."""
 import asyncio
+import hashlib
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -40,18 +41,28 @@ def _encode_token(claims: dict[str, Any], expires_delta: timedelta) -> str:
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
-async def create_access_token(user_id: str, tenant_id: str, rol: str) -> str:
-    """Crea el access_token de un usuario de RRHH, con tenant_id y rol como claims."""
-    claims = {"sub": user_id, "tenant_id": tenant_id, "rol": rol, "type": "access"}
+async def create_access_token(user_id: str, tenant_id: str, rol: str, token_version: int = 0) -> str:
+    """Crea el access_token de un usuario de RRHH (15 minutos, DEC-011).
+
+    `ver` es la versión de token del usuario: si cambia (desactivación o cambio de
+    contraseña), get_current_user rechaza el token aunque no haya expirado.
+    """
+    claims = {"sub": user_id, "tenant_id": tenant_id, "rol": rol, "type": "access", "ver": token_version}
     expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
     return _encode_token(claims, expires_delta)
 
 
-async def create_refresh_token(user_id: str, tenant_id: str) -> str:
-    """Crea el refresh_token de un usuario de RRHH."""
-    claims = {"sub": user_id, "tenant_id": tenant_id, "type": "refresh"}
+def create_refresh_token(user_id: str, tenant_id: str, sesion_id: str) -> str:
+    """Crea el refresh_token de una sesión. Lleva el id de la sesión (`sid`) y el tenant, para
+    buscar la sesión con la RLS fijada sin cruzar empresas (DEC-010)."""
+    claims = {"sub": user_id, "tenant_id": tenant_id, "sid": sesion_id, "type": "refresh", "jti": secrets.token_hex(8)}
     expires_delta = timedelta(days=settings.refresh_token_expire_days)
     return _encode_token(claims, expires_delta)
+
+
+def hash_refresh_token(token: str) -> str:
+    """SHA-256 del refresh token: lo único que se guarda en `sesiones` (DEC-011)."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 async def create_candidate_token(
@@ -67,10 +78,13 @@ async def create_candidate_token(
 
 
 async def decode_token(token: str) -> dict[str, Any] | None:
-    """Decodifica y valida un JWT; retorna sus claims o None si es inválido o expiró."""
+    """Decodifica y valida un JWT; retorna sus claims o None si es inválido o expiró.
+
+    Solo acepta el algoritmo configurado (HS256): rechaza `alg: none` y cualquier otro.
+    """
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-    except JWTError:
+        return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm], options={"require": ["exp"]})
+    except jwt.PyJWTError:
         return None
 
 

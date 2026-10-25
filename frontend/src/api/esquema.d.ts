@@ -110,7 +110,8 @@ export interface paths {
          * @description Autentica a un usuario RRHH por email y contraseña, y emite access_token + refresh_token.
          *
          *     Usa la sesión del sistema (lista cerrada de DEC-010): busca por email antes de
-         *     conocer la empresa del usuario.
+         *     conocer la empresa del usuario. Crea la fila de la sesión con el hash del refresh token
+         *     (DEC-011). Credenciales incorrectas: 401; usuario inactivo: 403.
          */
         post: operations["login_api_auth_login_post"];
         delete?: never;
@@ -130,11 +131,9 @@ export interface paths {
         put?: never;
         /**
          * Logout
-         * @description Cierra la sesión del usuario autenticado.
+         * @description Cierra la sesión: revoca su refresh token, que deja de servir para renovar (DEC-011).
          *
-         *     NOTA: sin blacklist en Redis (no está entre las variables de la sección 12 ni en
-         *     el stack configurado todavía), este endpoint valida el token pero no lo invalida
-         *     server-side — seguirá siendo válido hasta su expiración natural.
+         *     El access token vigente expira solo, en 15 minutos como máximo (trade-off de DEC-011).
          */
         post: operations["logout_api_auth_logout_post"];
         delete?: never;
@@ -174,7 +173,9 @@ export interface paths {
         put?: never;
         /**
          * Refresh
-         * @description Emite un nuevo access_token a partir de un refresh_token válido y vigente.
+         * @description Renueva la sesión: revoca el refresh token usado y emite un par nuevo (rotación, DEC-011).
+         *
+         *     Si el refresh token ya estaba revocado, revoca todas las sesiones del usuario (401).
          */
         post: operations["refresh_api_auth_refresh_post"];
         delete?: never;
@@ -257,7 +258,7 @@ export interface paths {
         get?: never;
         /**
          * Cambiar Password
-         * @description Cambia la contraseña de un usuario del tenant a un valor definido por el administrador.
+         * @description Cambia la contraseña de un usuario e invalida sus tokens y sesiones (DEC-011).
          */
         put: operations["cambiar_password_api_auth_usuarios__usuario_id__cambiar_password_put"];
         post?: never;
@@ -277,7 +278,7 @@ export interface paths {
         get?: never;
         /**
          * Desactivar Usuario
-         * @description Desactiva a un usuario del tenant.
+         * @description Desactiva a un usuario del tenant e invalida al instante sus tokens y sesiones (DEC-011).
          */
         put: operations["desactivar_usuario_api_auth_usuarios__usuario_id__desactivar_put"];
         post?: never;
@@ -299,6 +300,8 @@ export interface paths {
         /**
          * Reenviar Credenciales
          * @description Genera una nueva contraseña temporal para el usuario y la reenvía por correo.
+         *
+         *     Es un cambio de contraseña: invalida los tokens y las sesiones anteriores (DEC-011).
          */
         post: operations["reenviar_credenciales_api_auth_usuarios__usuario_id__reenviar_credenciales_post"];
         delete?: never;
@@ -1430,19 +1433,6 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * AccessTokenResponse
-         * @description Nuevo access_token emitido al renovar la sesión.
-         */
-        AccessTokenResponse: {
-            /** Access Token */
-            access_token: string;
-            /**
-             * Token Type
-             * @default bearer
-             */
-            token_type: string;
-        };
-        /**
          * AreaCreateRequest
          * @description Datos para crear un área o departamento.
          */
@@ -2260,6 +2250,14 @@ export interface components {
             password: string;
         };
         /**
+         * LogoutRequest
+         * @description Refresh token de la sesión que se cierra.
+         */
+        LogoutRequest: {
+            /** Refresh Token */
+            refresh_token: string;
+        };
+        /**
          * Modalidad
          * @description Modalidad de trabajo de una vacante.
          * @enum {string}
@@ -2662,7 +2660,7 @@ export interface components {
         TipoPregunta: "multiple_choice" | "abierta";
         /**
          * TokenResponse
-         * @description Par de tokens emitido al iniciar sesión.
+         * @description Par de tokens emitido al iniciar sesión y en cada renovación (el refresh rota, DEC-011).
          */
         TokenResponse: {
             /** Access Token */
@@ -3296,7 +3294,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3305,6 +3307,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["app__schemas__auth__MensajeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3348,7 +3359,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccessTokenResponse"];
+                    "application/json": components["schemas"]["TokenResponse"];
                 };
             };
             /** @description Validation Error */

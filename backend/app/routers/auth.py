@@ -10,26 +10,34 @@ from app.core.database import fijar_tenant, get_db, get_system_db
 from app.core.dependencies import get_current_user, require_rol
 from app.core.security import (
     create_access_token,
-    create_refresh_token,
     decode_token,
     generate_temporary_password,
     hash_password,
     verify_password,
 )
+from app.models.base import utcnow
 from app.models.usuario import RolUsuario, Usuario
 from app.schemas.auth import (
-    AccessTokenResponse,
     CambiarPasswordRequest,
     CrearUsuarioRequest,
     LoginRequest,
+    LogoutRequest,
     MensajeResponse,
     RefreshRequest,
     TokenResponse,
     UsuarioResponse,
 )
+from app.services import sesiones
 from app.services.correos import correo_credenciales_usuario
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+async def _revocar_acceso(usuario: Usuario, db: AsyncSession) -> None:
+    """Sube token_version (rechaza los access tokens vigentes) y revoca todas sus sesiones."""
+    usuario.token_version += 1
+    usuario.updated_at = utcnow()
+    await sesiones.revocar_todas(usuario.id, usuario.tenant_id, db)
 
 
 async def _obtener_usuario_del_tenant(usuario_id: str, tenant_id: str, db: AsyncSession) -> Usuario:
@@ -52,27 +60,34 @@ async def login(
     """Autentica a un usuario RRHH por email y contraseña, y emite access_token + refresh_token.
 
     Usa la sesión del sistema (lista cerrada de DEC-010): busca por email antes de
-    conocer la empresa del usuario.
+    conocer la empresa del usuario. Crea la fila de la sesión con el hash del refresh token
+    (DEC-011). Credenciales incorrectas: 401; usuario inactivo: 403.
     """
     statement = select(Usuario).where(Usuario.email == body.email)
     result = await db.exec(statement)
     usuario = result.first()
 
-    if usuario is None or not usuario.activo or not await verify_password(body.password, usuario.password_hash):
+    if usuario is None or not await verify_password(body.password, usuario.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales inválidas")
+    # Solo con la contraseña correcta se revela que la cuenta está inactiva (CA-01)
+    if not usuario.activo:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo")
 
-    access_token = await create_access_token(usuario.id, usuario.tenant_id, usuario.rol.value)
-    refresh_token = await create_refresh_token(usuario.id, usuario.tenant_id)
-
+    refresh_token = await sesiones.crear_sesion(usuario, db)
+    await db.commit()
+    access_token = await create_access_token(usuario.id, usuario.tenant_id, usuario.rol.value, usuario.token_version)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
-@router.post("/refresh", response_model=AccessTokenResponse)
+@router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     body: RefreshRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> AccessTokenResponse:
-    """Emite un nuevo access_token a partir de un refresh_token válido y vigente."""
+) -> TokenResponse:
+    """Renueva la sesión: revoca el refresh token usado y emite un par nuevo (rotación, DEC-011).
+
+    Si el refresh token ya estaba revocado, revoca todas las sesiones del usuario (401).
+    """
     claims = await decode_token(body.refresh_token)
     if claims is None or claims.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token inválido o expirado")
@@ -92,18 +107,32 @@ async def refresh(
     if usuario is None or not usuario.activo:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado o inactivo")
 
-    access_token = await create_access_token(usuario.id, usuario.tenant_id, usuario.rol.value)
-    return AccessTokenResponse(access_token=access_token)
+    try:
+        refresh_token = await sesiones.rotar(claims, body.refresh_token, usuario, db)
+    except sesiones.SesionInvalida as error:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)) from error
+
+    access_token = await create_access_token(usuario.id, usuario.tenant_id, usuario.rol.value, usuario.token_version)
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/logout", response_model=MensajeResponse)
-async def logout(usuario: Annotated[Usuario, Depends(get_current_user)]) -> MensajeResponse:
-    """Cierra la sesión del usuario autenticado.
+async def logout(
+    body: LogoutRequest,
+    usuario: Annotated[Usuario, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> MensajeResponse:
+    """Cierra la sesión: revoca su refresh token, que deja de servir para renovar (DEC-011).
 
-    NOTA: sin blacklist en Redis (no está entre las variables de la sección 12 ni en
-    el stack configurado todavía), este endpoint valida el token pero no lo invalida
-    server-side — seguirá siendo válido hasta su expiración natural.
+    El access token vigente expira solo, en 15 minutos como máximo (trade-off de DEC-011).
     """
+    claims = await decode_token(body.refresh_token)
+    if claims is None or claims.get("type") != "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token inválido o expirado")
+    try:
+        await sesiones.cerrar(claims, body.refresh_token, usuario, db)
+    except sesiones.SesionInvalida as error:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)) from error
     return MensajeResponse(detail="Sesión cerrada")
 
 
@@ -187,9 +216,10 @@ async def desactivar_usuario(
     admin: Annotated[Usuario, Depends(require_rol(RolUsuario.ADMIN))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Usuario:
-    """Desactiva a un usuario del tenant."""
+    """Desactiva a un usuario del tenant e invalida al instante sus tokens y sesiones (DEC-011)."""
     usuario = await _obtener_usuario_del_tenant(usuario_id, admin.tenant_id, db)
     usuario.activo = False
+    await _revocar_acceso(usuario, db)
     db.add(usuario)
     await db.commit()
     await db.refresh(usuario)
@@ -203,9 +233,10 @@ async def cambiar_password(
     admin: Annotated[Usuario, Depends(require_rol(RolUsuario.ADMIN))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Usuario:
-    """Cambia la contraseña de un usuario del tenant a un valor definido por el administrador."""
+    """Cambia la contraseña de un usuario e invalida sus tokens y sesiones (DEC-011)."""
     usuario = await _obtener_usuario_del_tenant(usuario_id, admin.tenant_id, db)
     usuario.password_hash = await hash_password(body.password_nueva)
+    await _revocar_acceso(usuario, db)
     db.add(usuario)
     await db.commit()
     await db.refresh(usuario)
@@ -219,11 +250,15 @@ async def reenviar_credenciales(
     admin: Annotated[Usuario, Depends(require_rol(RolUsuario.ADMIN))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MensajeResponse:
-    """Genera una nueva contraseña temporal para el usuario y la reenvía por correo."""
+    """Genera una nueva contraseña temporal para el usuario y la reenvía por correo.
+
+    Es un cambio de contraseña: invalida los tokens y las sesiones anteriores (DEC-011).
+    """
     usuario = await _obtener_usuario_del_tenant(usuario_id, admin.tenant_id, db)
 
     password_temporal = generate_temporary_password()
     usuario.password_hash = await hash_password(password_temporal)
+    await _revocar_acceso(usuario, db)
     db.add(usuario)
     await db.commit()
     await db.refresh(usuario)

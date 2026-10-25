@@ -14,8 +14,9 @@ alembic==1.14.0
 # Base de datos — PostgreSQL 16 (driver async)
 asyncpg==0.30.0
 
-# Autenticación JWT y hashing de contraseñas
-python-jose[cryptography]==3.3.0
+# Autenticación: PyJWT (solo JWS HS256) reemplaza a python-jose, afectado por
+# CVE-2024-33663 y CVE-2024-33664 hasta la 3.3.0 (DEC-011). Hashing de contraseñas con bcrypt.
+PyJWT==2.15.1
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 
