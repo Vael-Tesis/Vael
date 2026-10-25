@@ -26,9 +26,10 @@ import Dashboard from './pages/admin/Dashboard.jsx'
 import Vacantes from './pages/admin/Vacantes'
 import VacanteForm from './pages/admin/VacanteForm'
 import VacanteDetalle from './pages/admin/VacanteDetalle'
-import Candidatos from './pages/admin/Candidatos.jsx'
-import CandidatoRegistrar from './pages/admin/CandidatoRegistrar.jsx'
-import CandidatoDetalle from './pages/admin/CandidatoDetalle.jsx'
+import Candidatos from './pages/admin/Candidatos'
+import CandidatoRegistrar from './pages/admin/CandidatoRegistrar'
+import CandidatoDetalle from './pages/admin/CandidatoDetalle'
+import Bandeja from './pages/admin/Bandeja'
 import Ranking from './pages/admin/Ranking.jsx'
 import BancoTalento from './pages/admin/BancoTalento.jsx'
 import Examenes from './pages/admin/Examenes.jsx'
@@ -101,6 +102,7 @@ export default function App() {
         <Route path="candidatos" element={<Candidatos />} />
         <Route path="candidatos/registrar" element={<CandidatoRegistrar />} />
         <Route path="candidatos/:id" element={<CandidatoDetalle />} />
+        <Route path="bandeja" element={<Bandeja />} />
 
         <Route path="ranking" element={<Ranking />} />
         <Route path="banco-talento" element={<BancoTalento />} />

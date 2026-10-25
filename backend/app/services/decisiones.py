@@ -18,7 +18,7 @@ from app.core.security import emitir_token_candidato
 from app.models.base import utcnow
 from app.models.candidato import Candidato, EstadoCandidato
 from app.models.decision import DecisionCandidato, EtapaDecision, TipoDecision
-from app.models.evaluacion import Examen
+from app.models.evaluacion import Examen, SemaforoExamen
 from app.models.usuario import Empresa, TipoToken, TokenAcceso, Usuario
 from app.models.vacante import Vacante
 from app.services.correos import (
@@ -336,8 +336,9 @@ async def registrar_decisiones_lote(
 
 async def recomendaciones_pendientes(
     tenant_id: str, db: AsyncSession, *, vacante_id: str | None = None, etapa: EtapaDecision | None = None
-) -> list[tuple[Candidato, Recomendacion]]:
-    """Bandeja: candidatos a la espera de una decisión, con la recomendación de la IA.
+) -> list[tuple[Candidato, Recomendacion, SemaforoExamen | None]]:
+    """Bandeja: candidatos a la espera de una decisión, con la recomendación de la IA y, en la
+    etapa de examen, su semáforo de integridad (doc 15, P-09).
 
     Sin etapa, muestra las de CV y examen (doc 15); la de entrevista se decide desde el ranking.
     """
@@ -356,16 +357,21 @@ async def recomendaciones_pendientes(
         v.id: v
         for v in (await db.exec(select(Vacante).where(Vacante.tenant_id == tenant_id, Vacante.id.in_(vacantes_ids)))).all()
     }
-    notas = {
-        e.candidato_id: e.nota
+    examenes = {
+        e.candidato_id: e
         for e in (
             await db.exec(
                 select(Examen).where(Examen.tenant_id == tenant_id, Examen.candidato_id.in_([c.id for c in candidatos]))
             )
         ).all()
     }
-    return [
-        (c, recomendacion_de_etapa(c, vacantes[c.vacante_id], estados[c.estado], notas.get(c.id)))
-        for c in candidatos
-        if c.vacante_id in vacantes
-    ]
+    resultado = []
+    for c in candidatos:
+        if c.vacante_id not in vacantes:
+            continue
+        etapa_c = estados[c.estado]
+        examen = examenes.get(c.id)
+        nota = examen.nota if examen is not None else None
+        semaforo = examen.semaforo if examen is not None and etapa_c is EtapaDecision.EXAMEN else None
+        resultado.append((c, recomendacion_de_etapa(c, vacantes[c.vacante_id], etapa_c, nota), semaforo))
+    return resultado

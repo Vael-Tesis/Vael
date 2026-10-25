@@ -367,9 +367,9 @@ export interface paths {
          * Carga Masiva Candidatos
          * @description Sube múltiples CVs para una vacante: crea un candidato por archivo y dispara su análisis IA.
          *
-         *     Como el CV recién se analiza en background, nombre/apellidos/email todavía no se
-         *     conocen al momento de la carga — quedan con un valor provisional hasta que el
-         *     análisis (una vez implementado) los complete.
+         *     Informa qué archivos fallaron y por qué (CA-11): no PDF, vacío, más de 10 MB, PDF dañado
+         *     o error al guardarlo. Como el CV recién se analiza en segundo plano, nombre, apellidos y
+         *     correo quedan con un valor provisional hasta que RRHH los corrija.
          */
         post: operations["carga_masiva_candidatos_api_candidatos_carga_masiva_post"];
         delete?: never;
@@ -544,7 +544,7 @@ export interface paths {
         };
         /**
          * Historial Decisiones
-         * @description Historial de decisiones del candidato, en orden cronológico (HU-16, OE3).
+         * @description Historial de decisiones del candidato, en orden cronológico, con el nombre de quien decidió (HU-16, OE3).
          */
         get: operations["historial_decisiones_api_candidatos__candidato_id__decisiones_get"];
         put?: never;
@@ -1469,6 +1469,16 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * ArchivoFallido
+         * @description Archivo de una carga masiva que no generó candidato, con el motivo.
+         */
+        ArchivoFallido: {
+            /** Motivo */
+            motivo: string;
+            /** Nombre */
+            nombre: string;
+        };
+        /**
          * AreaCreateRequest
          * @description Datos para crear un área o departamento.
          */
@@ -1829,13 +1839,18 @@ export interface components {
         };
         /**
          * CargaMasivaResponse
-         * @description Resumen de una carga masiva de CVs.
+         * @description Resumen de una carga masiva de CVs: los creados y los archivos que fallaron (CA-11).
          */
         CargaMasivaResponse: {
             /** Candidato Ids */
             candidato_ids: string[];
             /** Creados */
             creados: number;
+            /**
+             * Fallidos
+             * @default []
+             */
+            fallidos: components["schemas"]["ArchivoFallido"][];
         };
         /**
          * ClasificacionIA
@@ -1915,6 +1930,8 @@ export interface components {
             decidido_en: string;
             /** Decidido Por */
             decidido_por: string;
+            /** Decidido Por Nombre */
+            decidido_por_nombre?: string | null;
             decision: components["schemas"]["TipoDecision"];
             etapa: components["schemas"]["EtapaDecision"];
             /** Id */
@@ -2585,6 +2602,8 @@ export interface components {
             /** Puntaje */
             puntaje: number | null;
             recomendacion_ia: components["schemas"]["TipoDecision"] | null;
+            /** @description Semáforo de integridad del examen (etapa examen) */
+            semaforo?: components["schemas"]["SemaforoExamen"] | null;
             /** Umbral */
             umbral: number | null;
         };

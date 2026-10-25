@@ -520,4 +520,33 @@ async def test_historial_y_detalle_muestran_las_decisiones(
 
     assert [d["id"] for d in historial.json()] == [decision["id"]]
     assert historial.json()[0]["decidido_por"] == decision["decidido_por"]
+    assert historial.json()[0]["decidido_por_nombre"] == "Test admin"
     assert [d["id"] for d in detalle.json()["decisiones"]] == [decision["id"]]
+
+
+async def test_revision_inicio_con_zona_horaria_se_guarda_en_utc(
+    client: TestClient, admin_headers: dict[str, str], db_session: AsyncSession, enviados: list[Any]
+) -> None:
+    """El navegador envía la fecha con zona (ISO con Z u offset); se guarda en UTC sin zona."""
+    vacante = await _vacante(db_session)
+    candidato = await _candidato(db_session, vacante, EstadoCandidato.CV_POR_CONFIRMAR, score_cv=80)
+
+    respuesta = _decidir(
+        client, admin_headers, candidato.id, etapa="cv", decision="avanzar", revision_inicio="2026-10-20T10:02:11-05:00"
+    )
+
+    assert respuesta.status_code == 200, respuesta.text
+    assert respuesta.json()["revision_inicio"] == "2026-10-20T15:02:11"
+
+
+async def test_reenviar_tras_aprobar_el_examen_reenvia_la_invitacion(
+    client: TestClient, admin_headers: dict[str, str], db_session: AsyncSession, enviados: list[Any]
+) -> None:
+    """examen_aprobado es el estado que deja confirmar el examen: se puede reenviar la invitación."""
+    vacante = await _vacante(db_session)
+    candidato = await _candidato(db_session, vacante, EstadoCandidato.EXAMEN_APROBADO)
+
+    respuesta = client.post(f"/api/candidatos/{candidato.id}/reenviar-correo-etapa", headers=admin_headers)
+
+    assert respuesta.status_code == 200
+    assert len(enviados) == 1 and "siguiente paso" in enviados[0]["asunto"]

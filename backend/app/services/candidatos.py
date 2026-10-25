@@ -5,6 +5,10 @@ es idempotente. Las notas nunca son visibles para el candidato.
 
 No depende de FastAPI: lanza ErrorCandidatos y el router la traduce a HTTP.
 """
+from io import BytesIO
+from pathlib import Path
+
+from PyPDF2 import PdfReader
 from sqlalchemy import delete
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -12,6 +16,27 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.base import utcnow
 from app.models.candidato import Candidato, CandidatoTag, NotaCandidato, Tag
 from app.models.usuario import RolUsuario, Usuario
+
+
+TAMANO_MAXIMO_CV = 10 * 1024 * 1024  # 10 MB
+
+
+def motivo_de_rechazo_cv(nombre: str | None, contenido: bytes) -> str | None:
+    """Motivo por el que un archivo no sirve como CV, o None si es un PDF legible (RF-A-09).
+
+    Un PDF escaneado (sin texto) sí se acepta: el análisis lo deja para revisión manual.
+    """
+    if not contenido:
+        return "El archivo está vacío"
+    if len(contenido) > TAMANO_MAXIMO_CV:
+        return "El archivo supera los 10 MB"
+    if Path(nombre or "").suffix.lower() != ".pdf" or not contenido.startswith(b"%PDF"):
+        return "No es un PDF"
+    try:
+        PdfReader(BytesIO(contenido))
+    except Exception:
+        return "El PDF está dañado o no se puede leer"
+    return None
 
 
 class ErrorCandidatos(Exception):
