@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { type AxiosError } from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
@@ -8,7 +8,8 @@ const api = axios.create({
 const RUTAS_CANDIDATO = [/^\/evaluaciones\/candidato\//, /^\/entrevista\/(acceso|iniciar|finalizar|captura|evento)/]
 
 api.interceptors.request.use((config) => {
-  const esRutaCandidato = RUTAS_CANDIDATO.some((patron) => patron.test(config.url))
+  const url = config.url ?? ''
+  const esRutaCandidato = RUTAS_CANDIDATO.some((patron) => patron.test(url))
   const token = esRutaCandidato
     ? sessionStorage.getItem('vael_candidate_token')
     : localStorage.getItem('vael_token')
@@ -18,7 +19,7 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (res) => res,
-  async (error) => {
+  async (error: AxiosError) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('vael_token')
       localStorage.removeItem('vael_user')

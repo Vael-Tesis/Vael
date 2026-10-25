@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import api from '../../services/api.js'
-import Button from '../../components/ui/Button.jsx'
+import api from '../../services/api'
+import Button from '../../components/ui/Button'
 
 const DEMO_PREGUNTAS = [
   { id: 1, orden: 1, tipo: 'multiple_choice', enunciado: '¿Cuál de los siguientes enfoques es más adecuado para manejar autenticación en una API REST stateless?', opciones: ['Sesiones del lado del servidor', 'Basic Auth con HTTPS', 'JSON Web Tokens (JWT)', 'API Keys estáticas'] },

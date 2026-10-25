@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 
 // Layouts
-import AdminLayout from './layouts/AdminLayout.jsx'
-import CandidatoLayout from './layouts/CandidatoLayout.jsx'
+import AdminLayout, { type Tema } from './layouts/AdminLayout'
+import CandidatoLayout from './layouts/CandidatoLayout'
 
 // Públicas
 import Login from './pages/Login.jsx'
@@ -38,14 +38,14 @@ import Plantillas from './pages/admin/Plantillas.jsx'
 import Areas from './pages/admin/Areas.jsx'
 import Usuarios from './pages/admin/Usuarios.jsx'
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children }: { children: ReactNode }) {
   const token = localStorage.getItem('vael_token')
   if (!token) return <Navigate to="/login" replace />
   return children
 }
 
 export default function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('vael_theme') || 'light')
+  const [theme, setTheme] = useState<Tema>(() => (localStorage.getItem('vael_theme') === 'dark' ? 'dark' : 'light'))
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')

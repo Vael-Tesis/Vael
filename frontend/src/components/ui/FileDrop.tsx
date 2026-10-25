@@ -3,12 +3,19 @@ import { toast } from 'sonner'
 
 const MAX_MB = 5
 
-export default function FileDrop({ multiple = false, onFiles, hint = 'Arrastra tu PDF aquí o haz clic para seleccionar' }) {
-  const inputRef = useRef(null)
+interface FileDropProps {
+  multiple?: boolean
+  onFiles: (archivos: File[]) => void
+  hint?: string
+}
+
+export default function FileDrop({ multiple = false, onFiles, hint = 'Arrastra tu PDF aquí o haz clic para seleccionar' }: FileDropProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
   const [over, setOver] = useState(false)
 
-  function procesar(lista) {
-    const validos = []
+  function procesar(lista: FileList | null) {
+    if (!lista) return
+    const validos: File[] = []
     for (const f of Array.from(lista)) {
       if (f.type !== 'application/pdf') {
         toast.error(`${f.name}: solo se aceptan archivos PDF`)
