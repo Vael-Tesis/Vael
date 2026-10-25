@@ -4,29 +4,38 @@
 :root {
   --font-sans: 'Inter', system-ui, sans-serif;
 
+  /* Paleta VAEL (DEC-008). Fuente provisional: tokens de la landing; se verifica contra el Figma. */
+  --brand:      #0E5C4A;
+  --brand-dark: #0A4538;
+  --brand-soft: #E7F3EE;
+  --on-brand:   #FFFFFF;
+  --signal:     #C8F04A;
+  --accent:     #FF6B3D;
+  --gold:       #F2B541;
+
   /* Superficies */
-  --bg-page:   #f9fafb;
-  --bg-card:   #ffffff;
-  --bg-sidebar:#ffffff;
+  --bg-page:   #F6F4EF;
+  --bg-card:   #FFFFFF;
+  --bg-sidebar:#FFFFFF;
 
   /* Texto */
-  --text-primary:   #0a0a0a;
-  --text-secondary: #6b7280;
-  --text-muted:     #9ca3af;
+  --text-primary:   #10201B;
+  --text-secondary: #55665F;
+  --text-muted:     #7E8C86;
 
   /* Bordes */
-  --border:         #e5e7eb;
-  --border-hover:   #d1d5db;
+  --border:         #E3DFD5;
+  --border-hover:   #D2CCBF;
 
   /* Semánticos — solo para badges y estados */
-  --success-bg:   #f0fdf4;
-  --success-text: #166534;
-  --warning-bg:   #fffbeb;
-  --warning-text: #92400e;
-  --danger-bg:    #fef2f2;
-  --danger-text:  #991b1b;
-  --info-bg:      #eef2ff;
-  --info-text:    #3730a3;
+  --success-bg:   #E7F3EE;
+  --success-text: #0A4538;
+  --warning-bg:   #FDF3DD;
+  --warning-text: #7A5200;
+  --danger-bg:    #FFEDE6;
+  --danger-text:  #A8350F;
+  --info-bg:      #EAF0EE;
+  --info-text:    #24463C;
 
   --radius-sm: 4px;
   --radius:    6px;
@@ -34,22 +43,27 @@
 }
 
 .dark {
-  --bg-page:   #0a0a0a;
-  --bg-card:   #111111;
-  --bg-sidebar:#111111;
-  --text-primary:   #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted:     #71717a;
-  --border:         #27272a;
-  --border-hover:   #3f3f46;
-  --success-bg:   #052e16;
-  --success-text: #86efac;
-  --warning-bg:   #451a03;
-  --warning-text: #fcd34d;
-  --danger-bg:    #450a0a;
-  --danger-text:  #fca5a5;
-  --info-bg:      #1e1b4b;
-  --info-text:    #a5b4fc;
+  --brand:      #4FBF99;
+  --brand-dark: #3FA582;
+  --brand-soft: #0F2E25;
+  --on-brand:   #08130F;
+
+  --bg-page:   #0B1713;
+  --bg-card:   #10201B;
+  --bg-sidebar:#10201B;
+  --text-primary:   #F6F4EF;
+  --text-secondary: #A9B5AF;
+  --text-muted:     #75847D;
+  --border:         #22362F;
+  --border-hover:   #2F473E;
+  --success-bg:   #0F2E25;
+  --success-text: #8FE0C1;
+  --warning-bg:   #36290B;
+  --warning-text: #F2C46B;
+  --danger-bg:    #3A1A10;
+  --danger-text:  #FF9E80;
+  --info-bg:      #15282A;
+  --info-text:    #A7C8C0;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

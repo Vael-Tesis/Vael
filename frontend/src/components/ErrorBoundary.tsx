@@ -1,16 +1,21 @@
-import { Component } from 'react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 
-export default class ErrorBoundary extends Component {
-  constructor(props) {
-    super(props)
-    this.state = { error: null }
-  }
+interface Props {
+  children: ReactNode
+}
 
-  static getDerivedStateFromError(error) {
+interface State {
+  error: Error | null
+}
+
+export default class ErrorBoundary extends Component<Props, State> {
+  state: State = { error: null }
+
+  static getDerivedStateFromError(error: Error): State {
     return { error }
   }
 
-  componentDidCatch(error, info) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('ErrorBoundary capturó un error de renderizado:', error, info)
   }
 
@@ -39,8 +44,8 @@ export default class ErrorBoundary extends Component {
               onClick={() => window.location.reload()}
               style={{
                 height: 36, padding: '0 20px',
-                background: 'var(--text-primary, #111)',
-                color: 'var(--bg-card, #fff)',
+                background: 'var(--brand, #0E5C4A)',
+                color: 'var(--on-brand, #fff)',
                 border: 'none', borderRadius: 6,
                 fontSize: 13, fontWeight: 500, cursor: 'pointer',
               }}

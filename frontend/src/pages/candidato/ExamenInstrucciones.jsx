@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import Button from '../../components/ui/Button.jsx'
-import Card from '../../components/ui/Card.jsx'
+import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
 
 const candidatoData = JSON.parse(sessionStorage.getItem('vael_candidate_data') || '{}')
 

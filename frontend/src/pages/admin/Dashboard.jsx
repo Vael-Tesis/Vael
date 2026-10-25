@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import api from '../../services/api.js'
-import { sinBackend } from '../../utils/devFallback.js'
+import api from '../../services/api'
+import { sinBackend } from '../../utils/devFallback'
 
 const METRICS = [
   { key: 'vacantes_activas',        label: 'Vacantes activas' },

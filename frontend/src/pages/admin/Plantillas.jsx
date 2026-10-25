@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import api from '../../services/api.js'
-import { sinBackend } from '../../utils/devFallback.js'
-import PageHeader from '../../components/ui/PageHeader.jsx'
-import Card from '../../components/ui/Card.jsx'
-import Badge from '../../components/ui/Badge.jsx'
-import Button from '../../components/ui/Button.jsx'
+import api from '../../services/api'
+import { sinBackend } from '../../utils/devFallback'
+import PageHeader from '../../components/ui/PageHeader'
+import Card from '../../components/ui/Card'
+import Badge from '../../components/ui/Badge'
+import Button from '../../components/ui/Button'
 
 const DEMO = [
   { id: '1', nombre: 'Técnico Estándar', descripcion: 'Para perfiles de TI y áreas técnicas', activa: true, dimensiones: [

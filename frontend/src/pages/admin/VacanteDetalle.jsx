@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import api from '../../services/api.js'
-import { sinBackend } from '../../utils/devFallback.js'
-import Card from '../../components/ui/Card.jsx'
-import Badge from '../../components/ui/Badge.jsx'
-import Button from '../../components/ui/Button.jsx'
+import api from '../../services/api'
+import { sinBackend } from '../../utils/devFallback'
+import Card from '../../components/ui/Card'
+import Badge from '../../components/ui/Badge'
+import Button from '../../components/ui/Button'
 
 const DEMO = {
   id: '1', codigo: 'TI-2026-001', titulo: 'Full Stack Developer',
