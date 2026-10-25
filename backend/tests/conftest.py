@@ -41,7 +41,7 @@ from app.scripts.crear_roles import ROL_APP, ROL_OWNER, ROL_SYSTEM, Credencial, 
 
 # Importa todos los modelos para que sus tablas queden registradas en SQLModel.metadata
 # (mismo patrón que alembic/env.py); se usa para el TRUNCATE entre tests.
-from app.models import area, candidato, entrevista, evaluacion, usuario, vacante  # noqa: F401
+from app.models import area, candidato, decision, entrevista, evaluacion, usuario, vacante  # noqa: F401
 
 DIRECTORIO_BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

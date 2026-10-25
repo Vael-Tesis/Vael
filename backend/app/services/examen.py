@@ -6,14 +6,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.gemini import consultar_gemini_json
 from app.core.proctoring import CATALOGO_EVENTOS_PROCTORING, EVENTO_DEFAULT, calcular_semaforo
-from app.core.security import emitir_token_candidato
 from app.models.area import Area
 from app.models.base import utcnow
 from app.models.candidato import Candidato, EstadoCandidato
 from app.models.evaluacion import Examen, EventoAuditoria, PreguntaExamen, TipoPregunta
-from app.models.usuario import TipoToken
 from app.models.vacante import Vacante
-from app.services.correos import correo_invitacion_entrevista
 
 # Re-exportado para que app.services.examen.calcular_semaforo también sea válido —
 # la implementación real vive en core/proctoring.py, compartida con entrevista.
@@ -186,9 +183,7 @@ async def calificar_examen(examen_id: str, db: AsyncSession) -> Examen:
     - MC: compara respuesta_candidato con respuesta_correcta → 0 o puntos_max (2.0)
     - Abiertas: Gemini evalúa la respuesta → 0, 1 o 2 puntos, con feedback
     - Nota final = suma de puntos_obtenidos (máximo 20, sobre 6 MC + 4 abiertas × 2 pts)
-    - Si nota >= nota_minima_examen de la vacante: candidato pasa a examen_aprobado,
-      se emite el token de entrevista y se envía el correo de invitación
-    - Si nota < nota_minima_examen: candidato pasa a examen_rechazado, sin correo
+    - El candidato queda en examen_por_confirmar: avanzar o descartar lo decide RRHH (DEC-009)
     """
     examen = await db.get(Examen, examen_id)
     if examen is None:
@@ -221,23 +216,14 @@ async def calificar_examen(examen_id: str, db: AsyncSession) -> Examen:
     await db.refresh(examen)
 
     candidato = await db.get(Candidato, examen.candidato_id)
-    vacante = await db.get(Vacante, examen.vacante_id)
-    if candidato is None or vacante is None:
+    if candidato is None:
         return examen
 
+    # DEC-009: la nota frente a nota_minima_examen es una recomendación; RRHH decide.
+    candidato.estado = EstadoCandidato.EXAMEN_POR_CONFIRMAR
     candidato.updated_at = utcnow()
-
-    if examen.nota >= vacante.nota_minima_examen:
-        candidato.estado = EstadoCandidato.EXAMEN_APROBADO
-        db.add(candidato)
-        await db.commit()
-
-        token = await emitir_token_candidato(candidato.id, candidato.tenant_id, TipoToken.ENTREVISTA, db)
-        await correo_invitacion_entrevista(candidato, token)
-    else:
-        candidato.estado = EstadoCandidato.EXAMEN_RECHAZADO
-        db.add(candidato)
-        await db.commit()
+    db.add(candidato)
+    await db.commit()
 
     return examen
 

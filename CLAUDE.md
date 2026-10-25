@@ -65,12 +65,14 @@ Enfoque iterativo e incremental basado en Scrum, con sprints de 1 semana. Produc
 
 ```
 backend/app/
-  core/       config, database, dependencies (get_tenant), gemini, proctoring, security
+  core/       config, database (RLS), dependencies, despacho, gemini, logs, proctoring,
+              scoring, security
   models/     un archivo por dominio (`docs/diseno/05_modelos_bd.md`)
   routers/    auth, areas, plantillas, vacantes, candidatos, evaluaciones, entrevista, publico
   schemas/
-  services/   analisis_cv, examen, entrevista_ia, correos, vacante_ia, aws_services
-              (+ decisiones: planificado, DEV-C-10)
+  scripts/    crear_roles (DEC-010)
+  services/   analisis_cv, examen, entrevista_ia, decisiones (DEC-009), correos, vacante_ia,
+              aws_services
   templates/emails/
 backend/alembic/versions/
 backend/tests/

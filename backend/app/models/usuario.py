@@ -32,6 +32,8 @@ class Empresa(SQLModel, table=True):
     tenant_id: str = Field(unique=True, index=True, nullable=False, max_length=36)
     nombre: str = Field(nullable=False)
     logo_url: str | None = Field(default=None)
+    # Contacto para consultas sobre datos personales; va en el correo de cierre (DEC-013)
+    email_contacto: str | None = Field(default=None, max_length=255)
     activa: bool = Field(default=True, nullable=False)
     created_at: datetime = Field(default_factory=utcnow, nullable=False)
 
