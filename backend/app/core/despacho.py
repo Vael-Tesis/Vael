@@ -16,6 +16,8 @@ from collections.abc import Awaitable, Callable
 from enum import StrEnum
 from typing import Any
 
+from app.core.database import con_tenant
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,9 +63,15 @@ def _validar_payload(tipo: TipoTarea, payload: dict[str, Any]) -> None:
 
 
 async def _ejecutar(tipo: TipoTarea, manejador: Manejador, payload: dict[str, Any]) -> None:
-    """Corre la tarea y registra cualquier falla no controlada, sin propagarla."""
+    """Corre la tarea con el tenant del mensaje fijado (DEC-010, DEC-016 punto 6) y registra
+    cualquier falla no controlada, sin propagarla.
+
+    El tenant sale del payload y no del contexto de la petición que la despachó: así la
+    tarea se comporta igual en proceso que cuando llegue desde SQS.
+    """
     try:
-        await manejador(payload)
+        with con_tenant(payload["tenant_id"]):
+            await manejador(payload)
     except Exception:
         logger.exception("La tarea %s falló", tipo, extra={"tenant_id": payload.get("tenant_id")})
 

@@ -12,7 +12,13 @@ import app.main as modulo_main
 from app.core.config import Settings, settings
 from app.core.logs import FormateadorJSON, medir_operacion, tenant_actual
 
-_REQUERIDOS = {"database_url": "sqlite+aiosqlite://", "secret_key": "x" * 32, "internal_service_key": "k"}
+_REQUERIDOS = {
+    "database_url": "postgresql+asyncpg://vael_app:x@localhost/vael",
+    "database_system_url": "postgresql+asyncpg://vael_system:x@localhost/vael",
+    "database_owner_url": "postgresql+asyncpg://vael_owner:x@localhost/vael",
+    "secret_key": "x" * 32,
+    "internal_service_key": "k",
+}
 
 
 # --- DEV-C-07 -----------------------------------------------------------------

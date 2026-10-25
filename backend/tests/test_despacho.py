@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from app.core import despacho
+from app.core.database import con_tenant, tenant_fijado
 from app.core.despacho import TipoTarea, despachar_tarea
 from app.routers import candidatos, entrevista, publico
 
@@ -95,3 +96,21 @@ def test_los_routers_de_analisis_no_usan_background_tasks(modulo: Any) -> None:
     codigo = inspect.getsource(modulo)
     assert "BackgroundTasks" not in codigo
     assert "despachar_tarea" in codigo
+
+
+async def test_la_tarea_usa_el_tenant_del_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    """La tarea fija el tenant del mensaje (DEC-016 punto 6), no el de la petición que la despachó."""
+    vistos: list[str | None] = []
+
+    def manejador_que_observa(tipo: TipoTarea) -> despacho.Manejador:
+        async def ejecutar(payload: dict[str, Any]) -> None:
+            vistos.append(tenant_fijado())
+
+        return ejecutar
+
+    monkeypatch.setattr(despacho, "_manejador", manejador_que_observa)
+    with con_tenant("tenant-de-la-peticion"):
+        tarea = await despachar_tarea(TipoTarea.ANALISIS_CV, {"tenant_id": "tenant-del-mensaje", "candidato_id": "c-1"})
+    await tarea
+
+    assert vistos == ["tenant-del-mensaje"]

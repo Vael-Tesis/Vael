@@ -1,4 +1,8 @@
-"""Endpoints públicos sin autenticación — formulario de postulación — /api/publico/."""
+"""Endpoints públicos sin autenticación — formulario de postulación — /api/publico/.
+
+Los tres usan la sesión del sistema (lista cerrada de DEC-010): no hay JWT del que
+obtener la empresa, la vacante se ubica por su código o por su estado público.
+"""
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -6,7 +10,7 @@ from pydantic import EmailStr
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_system_db
 from app.core.despacho import TipoTarea, despachar_tarea
 from app.models.base import new_id
 from app.models.candidato import Candidato
@@ -59,7 +63,7 @@ def _construir_vacante_publica(vacante: Vacante, empresa: Empresa | None) -> Vac
 @router.get("/postular/{codigo}", response_model=VacantePublicaResponse)
 async def obtener_vacante_publica(
     codigo: str,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_system_db)],
 ) -> VacantePublicaResponse:
     """Info de una vacante abierta para el formulario público de postulación.
 
@@ -78,7 +82,7 @@ async def obtener_vacante_publica(
 @router.post("/postular/{codigo}/enviar", response_model=PostulacionResponse, status_code=status.HTTP_201_CREATED)
 async def enviar_postulacion(
     codigo: str,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_system_db)],
     nombre: Annotated[str, Form()],
     apellidos: Annotated[str, Form()],
     email: Annotated[EmailStr, Form()],
@@ -120,7 +124,7 @@ async def enviar_postulacion(
 
 @router.get("/vacantes", response_model=list[VacantePublicaResponse])
 async def listar_vacantes_publicas(
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_system_db)],
 ) -> list[VacantePublicaResponse]:
     """Lista las vacantes públicas: abiertas y no confidenciales, de cualquier tenant."""
     statement = select(Vacante).where(Vacante.estado == EstadoVacante.ABIERTA, Vacante.confidencial.is_(False))

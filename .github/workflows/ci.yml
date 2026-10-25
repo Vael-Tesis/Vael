@@ -29,7 +29,11 @@ jobs:
     env:
       ENVIRONMENT: test
       DEBUG: "true"
-      DATABASE_URL: postgresql+asyncpg://vael:vael@localhost:5432/vael_db
+      # Un rol por uso (DEC-010); el superusuario del servicio solo crea los roles.
+      DATABASE_ADMIN_URL: postgresql+asyncpg://vael:vael@localhost:5432/vael_db
+      DATABASE_URL: postgresql+asyncpg://vael_app:vael_app_ci@localhost:5432/vael_db
+      DATABASE_SYSTEM_URL: postgresql+asyncpg://vael_system:vael_system_ci@localhost:5432/vael_db
+      DATABASE_OWNER_URL: postgresql+asyncpg://vael_owner:vael_owner_ci@localhost:5432/vael_db
       SECRET_KEY: ci-test-secret-key-minimo-32-caracteres
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: "60"
@@ -73,7 +77,10 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
-      - name: Aplicar migraciones (alembic upgrade head)
+      - name: Crear roles de base de datos (DEC-010)
+        run: python -m app.scripts.crear_roles
+
+      - name: Aplicar migraciones como vael_owner (alembic upgrade head)
         run: alembic upgrade head
 
       - name: Tests (pytest)

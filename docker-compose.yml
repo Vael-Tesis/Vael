@@ -28,7 +28,10 @@ services:
     environment:
       # Dentro de la red de docker-compose el host de la BD es el nombre del servicio,
       # no localhost — sobrescribe lo que traiga backend/.env para el resto de variables.
-      DATABASE_URL: postgresql+asyncpg://vael:vael@db:5432/vael_db
+      # Un rol por uso (DEC-010); se crean con `python -m app.scripts.crear_roles`.
+      DATABASE_URL: postgresql+asyncpg://vael_app:vael_app_local@db:5432/vael_db
+      DATABASE_SYSTEM_URL: postgresql+asyncpg://vael_system:vael_system_local@db:5432/vael_db
+      DATABASE_OWNER_URL: postgresql+asyncpg://vael_owner:vael_owner_local@db:5432/vael_db
     ports:
       - "8000:8000"
     volumes:

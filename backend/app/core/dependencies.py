@@ -7,7 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import fijar_tenant, get_db
 from app.core.logs import tenant_actual
 from app.core.security import decode_token
 from app.models.candidato import Candidato
@@ -19,10 +19,17 @@ _bearer_scheme = HTTPBearer(auto_error=True)
 async def _get_token_claims(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer_scheme)],
 ) -> dict[str, Any]:
-    """Decodifica el JWT del header Authorization (vía core/security.py) y retorna sus claims."""
+    """Decodifica el JWT del header Authorization (vía core/security.py) y retorna sus claims.
+
+    Fija el tenant del token para la RLS (DEC-010) antes de cualquier consulta de la
+    petición: la primera transacción de get_db ya lo aplica.
+    """
     claims = await decode_token(credentials.credentials)
     if claims is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido o expirado")
+    tenant_id = claims.get("tenant_id")
+    if isinstance(tenant_id, str) and tenant_id:
+        fijar_tenant(tenant_id)
     return claims
 
 
