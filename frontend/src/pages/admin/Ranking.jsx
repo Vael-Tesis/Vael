@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import api from '../../services/api.js'
-import { sinBackend } from '../../utils/devFallback.js'
-import PageHeader from '../../components/ui/PageHeader.jsx'
-import Card from '../../components/ui/Card.jsx'
-import Badge from '../../components/ui/Badge.jsx'
-import EmptyState from '../../components/ui/EmptyState.jsx'
+import api from '../../services/api'
+import { sinBackend } from '../../utils/devFallback'
+import PageHeader from '../../components/ui/PageHeader'
+import Card from '../../components/ui/Card'
+import Badge from '../../components/ui/Badge'
+import EmptyState from '../../components/ui/EmptyState'
 
 const DEMO = [
   { id: '1', nombre: 'Jorge', apellidos: 'Torres',   score_cv: 92, score_final: 18.4, nota_examen: 17, nota_entrevista: 16.8, estado: 'finalista' },

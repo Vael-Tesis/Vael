@@ -1,9 +1,19 @@
-import { useState } from 'react'
+import { useState, type ChangeEventHandler, type HTMLInputTypeAttribute } from 'react'
+
+interface InputProps {
+  label?: string
+  type?: HTMLInputTypeAttribute
+  value?: string | number
+  onChange?: ChangeEventHandler<HTMLInputElement>
+  placeholder?: string
+  required?: boolean
+  error?: string
+}
 
 export default function Input({
   label, type = 'text', value, onChange,
   placeholder, required, error,
-}) {
+}: InputProps) {
   const [focused, setFocused] = useState(false)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
