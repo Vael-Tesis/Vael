@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     # Interno
     internal_service_key: str
 
+    # Contraseñas de los usuarios semilla (app.scripts.semillas, doc 13). Nunca en el repositorio.
+    # SEED_PASSWORD es la de respaldo para los roles que no tengan la suya.
+    seed_password: str | None = None
+    seed_password_admin: str | None = None
+    seed_password_reclutador: str | None = None
+    seed_password_evaluador: str | None = None
+    seed_password_gerente: str | None = None
+
     # Frontend
     frontend_url: str = "http://localhost:5173"
     allowed_origins: str = "http://localhost:5173,http://localhost:3000"

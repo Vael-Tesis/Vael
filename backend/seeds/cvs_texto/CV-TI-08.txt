@@ -1,0 +1,17 @@
+Martín Castillo Ríos
+martin.castillo@example.com | +51 900 000 108 | Lima, Perú
+
+PERFIL
+Desarrollador backend con 5 años de experiencia en Python, Django y PostgreSQL.
+
+EXPERIENCIA
+2023 (mayo) - actualidad | Desarrollador Backend | Plataforma Educativa Ejemplo (ficticia)
+- APIs en Django REST Framework y PostgreSQL; pruebas con pytest.
+2018 (enero) - 2022 (marzo) | Desarrollador Python | Banco Digital Ejemplo (ficticio)
+- Servicios de conciliación en Python y PostgreSQL.
+
+FORMACIÓN
+Ingeniería de Sistemas, Universidad Nacional de Ejemplo, 2017.
+
+HABILIDADES
+Python, Django, FastAPI, PostgreSQL, Docker, pytest, Git.

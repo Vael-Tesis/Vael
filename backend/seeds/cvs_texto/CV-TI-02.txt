@@ -1,0 +1,17 @@
+Valeria Paredes Rojas
+valeria.paredes@example.com | +51 900 000 102 | Arequipa, Perú
+
+PERFIL
+Desarrolladora web con 4 años de experiencia en Django y MySQL.
+
+EXPERIENCIA
+2021 - actualidad | Desarrolladora Django | Comercializadora Pacífica S.A.C. (ficticia)
+- Desarrolló el módulo de facturación con Django REST Framework y MySQL.
+- Integró pasarelas de pago y colas de tareas con Celery.
+2020 - 2021 | Practicante de desarrollo | Agencia Digital Norte (ficticia)
+
+FORMACIÓN
+Computación e Informática, Instituto Tecnológico de Ejemplo, 2020.
+
+HABILIDADES
+Python, Django, Django REST Framework, MySQL, Celery, Redis, Git, Linux.

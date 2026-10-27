@@ -1,0 +1,21 @@
+Diego Ramírez Cárdenas
+diego.ramirez@example.com | +51 900 000 103 | Trujillo, Perú
+github.com/diego-ramirez-ejemplo
+
+PERFIL
+Desarrollador con 3 años de experiencia en Python y proyectos públicos verificables.
+
+EXPERIENCIA
+2023 - actualidad | Desarrollador Python | Consultora Datos Claros (ficticia)
+- Construyó servicios de ingesta de datos con Python y PostgreSQL.
+2022 - 2023 | Desarrollador junior | Startup Rutas (ficticia)
+
+PROYECTOS
+- api-inventario: API en FastAPI con autenticación JWT y pruebas (GitHub).
+- scraper-precios: recolector de precios con asyncio y httpx (GitHub).
+
+FORMACIÓN
+Ingeniería de Software, Universidad Privada de Ejemplo, 2022.
+
+HABILIDADES
+Python, FastAPI, PostgreSQL, asyncio, Docker, Git.

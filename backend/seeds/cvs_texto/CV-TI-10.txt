@@ -1,0 +1,17 @@
+Ricardo Navarro León
+ricardo.navarro@example.com | +51 900 000 110 | Lima, Perú
+
+PERFIL
+Líder técnico con 12 años de experiencia en arquitectura de software, Python y equipos ágiles.
+
+EXPERIENCIA
+2019 - actualidad | Líder Técnico | Corporación Tecnológica Ejemplo (ficticia)
+- Lidera un equipo de 9 desarrolladores; arquitectura de microservicios en Python.
+2014 - 2019 | Arquitecto de Software | Telecomunicaciones Ejemplo (ficticia)
+2012 - 2014 | Desarrollador Python | Consultora Ejemplo (ficticia)
+
+FORMACIÓN
+Maestría en Ingeniería de Software, Universidad de Ejemplo, 2016.
+
+HABILIDADES
+Python, FastAPI, Django, PostgreSQL, Kubernetes, AWS, arquitectura, liderazgo de equipos.

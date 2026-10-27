@@ -1,0 +1,15 @@
+Sebastián Flores Ramos
+sebastian.flores@example.com | +51 900 000 206 | Lima, Perú
+
+PERFIL
+Desarrollador de software con 3 años de experiencia en JavaScript y React.
+
+EXPERIENCIA
+2023 - actualidad | Desarrollador Frontend | Software Ejemplo S.A.C. (ficticia)
+- Interfaces con React y TypeScript.
+
+FORMACIÓN
+Ingeniería de Software, Universidad de Ejemplo, 2022.
+
+HABILIDADES
+JavaScript, TypeScript, React, CSS, Git.
