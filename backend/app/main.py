@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.logs import configurar_logging
-from app.routers import areas, auth, candidatos, entrevista, evaluaciones, plantillas, publico, vacantes
+from app.routers import areas, auth, candidatos, entrevista, evaluaciones, plantillas, publico, tags, vacantes
 
 
 @asynccontextmanager
@@ -78,6 +78,7 @@ app.include_router(candidatos.router)
 app.include_router(evaluaciones.router)
 app.include_router(entrevista.router)
 app.include_router(plantillas.router)
+app.include_router(tags.router)
 app.include_router(publico.router)
 
 

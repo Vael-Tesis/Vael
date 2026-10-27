@@ -108,3 +108,4 @@ class NotaCandidato(TenantBase, table=True):
     autor_id: str = Field(nullable=False, index=True, foreign_key="usuarios.id")
     contenido: str = Field(nullable=False)
     created_at: datetime = Field(default_factory=utcnow, nullable=False)
+    updated_at: datetime | None = Field(default=None)  # última edición; nulo si nunca se editó

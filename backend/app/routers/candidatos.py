@@ -12,7 +12,7 @@ from app.core.despacho import TipoTarea, despachar_tarea
 from app.core.dependencies import get_current_user, require_rol
 from app.core.security import emitir_token_candidato
 from app.models.base import new_id, utcnow
-from app.models.candidato import Candidato, CandidatoTag, ClasificacionIA, EstadoCandidato, NotaCandidato
+from app.models.candidato import Candidato, CandidatoTag, ClasificacionIA, EstadoCandidato, NotaCandidato, Tag
 from app.models.entrevista import EntrevistaIA
 from app.models.evaluacion import Examen
 from app.models.usuario import Empresa, RolUsuario, TipoToken, Usuario
@@ -35,6 +35,8 @@ from app.schemas.decision import (
     DecisionResponse,
     RecomendacionPendienteResponse,
 )
+from app.schemas.tag import AsignarTagRequest, TagResponse
+from app.services import candidatos as servicio_candidatos
 from app.services import decisiones as servicio_decisiones
 from app.services.aws_services import subir_archivo
 from app.services.correos import (
@@ -64,8 +66,14 @@ async def _obtener_candidato_del_tenant(candidato_id: str, tenant_id: str, db: A
     return candidato
 
 
-def _como_http(error: servicio_decisiones.ErrorDecision) -> HTTPException:
+def _como_http(error: servicio_decisiones.ErrorDecision | servicio_candidatos.ErrorCandidatos) -> HTTPException:
     return HTTPException(status_code=error.codigo, detail=error.detalle)
+
+
+def _nota_response(nota: NotaCandidato, autor: Usuario | None) -> NotaResponse:
+    respuesta = NotaResponse.model_validate(nota)
+    respuesta.autor_nombre = f"{autor.nombre} {autor.apellidos}" if autor else None
+    return respuesta
 
 
 @router.get("", response_model=list[CandidatoResponse])
@@ -306,9 +314,11 @@ async def obtener_candidato(
     """Retorna el detalle completo de un candidato, con su historial de decisiones (HU-16)."""
     candidato = await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
     historial = await servicio_decisiones.historial(candidato.id, actor.tenant_id, db)
+    etiquetas = await servicio_candidatos.etiquetas_de(candidato.id, actor.tenant_id, db)
     return CandidatoDetalleResponse(
         **CandidatoResponse.model_validate(candidato).model_dump(),
         decisiones=[DecisionResponse.model_validate(d) for d in historial],
+        tags=[TagResponse.model_validate(t) for t in etiquetas],
     )
 
 
@@ -454,17 +464,18 @@ async def listar_notas_candidato(
     candidato_id: str,
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> list[NotaCandidato]:
-    """Lista las notas internas de un candidato, de la más reciente a la más antigua."""
+) -> list[NotaResponse]:
+    """Lista las notas internas de un candidato, de la más reciente a la más antigua, con su autor."""
     await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
 
     statement = (
-        select(NotaCandidato)
+        select(NotaCandidato, Usuario)
+        .join(Usuario, Usuario.id == NotaCandidato.autor_id)
         .where(NotaCandidato.tenant_id == actor.tenant_id, NotaCandidato.candidato_id == candidato_id)
         .order_by(NotaCandidato.created_at.desc())
     )
     result = await db.exec(statement)
-    return list(result.all())
+    return [_nota_response(nota, autor) for nota, autor in result.all()]
 
 
 @router.post("/{candidato_id}/notas", response_model=NotaResponse, status_code=status.HTTP_201_CREATED)
@@ -473,7 +484,7 @@ async def crear_nota_candidato(
     body: NotaCreateRequest,
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> NotaCandidato:
+) -> NotaResponse:
     """Agrega una nota interna a un candidato."""
     await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
 
@@ -486,4 +497,65 @@ async def crear_nota_candidato(
     db.add(nota)
     await db.commit()
     await db.refresh(nota)
-    return nota
+    return _nota_response(nota, actor)
+
+
+@router.put("/{candidato_id}/notas/{nota_id}", response_model=NotaResponse)
+async def editar_nota_candidato(
+    candidato_id: str,
+    nota_id: str,
+    body: NotaCreateRequest,
+    actor: Annotated[Usuario, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> NotaResponse:
+    """Edita una nota propia; solo el autor puede hacerlo (HU-13)."""
+    try:
+        nota = await servicio_candidatos.editar_nota(candidato_id, nota_id, body.contenido, actor, db)
+    except servicio_candidatos.ErrorCandidatos as error:
+        raise _como_http(error) from error
+    return _nota_response(nota, actor)
+
+
+@router.delete("/{candidato_id}/notas/{nota_id}", response_model=MensajeResponse)
+async def eliminar_nota_candidato(
+    candidato_id: str,
+    nota_id: str,
+    actor: Annotated[Usuario, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> MensajeResponse:
+    """Elimina una nota; puede hacerlo su autor o un admin (HU-13)."""
+    try:
+        await servicio_candidatos.eliminar_nota(candidato_id, nota_id, actor, db)
+    except servicio_candidatos.ErrorCandidatos as error:
+        raise _como_http(error) from error
+    return MensajeResponse(detail="Nota eliminada")
+
+
+@router.post("/{candidato_id}/tags", response_model=list[TagResponse])
+async def asignar_tag_candidato(
+    candidato_id: str,
+    body: AsignarTagRequest,
+    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[Tag]:
+    """Asigna una etiqueta al candidato (idempotente) y devuelve sus etiquetas."""
+    candidato = await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
+    try:
+        return await servicio_candidatos.asignar_etiqueta(candidato, body.tag_id, db)
+    except servicio_candidatos.ErrorCandidatos as error:
+        raise _como_http(error) from error
+
+
+@router.delete("/{candidato_id}/tags/{tag_id}", response_model=list[TagResponse])
+async def quitar_tag_candidato(
+    candidato_id: str,
+    tag_id: str,
+    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[Tag]:
+    """Quita una etiqueta del candidato y devuelve las que le quedan."""
+    candidato = await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
+    try:
+        return await servicio_candidatos.quitar_etiqueta(candidato, tag_id, db)
+    except servicio_candidatos.ErrorCandidatos as error:
+        raise _como_http(error) from error
