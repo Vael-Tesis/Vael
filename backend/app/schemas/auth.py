@@ -20,18 +20,17 @@ class RefreshRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    """Par de tokens emitido al iniciar sesión."""
+    """Par de tokens emitido al iniciar sesión y en cada renovación (el refresh rota, DEC-011)."""
 
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
 
 
-class AccessTokenResponse(BaseModel):
-    """Nuevo access_token emitido al renovar la sesión."""
+class LogoutRequest(BaseModel):
+    """Refresh token de la sesión que se cierra."""
 
-    access_token: str
-    token_type: str = "bearer"
+    refresh_token: str
 
 
 class UsuarioResponse(BaseModel):

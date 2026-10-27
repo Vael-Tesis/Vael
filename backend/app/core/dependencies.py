@@ -61,6 +61,9 @@ async def get_current_user(
 
     if usuario is None or not usuario.activo:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado o inactivo")
+    # Revocación inmediata (DEC-011): al desactivar o cambiar la contraseña sube token_version
+    if claims.get("ver", 0) != usuario.token_version:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="La sesión fue revocada")
 
     _fijar_tenant_en_logs(request, usuario.tenant_id)
     return usuario

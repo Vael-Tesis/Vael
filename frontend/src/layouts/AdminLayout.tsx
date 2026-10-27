@@ -2,14 +2,10 @@ import type { Dispatch, SetStateAction } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+import { puedeVer } from '../auth/permisos'
+import { cerrarSesion, usuarioActual } from '../auth/sesion'
 
 export type Tema = 'light' | 'dark'
-
-interface UsuarioGuardado {
-  nombre?: string
-  apellidos?: string
-  rol?: string
-}
 
 interface AdminLayoutProps {
   theme: Tema
@@ -47,13 +43,16 @@ const NAV = [
 
 export default function AdminLayout({ theme, setTheme }: AdminLayoutProps) {
   const navigate = useNavigate()
-  const user: UsuarioGuardado = JSON.parse(localStorage.getItem('vael_user') || '{}')
+  const user = usuarioActual()
+  const secciones = NAV.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => puedeVer(user?.rol, item.to)),
+  })).filter((section) => section.items.length > 0)
 
-  function handleLogout() {
-    localStorage.removeItem('vael_token')
-    localStorage.removeItem('vael_user')
+  async function handleLogout() {
+    await cerrarSesion()
     toast.success('Sesión cerrada')
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   return (
@@ -89,7 +88,7 @@ export default function AdminLayout({ theme, setTheme }: AdminLayoutProps) {
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: 8, overflowY: 'auto' }}>
-          {NAV.map((section) => (
+          {secciones.map((section) => (
             <div key={section.label}>
               <p style={{
                 fontSize: 10, fontWeight: 500,
@@ -141,13 +140,13 @@ export default function AdminLayout({ theme, setTheme }: AdminLayoutProps) {
             fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)',
             flexShrink: 0,
           }}>
-            {(user.nombre?.[0] || 'U') + (user.apellidos?.[0] || '')}
+            {(user?.nombre[0] ?? 'U') + (user?.apellidos[0] ?? '')}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user.nombre || 'Usuario'}
+              {user?.nombre ?? 'Usuario'}
             </p>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>{user.rol || 'admin'}</p>
+            <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>{user?.rol ?? ''}</p>
           </div>
           <button
             onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
