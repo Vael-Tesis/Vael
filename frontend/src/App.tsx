@@ -36,8 +36,8 @@ import ExamenDetalle from './pages/admin/ExamenDetalle.jsx'
 import EntrevistasIA from './pages/admin/EntrevistasIA.jsx'
 import EntrevistaDetalle from './pages/admin/EntrevistaDetalle.jsx'
 import Auditoria from './pages/admin/Auditoria.jsx'
-import Plantillas from './pages/admin/Plantillas.jsx'
-import Areas from './pages/admin/Areas.jsx'
+import Plantillas from './pages/admin/Plantillas'
+import Areas from './pages/admin/Areas'
 import Usuarios from './pages/admin/Usuarios.jsx'
 
 /** Exige sesión iniciada (HU-01). */
