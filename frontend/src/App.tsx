@@ -23,9 +23,9 @@ import SesionExpirada from './pages/candidato/SesionExpirada.jsx'
 
 // Admin
 import Dashboard from './pages/admin/Dashboard.jsx'
-import Vacantes from './pages/admin/Vacantes.jsx'
-import VacanteForm from './pages/admin/VacanteForm.jsx'
-import VacanteDetalle from './pages/admin/VacanteDetalle.jsx'
+import Vacantes from './pages/admin/Vacantes'
+import VacanteForm from './pages/admin/VacanteForm'
+import VacanteDetalle from './pages/admin/VacanteDetalle'
 import Candidatos from './pages/admin/Candidatos.jsx'
 import CandidatoRegistrar from './pages/admin/CandidatoRegistrar.jsx'
 import CandidatoDetalle from './pages/admin/CandidatoDetalle.jsx'

@@ -1,4 +1,5 @@
 """Endpoints de gestión de vacantes — /api/vacantes/."""
+import logging
 from datetime import datetime, timezone
 from email.utils import format_datetime
 from typing import Annotated
@@ -15,13 +16,18 @@ from app.models.area import Area
 from app.models.base import utcnow
 from app.models.usuario import Empresa, RolUsuario, Usuario
 from app.models.vacante import EstadoVacante, PrioridadVacante, TipoContrato, Vacante
+from app.schemas.candidato import MensajeResponse
 from app.schemas.vacante import (
     TextosMarketingResponse,
+    TextosPublicacionRequest,
     VacanteCreateRequest,
     VacanteResponse,
     VacanteUpdateRequest,
 )
+from app.services import vacantes as servicio_vacantes
 from app.services.vacante_ia import generar_textos_marketing
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/vacantes", tags=["vacantes"])
 
@@ -175,14 +181,12 @@ async def publicar_vacante(
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Vacante:
-    """Cambia el estado de la vacante a abierta."""
+    """Abre la vacante a postulaciones, desde borrador o pausada ("reactivar"). 409 si está cerrada."""
     vacante = await _obtener_vacante_del_tenant(vacante_id, actor.tenant_id, db)
-    vacante.estado = EstadoVacante.ABIERTA
-    vacante.updated_at = utcnow()
-    db.add(vacante)
-    await db.commit()
-    await db.refresh(vacante)
-    return vacante
+    try:
+        return await servicio_vacantes.cambiar_estado(vacante, EstadoVacante.ABIERTA, db)
+    except servicio_vacantes.ErrorVacante as error:
+        raise HTTPException(status_code=error.codigo, detail=error.detalle) from error
 
 
 @router.post("/{vacante_id}/pausar", response_model=VacanteResponse)
@@ -191,14 +195,12 @@ async def pausar_vacante(
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Vacante:
-    """Pausa la vacante."""
+    """Pausa una vacante abierta ("despublicar"): deja de aceptar postulaciones. 409 en otro estado."""
     vacante = await _obtener_vacante_del_tenant(vacante_id, actor.tenant_id, db)
-    vacante.estado = EstadoVacante.PAUSADA
-    vacante.updated_at = utcnow()
-    db.add(vacante)
-    await db.commit()
-    await db.refresh(vacante)
-    return vacante
+    try:
+        return await servicio_vacantes.cambiar_estado(vacante, EstadoVacante.PAUSADA, db)
+    except servicio_vacantes.ErrorVacante as error:
+        raise HTTPException(status_code=error.codigo, detail=error.detalle) from error
 
 
 @router.post("/{vacante_id}/cerrar", response_model=VacanteResponse)
@@ -207,14 +209,12 @@ async def cerrar_vacante(
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Vacante:
-    """Cierra la vacante."""
+    """Cierra una vacante abierta o pausada. Es final: para reabrir, se duplica."""
     vacante = await _obtener_vacante_del_tenant(vacante_id, actor.tenant_id, db)
-    vacante.estado = EstadoVacante.CERRADA
-    vacante.updated_at = utcnow()
-    db.add(vacante)
-    await db.commit()
-    await db.refresh(vacante)
-    return vacante
+    try:
+        return await servicio_vacantes.cambiar_estado(vacante, EstadoVacante.CERRADA, db)
+    except servicio_vacantes.ErrorVacante as error:
+        raise HTTPException(status_code=error.codigo, detail=error.detalle) from error
 
 
 @router.post("/{vacante_id}/duplicar", response_model=VacanteResponse, status_code=status.HTTP_201_CREATED)
@@ -273,10 +273,61 @@ async def generar_textos_vacante(
     actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TextosMarketingResponse:
-    """Genera, con Gemini, textos de difusión de la vacante para distintos canales (LinkedIn, WhatsApp, etc.)."""
+    """Genera, con Gemini, textos de difusión para LinkedIn, WhatsApp e Indeed. No los guarda:
+    RRHH los edita y los guarda con PUT /textos. Si la IA falla, responde 502 sin tocar la
+    vacante (CA-10).
+    """
     vacante = await _obtener_vacante_del_tenant(vacante_id, actor.tenant_id, db)
-    textos = await generar_textos_marketing(vacante)
+    try:
+        textos = await generar_textos_marketing(vacante)
+    except Exception as exc:
+        logger.exception("No se pudieron generar los textos de la vacante %s", vacante.id)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="La IA no pudo generar los textos en este momento; intenta de nuevo",
+        ) from exc
+    if not textos:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="La IA no devolvió textos; intenta de nuevo")
     return TextosMarketingResponse(textos=textos)
+
+
+@router.get("/{vacante_id}/textos", response_model=TextosMarketingResponse)
+async def obtener_textos_vacante(
+    vacante_id: str,
+    actor: Annotated[Usuario, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TextosMarketingResponse:
+    """Textos de publicación guardados de la vacante (vacío si aún no se guardaron)."""
+    vacante = await _obtener_vacante_del_tenant(vacante_id, actor.tenant_id, db)
+    return TextosMarketingResponse(textos=vacante.textos_publicacion or {})
+
+
+@router.put("/{vacante_id}/textos", response_model=TextosMarketingResponse)
+async def guardar_textos_vacante(
+    vacante_id: str,
+    body: TextosPublicacionRequest,
+    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TextosMarketingResponse:
+    """Guarda los textos de publicación editados por RRHH (HU-10)."""
+    vacante = await _obtener_vacante_del_tenant(vacante_id, actor.tenant_id, db)
+    textos = await servicio_vacantes.guardar_textos_publicacion(vacante, body.textos, db)
+    return TextosMarketingResponse(textos=textos)
+
+
+@router.delete("/{vacante_id}", response_model=MensajeResponse)
+async def eliminar_vacante(
+    vacante_id: str,
+    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> MensajeResponse:
+    """Elimina una vacante solo en borrador y sin candidatos; 409 en otro caso (HU-08)."""
+    vacante = await _obtener_vacante_del_tenant(vacante_id, actor.tenant_id, db)
+    try:
+        await servicio_vacantes.eliminar_vacante(vacante, db)
+    except servicio_vacantes.ErrorVacante as error:
+        raise HTTPException(status_code=error.codigo, detail=error.detalle) from error
+    return MensajeResponse(detail="Vacante eliminada")
 
 
 @router.get("/{vacante_id}/feed-xml")
