@@ -18,6 +18,10 @@ from app.models.vacante import Vacante
 
 logger = logging.getLogger(__name__)
 
+MENSAJE_CV_SIN_TEXTO = (
+    "No se pudo extraer texto del CV (posible documento escaneado). No se analizó con IA: requiere revisión manual."
+)
+
 
 def _extraer_con_pypdf2(pdf_bytes: bytes) -> str:
     """Extrae el texto de un PDF usando PyPDF2 (motor primario)."""
@@ -132,6 +136,18 @@ async def analizar_cv(candidato: Candidato, vacante: Vacante, area: Area | None,
 
     pdf_bytes = await _descargar_pdf(candidato.cv_url)
     texto_cv = extraer_texto_pdf(pdf_bytes)
+    if not texto_cv.strip():
+        # PDF escaneado o sin texto: no se envía a la IA; RRHH lo revisa a mano (doc 13, CV-TI-11)
+        candidato.score_cv = None
+        candidato.clasificacion_ia = ClasificacionIA.REQUIERE_REVISION
+        candidato.resumen_ia = MENSAJE_CV_SIN_TEXTO
+        candidato.analizado_en = utcnow()
+        candidato.updated_at = utcnow()
+        candidato.estado = EstadoCandidato.CV_POR_CONFIRMAR
+        db.add(candidato)
+        await db.commit()
+        return
+
     prompt = construir_prompt_analisis(texto_cv, vacante, area)
     resultado = await consultar_gemini_json(prompt)
 

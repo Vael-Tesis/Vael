@@ -19,6 +19,7 @@ const NAV = [
       { to: '/dashboard',     icon: '⊞', label: 'Dashboard' },
       { to: '/vacantes',      icon: '◈', label: 'Vacantes' },
       { to: '/candidatos',    icon: '◉', label: 'Candidatos' },
+      { to: '/bandeja',       icon: '◇', label: 'Bandeja de decisiones' },
       { to: '/ranking',       icon: '◐', label: 'Ranking' },
       { to: '/banco-talento', icon: '◬', label: 'Banco de talento' },
     ],

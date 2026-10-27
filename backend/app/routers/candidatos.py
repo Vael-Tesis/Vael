@@ -1,4 +1,5 @@
 """Endpoints de gestión de candidatos y ranking — /api/candidatos/."""
+import logging
 from pathlib import Path
 from typing import Annotated
 
@@ -22,6 +23,7 @@ from app.schemas.candidato import (
     CambiarEstadoRequest,
     CandidatoResponse,
     CandidatoUpdateRequest,
+    ArchivoFallido,
     CargaMasivaResponse,
     MensajeResponse,
     NotaCreateRequest,
@@ -48,6 +50,7 @@ from app.services.correos import (
 )
 
 router = APIRouter(prefix="/api/candidatos", tags=["candidatos"])
+logger = logging.getLogger(__name__)
 
 _RECLUTADOR_O_SUPERIOR = (RolUsuario.ADMIN, RolUsuario.GERENTE, RolUsuario.RECLUTADOR)
 _ESTADOS_BANCO_TALENTO = (EstadoCandidato.CV_RECHAZADO, EstadoCandidato.EXAMEN_RECHAZADO, EstadoCandidato.DESCARTADO)
@@ -68,6 +71,21 @@ async def _obtener_candidato_del_tenant(candidato_id: str, tenant_id: str, db: A
 
 def _como_http(error: servicio_decisiones.ErrorDecision | servicio_candidatos.ErrorCandidatos) -> HTTPException:
     return HTTPException(status_code=error.codigo, detail=error.detalle)
+
+
+async def _decisiones_response(decisiones: list[DecisionCandidato], tenant_id: str, db: AsyncSession) -> list[DecisionResponse]:
+    """Decisiones con el nombre de quien decidió (CA-16)."""
+    ids = {d.decidido_por for d in decisiones}
+    autores = {}
+    if ids:
+        statement = select(Usuario).where(Usuario.tenant_id == tenant_id, Usuario.id.in_(ids))
+        autores = {u.id: f"{u.nombre} {u.apellidos}" for u in (await db.exec(statement)).all()}
+    respuesta = []
+    for decision in decisiones:
+        fila = DecisionResponse.model_validate(decision)
+        fila.decidido_por_nombre = autores.get(decision.decidido_por)
+        respuesta.append(fila)
+    return respuesta
 
 
 def _nota_response(nota: NotaCandidato, autor: Usuario | None) -> NotaResponse:
@@ -129,8 +147,15 @@ async def crear_candidato(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vacante no encontrada")
 
     contenido = await cv.read()
+    motivo = servicio_candidatos.motivo_de_rechazo_cv(cv.filename, contenido)
+    if motivo is not None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=motivo)
     clave = f"cvs/{actor.tenant_id}/{vacante_id}/{new_id()}_{cv.filename}"
-    cv_url = await subir_archivo(contenido, clave, cv.content_type or "application/pdf")
+    try:
+        cv_url = await subir_archivo(contenido, clave, "application/pdf")
+    except Exception as exc:
+        logger.exception("No se pudo subir el CV a S3", extra={"tenant_id": actor.tenant_id})
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="No se pudo guardar el CV; intenta de nuevo") from exc
 
     candidato = Candidato(
         tenant_id=actor.tenant_id,
@@ -223,20 +248,31 @@ async def carga_masiva_candidatos(
 ) -> CargaMasivaResponse:
     """Sube múltiples CVs para una vacante: crea un candidato por archivo y dispara su análisis IA.
 
-    Como el CV recién se analiza en background, nombre/apellidos/email todavía no se
-    conocen al momento de la carga — quedan con un valor provisional hasta que el
-    análisis (una vez implementado) los complete.
+    Informa qué archivos fallaron y por qué (CA-11): no PDF, vacío, más de 10 MB, PDF dañado
+    o error al guardarlo. Como el CV recién se analiza en segundo plano, nombre, apellidos y
+    correo quedan con un valor provisional hasta que RRHH los corrija.
     """
     vacante = await db.get(Vacante, vacante_id)
     if vacante is None or vacante.tenant_id != actor.tenant_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vacante no encontrada")
 
     candidato_ids: list[str] = []
+    fallidos: list[ArchivoFallido] = []
 
     for archivo in archivos:
+        nombre_archivo = archivo.filename or "sin nombre"
         contenido = await archivo.read()
+        motivo = servicio_candidatos.motivo_de_rechazo_cv(archivo.filename, contenido)
+        if motivo is not None:
+            fallidos.append(ArchivoFallido(nombre=nombre_archivo, motivo=motivo))
+            continue
         clave = f"cvs/{actor.tenant_id}/{vacante_id}/{new_id()}_{archivo.filename}"
-        cv_url = await subir_archivo(contenido, clave, archivo.content_type or "application/pdf")
+        try:
+            cv_url = await subir_archivo(contenido, clave, "application/pdf")
+        except Exception:
+            logger.exception("No se pudo subir el CV %s a S3", nombre_archivo, extra={"tenant_id": actor.tenant_id})
+            fallidos.append(ArchivoFallido(nombre=nombre_archivo, motivo="No se pudo guardar el archivo; intenta de nuevo"))
+            continue
 
         nombre_provisional = Path(archivo.filename or "candidato").stem.replace("_", " ").replace("-", " ").title()
 
@@ -255,7 +291,7 @@ async def carga_masiva_candidatos(
         candidato_ids.append(candidato.id)
         await despachar_tarea(TipoTarea.ANALISIS_CV, {"tenant_id": candidato.tenant_id, "candidato_id": candidato.id})
 
-    return CargaMasivaResponse(creados=len(candidato_ids), candidato_ids=candidato_ids)
+    return CargaMasivaResponse(creados=len(candidato_ids), candidato_ids=candidato_ids, fallidos=fallidos)
 
 
 @router.get("/por-confirmar", response_model=list[RecomendacionPendienteResponse])
@@ -277,8 +313,9 @@ async def bandeja_por_confirmar(
             puntaje=recomendacion.puntaje,
             umbral=recomendacion.umbral,
             justificacion_ia=recomendacion.justificacion,
+            semaforo=semaforo,
         )
-        for candidato, recomendacion in pendientes
+        for candidato, recomendacion, semaforo in pendientes
     ]
 
 
@@ -317,7 +354,7 @@ async def obtener_candidato(
     etiquetas = await servicio_candidatos.etiquetas_de(candidato.id, actor.tenant_id, db)
     return CandidatoDetalleResponse(
         **CandidatoResponse.model_validate(candidato).model_dump(),
-        decisiones=[DecisionResponse.model_validate(d) for d in historial],
+        decisiones=await _decisiones_response(historial, actor.tenant_id, db),
         tags=[TagResponse.model_validate(t) for t in etiquetas],
     )
 
@@ -353,10 +390,11 @@ async def historial_decisiones(
     candidato_id: str,
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> list[DecisionCandidato]:
-    """Historial de decisiones del candidato, en orden cronológico (HU-16, OE3)."""
+) -> list[DecisionResponse]:
+    """Historial de decisiones del candidato, en orden cronológico, con el nombre de quien decidió (HU-16, OE3)."""
     await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
-    return await servicio_decisiones.historial(candidato_id, actor.tenant_id, db)
+    historial = await servicio_decisiones.historial(candidato_id, actor.tenant_id, db)
+    return await _decisiones_response(historial, actor.tenant_id, db)
 
 
 @router.put("/{candidato_id}", response_model=CandidatoResponse)
@@ -439,7 +477,7 @@ async def reenviar_correo_etapa(
     if candidato.estado in (EstadoCandidato.CV_APROBADO, EstadoCandidato.EXAMEN_PENDIENTE):
         token = await emitir_token_candidato(candidato.id, candidato.tenant_id, TipoToken.EXAMEN, db)
         await correo_bienvenida_examen(candidato, token)
-    elif candidato.estado == EstadoCandidato.ENTREVISTA_PENDIENTE:
+    elif candidato.estado in (EstadoCandidato.EXAMEN_APROBADO, EstadoCandidato.ENTREVISTA_PENDIENTE):
         token = await emitir_token_candidato(candidato.id, candidato.tenant_id, TipoToken.ENTREVISTA, db)
         await correo_invitacion_entrevista(candidato, token)
     elif candidato.estado == EstadoCandidato.FINALISTA:
