@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import api from '../../services/api.js'
-import { sinBackend } from '../../utils/devFallback.js'
-import PageHeader from '../../components/ui/PageHeader.jsx'
-import Card from '../../components/ui/Card.jsx'
-import EmptyState from '../../components/ui/EmptyState.jsx'
+import api from '../../services/api'
+import { sinBackend } from '../../utils/devFallback'
+import PageHeader from '../../components/ui/PageHeader'
+import Card from '../../components/ui/Card'
+import EmptyState from '../../components/ui/EmptyState'
 
 const DEMO = [
   { id: '1', candidato: { nombre: 'Ana', apellidos: 'Flores' }, semaforo: 'rojo', puntaje_riesgo: 24, eventos: [

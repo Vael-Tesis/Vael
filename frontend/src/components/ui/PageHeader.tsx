@@ -1,4 +1,12 @@
-export default function PageHeader({ title, description, action }) {
+import type { ReactNode } from 'react'
+
+interface PageHeaderProps {
+  title: ReactNode
+  description?: ReactNode
+  action?: ReactNode
+}
+
+export default function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
     <div style={{
       display: 'flex', alignItems: 'flex-start',

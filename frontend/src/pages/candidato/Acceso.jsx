@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import api from '../../services/api.js'
-import Button from '../../components/ui/Button.jsx'
-import Input from '../../components/ui/Input.jsx'
+import api from '../../services/api'
+import Button from '../../components/ui/Button'
+import Input from '../../components/ui/Input'
 
 export default function Acceso() {
   const navigate = useNavigate()
