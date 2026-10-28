@@ -99,6 +99,61 @@ function Candidatos({ vacante }: { vacante: Vacante }) {
   )
 }
 
+function IconoCopiar({ copiado }: { copiado: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {copiado
+        ? <polyline points="20 6 9 17 4 12" />
+        : <><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>}
+    </svg>
+  )
+}
+
+/** Enlace público de postulación: lo sirve `GET /api/publico/postular/{codigo}`, que solo responde con la
+ *  vacante abierta (también si es confidencial: el código hace de enlace privado). Un clic lo copia. */
+function EnlacePostulacion({ vacante }: { vacante: Vacante }) {
+  const [copiado, setCopiado] = useState(false)
+  const enlace = `${window.location.origin}/postular/${vacante.codigo}`
+  const disponible = vacante.estado === 'abierta'
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(enlace)
+      setCopiado(true)
+      toast.success('Enlace copiado')
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      toast.error('No se pudo copiar; selecciona el enlace y cópialo a mano')
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Enlace de postulación</p>
+      {disponible ? (
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+          <button type="button" onClick={copiar} title="Clic para copiar"
+            style={{ flex: 1, minWidth: 0, textAlign: 'left', padding: 10, background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: 6, fontFamily: 'monospace', fontSize: 12, color: 'var(--brand)', wordBreak: 'break-all', cursor: 'pointer' }}>
+            {enlace}
+          </button>
+          <button type="button" onClick={copiar} aria-label="Copiar enlace de postulación" title="Copiar"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', background: copiado ? 'var(--success-bg)' : 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: 6, color: copiado ? 'var(--success-text)' : 'var(--text-secondary)', cursor: 'pointer' }}>
+            <IconoCopiar copiado={copiado} />
+          </button>
+        </div>
+      ) : (
+        <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Disponible cuando la vacante está abierta. Publícala para recibir postulaciones.</p>
+      )}
+      {disponible && vacante.confidencial && (
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+          Vacante confidencial: no aparece en el listado público ni en el feed; solo quien tenga este enlace puede postular.
+        </p>
+      )}
+    </div>
+  )
+}
+
 function Publicacion({ vacante }: { vacante: Vacante }) {
   const queryClient = useQueryClient()
   const [borrador, setBorrador] = useState<Record<string, string> | null>(null)
@@ -166,6 +221,8 @@ function Publicacion({ vacante }: { vacante: Vacante }) {
           ))}
         </div>
       )}
+
+      <EnlacePostulacion vacante={vacante} />
 
       <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Feed XML para bolsas de empleo</p>
