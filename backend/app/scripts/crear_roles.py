@@ -82,6 +82,11 @@ async def crear_roles(
             )
             await conexion.execute(sentencia)
 
+        # En RDS el administrador no es superusuario: para pasar objetos a vael_owner y fijar sus
+        # privilegios por defecto debe ser miembro de vael_owner. En local (superusuario) no hace falta.
+        if not await conexion.fetchval("SELECT rolsuper FROM pg_roles WHERE rolname = current_user"):
+            await conexion.execute(f"GRANT {ROL_OWNER} TO CURRENT_USER")
+
         await conexion.execute(
             f'GRANT CONNECT ON DATABASE "{base_destino}" TO {ROL_OWNER}, {ROL_APP}, {ROL_SYSTEM}'
         )
