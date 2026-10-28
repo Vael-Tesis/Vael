@@ -11,7 +11,7 @@ param([string]$Origen = "$env:USERPROFILE\Downloads")
 
 $docs = @(
   "05_modelos_bd.md", "06_api_endpoints.md", "07_flujo_proceso.md", "08_servicios_negocio.md",
-  "13_datos_semilla.md", "14_plan_metricas.md", "15_matriz_admin_y_endpoints.md", "16_requerimientos_admin.md"
+  "13_datos_semilla.md", "14_plan_metricas.md", "15_matriz_admin_y_endpoints.md", "16_requerimientos_admin.md", "17_convenciones_documentacion.md"
 )
 $destino = Join-Path $PSScriptRoot "..\docs\diseno"
 New-Item -ItemType Directory -Force -Path $destino | Out-Null
