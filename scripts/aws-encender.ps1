@@ -13,6 +13,7 @@
 param([string]$Perfil = "vael", [string]$Region = "us-east-1")
 
 $ErrorActionPreference = "Stop"
+$env:AWS_PAGER = ""  # sin paginador: el script no debe quedarse esperando una tecla
 $raiz = Split-Path $PSScriptRoot -Parent
 $inicio = Get-Date
 
