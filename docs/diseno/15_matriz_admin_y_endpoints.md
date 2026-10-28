@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/15_matriz_admin_y_endpoints.md`, versión 1.2 — **APROBADO** (2026-10-18), copiada el 2026-10-18.
+> COPIA del documento del Drive `VAEL/Docs/15_matriz_admin_y_endpoints.md`, versión 1.3 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-27, copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 15 — Matriz de vistas del perfil Admin y endpoints faltantes
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.2 — **APROBADO** (2026-10-18) |
+| Versión | 1.3 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-27 |
 | Tareas de origen | PLN-A-01 (matriz) y PLN-A-02 (endpoints faltantes) |
 | Criterio | El Figma no es definitivo. **VAEL deriva de MENTIS: sus vistas se asimilan y se adaptan al formato de VAEL** (decisiones DEC-007 a DEC-019, contrato del backend FastAPI, TypeScript) |
 | Alcance aprobado | **Todo lo de esta matriz se desarrolla en este ciclo** (perfil Admin completo) |
@@ -50,7 +50,20 @@ Todas las vistas cumplen el criterio de DEC-008: `.tsx`, cliente tipado, sin moc
 | V-21 | BancoTalento | P-18 Banco de talento | Asimilar | Filtro por área; agregar al banco | — | HU-14 |
 | V-22 | Usuarios | P-19 Usuarios | Asimilar | Reenviar credenciales | Desactivar invalida la sesión (DEC-011) | HU-07 |
 
-Elementos transversales a asimilar: `ConfirmModal` (confirmación antes de acciones irreversibles) y `ProtectedRoute` (guard de rutas), que en VAEL valida también el rol.
+Elementos transversales a asimilar: `ConfirmModal` (confirmación antes de acciones irreversibles) y `ProtectedRoute` (guard de rutas), que en VAEL valida también el rol. **Ambos implementados:** `ConfirmModal` (DEV-A-03) y `ProtectedRoute` + `RutaPorRol`, con el menú filtrado por rol (DEV-A-02).
+
+### Estado de las vistas al cierre del Sprint 1 (2026-10-27)
+
+| Estado | Vistas |
+|---|---|
+| **Migradas a `.tsx` con el cliente tipado, sin mocks** | P-01 Login (DEV-A-02 · PR #18) · P-03, P-04 y P-05 Vacantes (DEV-A-04 · PR #20) · P-06 Candidatos, P-07 Registrar y carga masiva, P-08 Detalle, P-09 Bandeja (DEV-A-05 · PR #21) · P-16 Plantillas y P-17 Áreas (DEV-A-03 · PR #19) |
+| Pendientes (Sprint 2) | P-02 Dashboard (DEV-A-10) · P-10 Ranking (DEV-A-06) · P-11 a P-15 Evaluaciones y auditoría (DEV-A-07) · P-18 Banco de talento (DEV-A-08) · P-19 Usuarios (DEV-A-09) |
+
+Observaciones:
+- **V-04, selector de plantilla:** no se implementó porque `Vacante` no tiene `plantilla_id` (doc 05). Pendiente de decisión del Product Owner, junto con la columna "Plantilla" del doc 13.
+- **V-11, enviar al banco:** depende de DEV-A-08.
+- **P-09, requisitos de diseño:** los seis requisitos de abajo están implementados. El diseño en Figma (P-07 del Sprint 0) sigue pendiente.
+- Las vistas migradas se verificaron con `tsc`, el build y una prueba de humo por HTTP; **falta la revisión visual en el navegador**.
 
 ### Requisitos de diseño de la bandeja (P-09)
 
@@ -65,11 +78,13 @@ Elementos transversales a asimilar: `ConfirmModal` (confirmación antes de accio
 
 **Corrección registrada:** la v1.1 habló de "14 endpoints". El conteo correcto es **16 endpoints nuevos**: 9 de la retrospectiva, 6 de etiquetas y 1 de métricas. A ellos se suman los 4 de decisiones (DEC-009) y el endpoint interno de las Lambdas (DEC-018), especificados en el doc 06.
 
+**Estado al cierre del Sprint 1:** 14 de los 16 endpoints nuevos están implementados (DEV-A-01 · PR #17 y DEV-A-04 · PR #20), además de los 4 de decisiones (DEV-C-10 · PR #13). Faltan `POST /candidatos/{id}/banco-talento` (DEV-A-08), `GET /metricas/dashboard` (DEV-A-10) y los endpoints internos (HU-23).
+
 ### Derivados de la retrospectiva (9)
 
 | Método | Ruta | Permiso | Función | Historia |
 |---|---|---|---|---|
-| DELETE | `/api/vacantes/{vacante_id}` | Reclutador+ | Elimina una vacante **solo en borrador** (409 en otro estado) | HU-08 |
+| DELETE | `/api/vacantes/{vacante_id}` | Reclutador+ | Elimina una vacante **solo en borrador y sin candidatos** (409 en otro caso) | HU-08 |
 | GET | `/api/vacantes/{vacante_id}/textos` | Autenticado | Devuelve los textos de publicación guardados | HU-10 |
 | PUT | `/api/vacantes/{vacante_id}/textos` | Reclutador+ | Guarda los textos de publicación editados | HU-10 |
 | PUT | `/api/candidatos/{candidato_id}/notas/{nota_id}` | Autor de la nota | Edita una nota propia | HU-13 |
@@ -107,3 +122,4 @@ Sin endpoint: `python -m app.scripts.crear_empresa`.
 | 1.0 | 2026-10-14 | Borrador construido desde el código de VAEL |
 | 1.1 | 2026-10-16 | Retrospectiva MENTIS → VAEL |
 | 1.2 | 2026-10-18 | Aprobado; alcance completo en este ciclo; historias asociadas; corrección del conteo (16 endpoints nuevos, no 14) |
+| 1.3 | 2026-10-27 | Estado al cierre del Sprint 1: 10 vistas migradas y 14 de 16 endpoints nuevos implementados; eliminar vacante exige además que no tenga candidatos; selector de plantilla pendiente de decisión |

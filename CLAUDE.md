@@ -61,6 +61,15 @@ Enfoque iterativo e incremental basado en Scrum, con sprints de 1 semana. Produc
 
 **Definition of Done** de cada historia: (1) PR revisado e integrado a `develop`; (2) CI en verde; (3) criterio de aceptación verificado; (4) pruebas de la historia en verde; (5) documentos actualizados si cambió el contrato o el modelo; (6) desplegada en AWS una vez que el entorno existe.
 
+## 7b. Documentación (doc 17)
+
+Antes de crear o modificar cualquier documento, lee `docs/diseno/17_convenciones_documentacion.md` y aplícalo.
+
+- **No tienes acceso al Drive.** Si una tarea exige actualizar un documento del Drive (por ejemplo, porque cambió un endpoint o una tabla; ver la matriz de la sección 6 del doc 17), escribe la versión nueva completa en `drive_pendiente/<nombre>.md` (carpeta ignorada por Git) e infórmalo al final de la tarea.
+- Los ADR sí se escriben en `docs/decisiones/`, con estado **Propuesta** hasta que el otro integrante los apruebe en el PR.
+- **Nunca edites `docs/diseno/`.**
+- Antes de terminar, recorre el checklist de la sección 11 del doc 17 e informa los ítems pendientes.
+
 ## 8. Estructura
 
 ```
@@ -80,7 +89,8 @@ backend/seeds/cvs_texto/   textos de los CV ficticios (los PDF se generan)
 backend/tests/
 frontend/src/
 docs/decisiones/   ADRs
-docs/diseno/       copias de los docs de diseño del Drive (no editar)
+docs/diseno/       copias de los docs de diseño del Drive, incluidas las convenciones (doc 17; no editar)
+drive_pendiente/   borradores de documentos del Drive (ignorada por Git)
 scripts/           sincronizar-diseno.ps1
 ```
 

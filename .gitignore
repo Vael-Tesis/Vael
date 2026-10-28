@@ -17,3 +17,6 @@ frontend/.env
 .idea/
 .DS_Store
 Thumbs.db
+
+# Borradores de documentos del Drive generados por Claude Code (doc 17, sección 9)
+drive_pendiente/
