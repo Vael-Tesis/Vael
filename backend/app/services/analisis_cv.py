@@ -3,7 +3,6 @@ import logging
 from io import BytesIO
 from typing import Any
 
-import httpx
 from pdfminer.high_level import extract_text as pdfminer_extract_text
 from PyPDF2 import PdfReader
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -15,6 +14,7 @@ from app.models.area import Area
 from app.models.base import utcnow
 from app.models.candidato import Candidato, ClasificacionIA, EstadoCandidato
 from app.models.vacante import Vacante
+from app.services.aws_services import clave_desde_url, descargar_archivo
 
 logger = logging.getLogger(__name__)
 
@@ -96,11 +96,8 @@ Evalúa qué tan bien encaja este candidato con la vacante. Responde ÚNICAMENTE
 
 
 async def _descargar_pdf(cv_url: str) -> bytes:
-    """Descarga el PDF del CV desde su URL (S3/CloudFront)."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        respuesta = await client.get(cv_url)
-        respuesta.raise_for_status()
-        return respuesta.content
+    """Descarga el PDF del CV con el cliente de S3: el bucket es privado (doc 03), una URL sin firma da 403."""
+    return await descargar_archivo(clave_desde_url(cv_url))
 
 
 def _como_score(valor: Any) -> int:
