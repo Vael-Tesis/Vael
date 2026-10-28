@@ -1,12 +1,13 @@
-> COPIA del documento del Drive `VAEL/Docs/17_convenciones_documentacion.md`, versión 1.1 — Propuesta para revisión del equipo, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/17_convenciones_documentacion.md`, versión 1.2 — **APROBADO** (2026-10-28), copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 17 — Convenciones de documentación
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.1 — Propuesta para revisión del equipo |
+| Versión | 1.2 — **APROBADO** (2026-10-28) |
 | Actualizado | 2026-10-28 |
+| Aprobación | Gabriel Llanos (Product Owner) en la revisión del PR #22; Diego Nina (Scrum Master), autor |
 | Aplica a | Toda la documentación de VAEL: Drive `VAEL/Docs`, `docs/decisiones/`, `docs/diseno/`, `CLAUDE.md` y artefactos de Scrum |
 | Lo usan | Las personas del equipo, **Claude Code** (en el repositorio) y **Claude en el chat** (con el conector de Drive) |
 | Copia en el repositorio | `docs/diseno/17_convenciones_documentacion.md` (DEC-019) |
@@ -51,7 +52,7 @@ Este documento es la referencia única de cómo se documenta en VAEL. **Un agent
 2. El archivo anterior se renombra con su versión (`05_modelos_bd_v2.1.md`) y **se mueve a `Docs/_historial`**.
 3. **Nunca se borra una versión anterior.** Es la evidencia de la evolución del proyecto.
 
-**Propiedad de los archivos:** en el Drive, solo el propietario de un archivo puede moverlo. Si quien actualiza un documento no es el propietario de la versión anterior, la **copia** a `Docs/_historial` con el sufijo y **avisa al propietario** para que retire el original de la carpeta `Docs`. Nunca deja en `Docs` el original renombrado.
+**Propiedad de los archivos:** en el Drive, solo el propietario de un archivo puede moverlo. Si quien actualiza un documento no es el propietario de la versión anterior, la **copia** a `Docs/_historial` con el sufijo y **avisa al propietario** para que retire el original de la carpeta `Docs`. Nunca deja en `Docs` el original con el mismo nombre del documento vigente.
 
 ---
 
@@ -180,7 +181,7 @@ Claude Code **no tiene acceso al Drive**. Por eso:
 Antes de dar por terminado el trabajo, verificar:
 
 - [ ] Cada documento modificado tiene la versión nueva en su tabla de metadatos y una fila nueva en el historial.
-- [ ] Cada versión anterior está en `Docs/_historial`, con su sufijo, y ningún original renombrado quedó en `Docs`.
+- [ ] Cada versión anterior está en `Docs/_historial`, con su sufijo, y ningún original con el nombre del documento vigente quedó en `Docs`.
 - [ ] Los documentos siguen siendo archivos `.md`, no documentos convertidos de Google Docs.
 - [ ] Se aplicó la matriz de la sección 6: no queda ningún documento afectado sin actualizar.
 - [ ] Lo construido figura como "Implementado".
@@ -197,4 +198,5 @@ Antes de dar por terminado el trabajo, verificar:
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 1.0 | 2026-10-27 | Propuesta inicial: reúne las convenciones dispersas; matriz de coherencia, plantillas de Scrum y uso con Claude Code y Claude en el chat |
-| 1.1 | 2026-10-28 | **Corrección:** se retira la afirmación de que Google Docs corrompe los `.md` (era un efecto de la herramienta de lectura; se agrega la nota de la sección 10). Regla de propiedad de archivos al archivar versiones (sección 3), tras el caso de los originales renombrados que quedaron en `Docs`. La lista cerrada de operaciones del sistema se agrega a la matriz (docs 03 y 09) |
+| 1.1 | 2026-10-28 | Corrección: se retira la afirmación de que Google Docs corrompe los `.md` (era un efecto de la herramienta de lectura). Regla de propiedad de archivos al archivar versiones. Lista cerrada en la matriz (docs 03 y 09) |
+| 1.2 | 2026-10-28 | **Aprobado** por el equipo (revisión del PR #22). Precisión de la regla de propiedad: el original del propietario puede quedar en `Docs` renombrado de forma inequívoca hasta que lo retire, pero nunca con el nombre del documento vigente |

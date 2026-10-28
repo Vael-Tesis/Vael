@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/13_datos_semilla.md`, versión 1.2 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-27, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/13_datos_semilla.md`, versión 1.3 — **APROBADO** (2026-10-18); ampliación aprobada por el Product Owner el 2026-10-28, copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 13 — Datos semilla
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.2 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-27 |
+| Versión | 1.3 — **APROBADO** (2026-10-18); ampliación aprobada por el Product Owner el 2026-10-28 |
 | Tarea de origen | PLN-C-05 |
 | Implementación | **Implementado** en HU-21, tarea DEV-C-03 (PR #15): `python -m app.scripts.semillas` (idempotente) y `python -m app.scripts.generar_cvs` |
 | Usado por | TST-C-01 (OE4), TST-A-04 (OE1), TST-A-05 (OE2), TST-A-03 (pruebas de extremo a extremo), demo de E3 |
@@ -58,19 +58,19 @@ Las cuatro plantillas predefinidas del doc 05: Técnico Estándar, Comercial, Li
 
 ## Vacantes
 
-| Código | Empresa | Título | Nivel | Estado | Plantilla | Propósito |
-|---|---|---|---|---|---|---|
-| TI-2026-001 | A | Desarrollador Backend Python | semi_senior | abierta | Técnico Estándar | Flujo principal, OE1, OE2, demo |
-| VEN-2026-001 | A | Ejecutivo Comercial | junior | abierta | Comercial | Segundo perfil de evaluación |
-| OPE-2026-001 | A | Analista de Operaciones | junior | borrador | — | Estados de vacante y eliminación en borrador |
-| TI-2026-002 | A | Desarrollador Frontend (confidencial) | junior | abierta, confidencial | Técnico Estándar | No debe aparecer en el listado público ni en el feed XML |
-| LOG-2026-001 | B | Coordinador Logístico | semi_senior | abierta | — | Datos de la empresa testigo |
+| Código | Empresa | Título | Nivel | Estado | Propósito |
+|---|---|---|---|---|---|
+| TI-2026-001 | A | Desarrollador Backend Python | semi_senior | abierta | Flujo principal, OE1, OE2, demo |
+| VEN-2026-001 | A | Ejecutivo Comercial | junior | abierta | Segundo perfil de evaluación |
+| OPE-2026-001 | A | Analista de Operaciones | junior | borrador | Estados de vacante y eliminación en borrador |
+| TI-2026-002 | A | Desarrollador Frontend (confidencial) | junior | abierta, confidencial | No debe aparecer en el listado público ni en el feed XML |
+| LOG-2026-001 | B | Coordinador Logístico | semi_senior | abierta | Datos de la empresa testigo |
 
-**Columna "Plantilla":** el modelo actual no tiene `Vacante.plantilla_id` (la plantilla se asocia a la entrevista, doc 05), así que el script no la asigna. **Pendiente de decisión del Product Owner:** agregar el campo o quitar la columna.
+**Plantilla por vacante — DECISIÓN del Product Owner (2026-10-28):** se quita la referencia. `Vacante` no tiene `plantilla_id`: la plantilla pertenece a la empresa y se asocia a la entrevista (doc 05). La columna "Plantilla" de versiones anteriores se retiró.
 
 ## Currículums ficticios (20, empresa A)
 
-Se generan como PDF en `backend/seeds/cvs/` **con un script a partir de plantillas de texto**, para que sean reproducibles (confirmado en DEV-C-03). Los 18 textos están en `backend/seeds/cvs_texto/`; CV-TI-11 (escaneado, sin texto extraíble) y CV-TI-12 (dañado) se generan sin texto fuente. Los PDF no se suben al repositorio (`.gitignore`): se regeneran con `python -m app.scripts.generar_cvs`. Los CV de la empresa A no se cargan como candidatos: se registran por la aplicación durante las pruebas y las mediciones.
+Se generan como PDF en `backend/seeds/cvs/` **con un script a partir de plantillas de texto**, para que sean reproducibles (confirmado en DEV-C-03). Los 18 textos están en `backend/seeds/cvs_texto/`; CV-TI-11 (escaneado, sin texto extraíble) y CV-TI-12 (dañado) se generan sin texto fuente. Los PDF no se suben al repositorio (`.gitignore`): se regeneran con `python -m app.scripts.generar_cvs`. Los CV de la empresa A no se cargan como candidatos: se registran por la aplicación durante las pruebas y las mediciones. La excepción son los candidatos con el proceso completo de la sección siguiente, que no se usan para medir OE1 ni OE2.
 
 ### TI-2026-001 — Desarrollador Backend Python (12 CVs)
 
@@ -99,6 +99,21 @@ Se generan como PDF en `backend/seeds/cvs/` **con un script a partir de plantill
 | CV-VEN-07 | Sin experiencia laboral | Negativo |
 | CV-VEN-08 | Perfil comercial con LinkedIn y portafolio | Extracción de enlaces |
 
+## Candidatos con el proceso completo (empresa A) — Planificado (DEV-A-07 · HU-19)
+
+**Aprobado por el Product Owner el 2026-10-28.** El examen y la entrevista del candidato se construyen en el ciclo siguiente (perfil Candidato), así que sin estos datos el ranking (RF-A-14), los finalistas (RF-A-15, DEC-022) y la revisión de evaluaciones (RF-A-16) se verían vacíos en E3.
+
+| Candidatos (TI-2026-001) | Estado | Datos | Propósito |
+|---|---|---|---|
+| 3 o 4 | `entrevista_realizada` | Análisis de CV, examen calificado con eventos de proctoring (semáforos distintos), entrevista con transcripción y puntaje por dimensiones, notas | Ranking con `score_final` (DEC-007), lote de finalistas, auditoría |
+| 1 | Examen rendido, sin entrevista | `score_final` nulo | Proceso incompleto aparte en el ranking (RF-A-14) |
+
+Reglas: datos ficticios como el resto del documento; sin datos de emociones (DEC-001); las decisiones de avance se registran en `decisiones_candidato` como en un proceso real (DEC-009). El detalle de cada candidato se fija al implementarlo en DEV-A-07 y se agrega a este documento.
+
+## Uso en AWS
+
+Cada encendido del entorno temporal crea la base desde cero y ejecuta el script de semillas (doc 09). Los usuarios semilla usan la misma `SEED_PASSWORD` que el entorno local; lo que se registre en AWS se pierde al apagar.
+
 ## Muestras para las métricas (aprobadas)
 
 | Métrica | Muestra |
@@ -117,3 +132,4 @@ Un área, una vacante, 3 candidatos con su análisis, un examen y una nota inter
 | 1.0 | 2026-10-14 | Borrador |
 | 1.1 | 2026-10-18 | Aprobado: nombres de las empresas, muestras de OE1 y OE2; alta de empresas con el script de DEC-015; vacante en borrador usada también para la eliminación |
 | 1.2 | 2026-10-27 | Estado de implementación (DEV-C-03 · PR #15): scripts, variables `SEED_PASSWORD`, generación de los PDF confirmada; columna de plantilla sin campo en el modelo (pendiente de decisión); verificación en SUNAT pendiente |
+| 1.3 | 2026-10-28 | Decisiones del Product Owner: se retira la columna "Plantilla" (sin `plantilla_id` en la vacante) y se aprueban candidatos con el proceso completo para E3 (planificado en DEV-A-07); uso de las semillas en AWS |

@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/16_requerimientos_admin.md`, versión 1.2 — **APROBADO** (2026-10-18); estado al cierre del Sprint 1 agregado el 2026-10-27, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/16_requerimientos_admin.md`, versión 1.3 — **APROBADO** (2026-10-18); estado actualizado el 2026-10-28, copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 16 — Requerimientos funcionales del perfil Admin RRHH
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.2 — **APROBADO** (2026-10-18); estado al cierre del Sprint 1 agregado el 2026-10-27 |
+| Versión | 1.3 — **APROBADO** (2026-10-18); estado actualizado el 2026-10-28 |
 | Tarea de origen | PLN-A-03 |
 | Fuentes | Monografía, sección 1.3; doc 15 (matriz); DEC-007 a DEC-019 |
 | Backlog | Cada requerimiento corresponde a una historia de usuario del Product Backlog (`VAEL/Docs/Scrum`) |
@@ -59,7 +59,21 @@ Cada requerimiento tiene un criterio de aceptación (CA) verificable con los dat
 
 HU-21 (base técnica) está completa: DEV-C-01, 03, 04, 05, 06, 07/08, 09, 10, 11, 12 y 13 (en modo en proceso) y TST-C-03 integradas (PR #4 a #16).
 
-**Lo que falta para declarar H-50:** ejecutar RF-A-01 a RF-A-13 **contra el backend real con los datos semilla**, en el navegador, y registrar el resultado (TST-A-01). Hasta ahora hay pruebas automáticas y una prueba de humo por HTTP (login, vacantes, bandeja, etiquetas, rotación y reutilización del refresh token, logout), pero no una verificación visual. El esqueleto en AWS (HU-22) tampoco existe aún.
+**Lo que falta para declarar H-50:** ejecutar RF-A-01 a RF-A-13 **contra el backend real con los datos semilla**, en el navegador, y registrar el resultado (TST-A-01). Hasta ahora hay pruebas automáticas y una prueba de humo por HTTP (login, vacantes, bandeja, etiquetas, rotación y reutilización del refresh token, logout), pero no una verificación visual.
+
+### Prueba manual en curso (TST-A-01, 2026-10-28)
+
+El Product Owner empezó la prueba en el navegador con el entorno local. **El resultado formal por requerimiento aún no está registrado**, así que H-50 sigue sin declararse. Lo observado hasta ahora:
+
+| RF | Observación | Resultado |
+|---|---|---|
+| RF-A-07 | No había forma de ver ni copiar el enlace de postulación de una vacante publicada | Corregido (PR #23): enlace copiable en la pestaña Publicación |
+| RF-A-09 | La postulación pública respondía 500 sin mensaje: en local no había S3 | Corregido (PR #23): validación del PDF, error 502 claro y S3 local (DEC-023) |
+| RF-A-10 | Un CV real de prueba se analizó con Gemini: puntaje, clasificación y resumen coherentes, sin datos de emociones. Tardó 5 minutos por la saturación de Google | Funciona; tiempo límite y reintento ante 504 agregados (PR #23) |
+| RF-A-11 | El correo de cierre llegó a la bandeja local (Mailpit) tras la decisión en la Bandeja | Funciona |
+| RF-A-18 (Sprint 2) | Cambiar contraseña usaba el diálogo del navegador | Corregido (PR #23): modal |
+
+**Esqueleto en AWS (HU-22):** desplegado y verificado el 2026-10-28 (PR #24); RF-A-01 comprobado en AWS (200 / 401 / 403 con usuario inactivo).
 
 ## Criterio del perfil Admin al 100% (E3)
 
@@ -72,3 +86,4 @@ RF-A-01 a RF-A-20 en verde, la suite de aislamiento (TST-C-01) en verde y el per
 | 1.0 | 2026-10-14 | Borrador |
 | 1.1 | 2026-10-18 | Aprobado; correspondencia con las historias de usuario y sus sprints; criterios ampliados con la retrospectiva (eliminar en borrador, eliminar áreas sin vacantes, guardar textos, editar y eliminar notas, enviar al banco) |
 | 1.2 | 2026-10-27 | Estado al cierre del Sprint 1: RF-A-01 a RF-A-13 implementados con pruebas automáticas; falta la verificación con datos semilla en el navegador para declarar H-50 |
+| 1.3 | 2026-10-28 | Avance de la prueba manual (TST-A-01) y observaciones corregidas en el PR #23; esqueleto en AWS desplegado (PR #24); H-50 aún sin declarar |
