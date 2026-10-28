@@ -79,7 +79,7 @@ async def consultar_gemini_json(prompt: str, model_name: str | None = None) -> d
                 raise
             espera = _espera_backoff(intento)
             logger.warning(
-                "Gemini respondió %s con el modelo %s; reintento %d de %d en %.1f s",
+                "Gemini falló (%s) con el modelo %s; reintento %d de %d en %.1f s",
                 f"sin respuesta en {TIEMPO_LIMITE_SEGUNDOS:.0f} s" if sin_respuesta else exc.code,
                 modelo,
                 intento,
