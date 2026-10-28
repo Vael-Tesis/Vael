@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.1 — **APROBADO** (2026-10-18), copiada el 2026-10-18.
+> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.2 — **APROBADO** (2026-10-18); estado de la instrumentación actualizado el 2026-10-27, copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 14 — Plan de métricas
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.1 — **APROBADO** (2026-10-18) |
+| Versión | 1.2 — **APROBADO** (2026-10-18); estado de la instrumentación actualizado el 2026-10-27 |
 | Tarea de origen | PLN-C-06 |
 | Fuente de los objetivos | Monografía, sección 1.2 y Tabla 1.1 |
 | Datos de prueba | Doc 13 |
@@ -56,7 +56,7 @@ Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) c
 | Fórmula | `candidatos con fila en decisiones_candidato por etapa completada / candidatos que completaron esa etapa` |
 | Condición adicional | El 100% de las decisiones contrarias a la IA tiene `justificacion_humana` |
 | Verificación continua | TST-C-04 en el CI (historia HU-15) |
-| Medición final | Consulta SQL documentada sobre los datos del periodo de validación |
+| Medición final | Consulta SQL documentada sobre los datos del periodo de validación: `docs/metricas/oe3_registro_decisiones.sql` (cobertura por etapa y decisiones contrarias sin justificación; TST-C-04 · PR #14) |
 
 ### OE4 — Despliegue automatizado y aislamiento
 
@@ -82,14 +82,14 @@ Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) c
 
 ## Instrumentación que debe existir
 
-| Requisito | Tarea | Sprint |
-|---|---|---|
-| `revision_inicio` y `decidido_en` en `decisiones_candidato` | DEV-C-10 | 1 |
-| Logs JSON con `operation` y `duration_ms` | DEV-C-08 | 1 |
-| Registro del ID del modelo y los parámetros | DEV-C-04 | 1 |
-| Consulta del indicador OE3 | TST-C-04 | 1 |
-| Conteo automático de endpoints autenticados | TST-C-01 | 2 |
-| Script de OE2 | TST-A-05 | 2 |
+| Requisito | Tarea | Sprint | Estado |
+|---|---|---|---|
+| `revision_inicio` y `decidido_en` en `decisiones_candidato` | DEV-C-10 | 1 | **Hecho** (PR #13); `revision_inicio` se guarda en UTC y la bandeja lo envía (DEV-A-05) |
+| Logs JSON con `operation` y `duration_ms` | DEV-C-08 | 1 | **Hecho** (PR #6) |
+| Registro del ID del modelo y los parámetros | DEV-C-04 | 1 | **Hecho** (PR #7) |
+| Consulta del indicador OE3 | TST-C-04 | 1 | **Hecho** (PR #14); verificación continua en el CI |
+| Conteo automático de endpoints autenticados | TST-C-01 | 2 | Pendiente |
+| Script de OE2 | TST-A-05 | 2 | Pendiente |
 
 ## Registro de datos crudos
 
@@ -101,3 +101,4 @@ Cada medición guarda sus datos en `docs/metricas/` del repositorio (CSV o JSON)
 |---|---|---|
 | 1.0 | 2026-10-14 | Borrador |
 | 1.1 | 2026-10-18 | Aprobado: R1 (minutos-persona), R2 (cada integrante en una condición), R3 (tres CVs para OE2); historias y sprints asociados; métrica M-07 de la metodología; destino en el Capítulo IV según el índice oficial |
+| 1.2 | 2026-10-27 | Estado de la instrumentación al cierre del Sprint 1: los cuatro requisitos del Sprint 1 están hechos; consulta del OE3 en `docs/metricas/` |

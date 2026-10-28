@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/16_requerimientos_admin.md`, versión 1.1 — **APROBADO** (2026-10-18), copiada el 2026-10-18.
+> COPIA del documento del Drive `VAEL/Docs/16_requerimientos_admin.md`, versión 1.2 — **APROBADO** (2026-10-18); estado al cierre del Sprint 1 agregado el 2026-10-27, copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 16 — Requerimientos funcionales del perfil Admin RRHH
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.1 — **APROBADO** (2026-10-18) |
+| Versión | 1.2 — **APROBADO** (2026-10-18); estado al cierre del Sprint 1 agregado el 2026-10-27 |
 | Tarea de origen | PLN-A-03 |
 | Fuentes | Monografía, sección 1.3; doc 15 (matriz); DEC-007 a DEC-019 |
 | Backlog | Cada requerimiento corresponde a una historia de usuario del Product Backlog (`VAEL/Docs/Scrum`) |
@@ -44,6 +44,23 @@ Cada requerimiento tiene un criterio de aceptación (CA) verificable con los dat
 1. La historia técnica HU-21 (base común) está completa, y
 2. **RF-A-01 a RF-A-13 están en verde**, ejecutados contra el backend real con los datos semilla del doc 13.
 
+### Estado al cierre del Sprint 1 (2026-10-27)
+
+| RF | Implementado en | Pruebas automáticas (190 en verde en el CI) |
+|---|---|---|
+| RF-A-01, RF-A-02 | DEV-A-02 · PR #18 | `test_sesiones.py` |
+| RF-A-03 | DEV-A-02 · PR #18 | `test_permisos_por_rol.py` (recorre todas las rutas de escritura y exige 403 al evaluador) |
+| RF-A-04 | DEV-A-01 · PR #17, DEV-A-03 · PR #19 | `test_areas.py`, `test_notas_etiquetas_areas.py` |
+| RF-A-05 | DEV-A-03 · PR #19 | `test_plantillas.py` |
+| RF-A-06, RF-A-07, RF-A-08 | DEV-A-04 · PR #20 | `test_vacantes.py` |
+| RF-A-09, RF-A-10 | DEV-A-05 · PR #21 | `test_registro_candidatos.py`, `test_sin_emociones.py` |
+| RF-A-11, RF-A-12 | DEV-C-10 · PR #13, DEV-A-05 · PR #21 | `test_decisiones.py`, `test_invariante_decisiones.py` |
+| RF-A-13 | DEV-A-01 · PR #17, DEV-C-05 · PR #12, DEV-A-05 · PR #21 | `test_notas_etiquetas_areas.py`, `test_candidato_tags.py` |
+
+HU-21 (base técnica) está completa: DEV-C-01, 03, 04, 05, 06, 07/08, 09, 10, 11, 12 y 13 (en modo en proceso) y TST-C-03 integradas (PR #4 a #16).
+
+**Lo que falta para declarar H-50:** ejecutar RF-A-01 a RF-A-13 **contra el backend real con los datos semilla**, en el navegador, y registrar el resultado (TST-A-01). Hasta ahora hay pruebas automáticas y una prueba de humo por HTTP (login, vacantes, bandeja, etiquetas, rotación y reutilización del refresh token, logout), pero no una verificación visual. El esqueleto en AWS (HU-22) tampoco existe aún.
+
 ## Criterio del perfil Admin al 100% (E3)
 
 RF-A-01 a RF-A-20 en verde, la suite de aislamiento (TST-C-01) en verde y el perfil desplegado en AWS con el smoke test aprobado.
@@ -54,3 +71,4 @@ RF-A-01 a RF-A-20 en verde, la suite de aislamiento (TST-C-01) en verde y el per
 |---|---|---|
 | 1.0 | 2026-10-14 | Borrador |
 | 1.1 | 2026-10-18 | Aprobado; correspondencia con las historias de usuario y sus sprints; criterios ampliados con la retrospectiva (eliminar en borrador, eliminar áreas sin vacantes, guardar textos, editar y eliminar notas, enviar al banco) |
+| 1.2 | 2026-10-27 | Estado al cierre del Sprint 1: RF-A-01 a RF-A-13 implementados con pruebas automáticas; falta la verificación con datos semilla en el navegador para declarar H-50 |
