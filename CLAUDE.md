@@ -145,7 +145,7 @@ Ver `backend/.env.example`; el detalle de infraestructura está en el doc 09 del
 ## 15. Desarrollo local
 
 ```bash
-docker-compose up -d db
+docker-compose up -d db s3mock mailpit   # S3 y correo locales (DEC-023); correos en http://localhost:8025
 cd backend && pip install -r requirements.txt -r requirements-dev.txt
 python -m app.scripts.crear_roles   # crea vael_owner, vael_app y vael_system (DEC-010)
 alembic upgrade head                # migra como vael_owner

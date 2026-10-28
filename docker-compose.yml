@@ -17,6 +17,29 @@ services:
       timeout: 5s
       retries: 10
 
+  # S3 local de desarrollo (DEC-023): crea el bucket vael-storage al arrancar y acepta cualquier credencial.
+  s3mock:
+    image: adobe/s3mock:4.6.0
+    container_name: vael-s3mock
+    restart: unless-stopped
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: vael-storage
+      COM_ADOBE_TESTING_S3MOCK_STORE_ROOT: /data
+      COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT: "true"
+    ports:
+      - "9090:9090"
+    volumes:
+      - vael_s3_data:/data
+
+  # Captura los correos de desarrollo (DEC-023): SMTP en 1025, bandeja web en http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: vael-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   backend:
     build:
       context: ./backend
@@ -32,6 +55,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://vael_app:vael_app_local@db:5432/vael_db
       DATABASE_SYSTEM_URL: postgresql+asyncpg://vael_system:vael_system_local@db:5432/vael_db
       DATABASE_OWNER_URL: postgresql+asyncpg://vael_owner:vael_owner_local@db:5432/vael_db
+      S3_ENDPOINT_URL: http://s3mock:9090
+      SMTP_HOST: mailpit
     ports:
       - "8000:8000"
     volumes:
@@ -39,6 +64,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      s3mock:
+        condition: service_started
+      mailpit:
+        condition: service_started
 
   frontend:
     build:
@@ -59,3 +88,4 @@ services:
 
 volumes:
   vael_db_data:
+  vael_s3_data:

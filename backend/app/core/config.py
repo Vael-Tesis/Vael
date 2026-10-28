@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
     s3_bucket_name: str = "vael-storage"
+    # Solo en desarrollo: S3 local (Adobe S3Mock en docker-compose, DEC-023). Vacío = S3 de AWS.
+    s3_endpoint_url: str | None = None
     ses_region: str = "us-east-1"
 
     # Correos

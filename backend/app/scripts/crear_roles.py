@@ -72,15 +72,27 @@ async def crear_roles(
         database=base_destino,
     )
     try:
+        # En RDS el administrador no es superusuario (rds_superuser)
+        es_superusuario = await conexion.fetchval("SELECT rolsuper FROM pg_roles WHERE rolname = current_user")
         for credencial in (owner, app, system):
             existe = await conexion.fetchval("SELECT 1 FROM pg_roles WHERE rolname = $1", credencial.usuario)
             verbo = "ALTER" if existe else "CREATE"
+            atributos = _ATRIBUTOS[credencial.usuario]
+            if existe and not es_superusuario:
+                # Solo un superusuario puede nombrar el atributo SUPERUSER en un ALTER ROLE; un rol
+                # creado por quien no es superusuario nunca lo tiene, así que la garantía se mantiene
+                atributos = atributos.replace("NOSUPERUSER ", "")
             sentencia = await conexion.fetchval(
-                f"SELECT format('{verbo} ROLE %I WITH {_ATRIBUTOS[credencial.usuario]} PASSWORD %L', $1::text, $2::text)",
+                f"SELECT format('{verbo} ROLE %I WITH {atributos} PASSWORD %L', $1::text, $2::text)",
                 credencial.usuario,
                 credencial.password,
             )
             await conexion.execute(sentencia)
+
+        # Sin ser superusuario, para pasar objetos a vael_owner y fijar sus privilegios por
+        # defecto el administrador debe ser miembro de vael_owner. En local no hace falta.
+        if not es_superusuario:
+            await conexion.execute(f"GRANT {ROL_OWNER} TO CURRENT_USER")
 
         await conexion.execute(
             f'GRANT CONNECT ON DATABASE "{base_destino}" TO {ROL_OWNER}, {ROL_APP}, {ROL_SYSTEM}'

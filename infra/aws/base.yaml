@@ -1,0 +1,210 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  VAEL - base permanente (DEP-C-01, DEC-018). Registro de imágenes, sitios estáticos y las dos
+  distribuciones de CloudFront (landing y app). No tiene costo fijo mientras el backend está apagado,
+  y mantiene los mismos dominios de CloudFront, así que los registros de GoDaddy se configuran una vez.
+
+Parameters:
+  CertificadoArn:
+    Type: String
+    Description: Certificado de ACM (us-east-1) para vael.work, www.vael.work y app.vael.work
+  DominioApp:
+    Type: String
+    Default: app.vael.work
+  DominioLanding:
+    Type: String
+    Default: www.vael.work
+  DominioRaiz:
+    Type: String
+    Default: vael.work
+  OrigenApi:
+    Type: String
+    Default: api-apagada.vael.work
+    Description: DNS del ALB del entorno temporal; con el entorno apagado apunta a un nombre que no existe
+  OrigenSecreto:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    Description: Cabecera que CloudFront envía al ALB; el ALB rechaza las peticiones que no la traen
+
+Resources:
+  RepositorioBackend:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: vael-backend
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Conserva las 3 últimas imágenes",
+          "selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":3},
+          "action":{"type":"expire"}}]}
+
+  BucketApp:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  BucketLanding:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  AccesoOrigen:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: vael-s3
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # React Router: toda ruta sin extensión (/vacantes/123, /postular/TI-2026-001) sirve index.html.
+  # Va solo en el comportamiento de S3, así que no toca las respuestas de /api/*.
+  FuncionSpa:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: vael-spa
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Reescribe las rutas de la SPA a index.html
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var req = event.request;
+          if (req.uri.indexOf('.') === -1) { req.uri = '/index.html'; }
+          return req;
+        }
+
+  DistribucionApp:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: VAEL app (panel Admin y /api)
+        Enabled: true
+        HttpVersion: http2and3
+        PriceClass: PriceClass_All
+        Aliases: [!Ref DominioApp]
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificadoArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        DefaultRootObject: index.html
+        Origins:
+          - Id: s3-app
+            DomainName: !GetAtt BucketApp.RegionalDomainName
+            OriginAccessControlId: !GetAtt AccesoOrigen.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+          - Id: api
+            DomainName: !Ref OrigenApi
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only
+              HTTPPort: 80
+              OriginReadTimeout: 60
+            OriginCustomHeaders:
+              - HeaderName: X-Origen-Vael
+                HeaderValue: !Ref OrigenSecreto
+        DefaultCacheBehavior:
+          TargetOriginId: s3-app
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt FuncionSpa.FunctionMetadata.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac # Managed-AllViewerExceptHostHeader
+
+  DistribucionLanding:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: VAEL landing
+        Enabled: true
+        HttpVersion: http2and3
+        PriceClass: PriceClass_All
+        Aliases: [!Ref DominioLanding, !Ref DominioRaiz]
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificadoArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        DefaultRootObject: index.html
+        Origins:
+          - Id: s3-landing
+            DomainName: !GetAtt BucketLanding.RegionalDomainName
+            OriginAccessControlId: !GetAtt AccesoOrigen.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: s3-landing
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+
+  PoliticaBucketApp:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BucketApp
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: cloudfront.amazonaws.com}
+            Action: s3:GetObject
+            Resource: !Sub "${BucketApp.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${DistribucionApp}"
+
+  PoliticaBucketLanding:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BucketLanding
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: cloudfront.amazonaws.com}
+            Action: s3:GetObject
+            Resource: !Sub "${BucketLanding.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${DistribucionLanding}"
+
+Outputs:
+  RepositorioUri:
+    Value: !GetAtt RepositorioBackend.RepositoryUri
+  BucketApp:
+    Value: !Ref BucketApp
+  BucketLanding:
+    Value: !Ref BucketLanding
+  DistribucionAppId:
+    Value: !Ref DistribucionApp
+  DistribucionAppDominio:
+    Value: !GetAtt DistribucionApp.DomainName
+  DistribucionLandingId:
+    Value: !Ref DistribucionLanding
+  DistribucionLandingDominio:
+    Value: !GetAtt DistribucionLanding.DomainName

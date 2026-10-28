@@ -8,10 +8,12 @@ import asyncio
 import json
 import logging
 from typing import Any
+from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
 import aioboto3
 import httpx
+from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
 from app.core.config import settings
@@ -25,12 +27,19 @@ def _cliente(servicio: str, region_name: str | None = None) -> Any:
     Si no hay credenciales estáticas en settings (caso típico en producción, donde ECS
     Fargate usa el IAM task role en vez de access keys), se pasan como None para que
     aioboto3 caiga en la cadena de credenciales por defecto, en vez de mandar strings vacíos.
+    Con `s3_endpoint_url` (S3 local de desarrollo, DEC-023) S3 usa credenciales de relleno:
+    S3Mock acepta cualquiera y así nunca se firma con una cuenta real.
     """
+    s3_local = servicio == "s3" and bool(settings.s3_endpoint_url)
+    relleno = "local" if s3_local else None
     sesion = aioboto3.Session(
-        aws_access_key_id=settings.aws_access_key_id or None,
-        aws_secret_access_key=settings.aws_secret_access_key or None,
+        aws_access_key_id=settings.aws_access_key_id or relleno,
+        aws_secret_access_key=settings.aws_secret_access_key or relleno,
         region_name=region_name or settings.aws_region,
     )
+    if s3_local:
+        # Rutas `endpoint/bucket/clave`, sin subdominio por bucket
+        return sesion.client(servicio, endpoint_url=settings.s3_endpoint_url, config=Config(s3={"addressing_style": "path"}))
     return sesion.client(servicio)
 
 
@@ -152,7 +161,16 @@ async def subir_archivo(archivo_bytes: bytes, key: str, content_type: str) -> st
             ContentType=content_type,
         )
 
+    if settings.s3_endpoint_url:
+        return f"{settings.s3_endpoint_url.rstrip('/')}/{settings.s3_bucket_name}/{quote(key)}"
     return f"https://{settings.s3_bucket_name}.s3.{settings.aws_region}.amazonaws.com/{key}"
+
+
+def clave_desde_url(url: str) -> str:
+    """Clave del objeto a partir de la URL que devolvió `subir_archivo` (S3 de AWS o S3 local)."""
+    ruta = unquote(urlparse(url).path).lstrip("/")
+    prefijo_bucket = f"{settings.s3_bucket_name}/"
+    return ruta.removeprefix(prefijo_bucket)
 
 
 async def descargar_archivo(key: str) -> bytes:
