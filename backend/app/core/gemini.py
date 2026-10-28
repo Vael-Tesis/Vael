@@ -4,7 +4,8 @@ Centraliza lo que repiten services/analisis_cv.py, services/examen.py, services/
 y services/vacante_ia.py: cada uno arma su prompt, pero todos llaman a Gemini y parsean JSON
 de la misma forma. Usa el SDK `google-genai`, el único de Gemini en el proyecto.
 
-- Reintento con backoff exponencial y jitter ante 429 (cuota) y 503 (servicio saturado).
+- Reintento con backoff exponencial y jitter ante 429 (cuota), 503 (servicio saturado), 504
+  (plazo vencido en Google) y llamadas sin respuesta en TIEMPO_LIMITE_SEGUNDOS.
 - Cada llamada registra el modelo exacto, los parámetros, los intentos y la duración: el OE2
   exige saber con qué modelo y configuración se obtuvo cada puntaje (plan de métricas).
 """
@@ -23,8 +24,10 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-CODIGOS_REINTENTABLES: frozenset[int] = frozenset({429, 503})
+CODIGOS_REINTENTABLES: frozenset[int] = frozenset({429, 503, 504})
 MAX_INTENTOS = 4
+# Una llamada colgada dejaba al candidato en "analizando" varios minutos (observación de TST-A-01)
+TIEMPO_LIMITE_SEGUNDOS = 60.0
 ESPERA_BASE_SEGUNDOS = 2.0
 
 
@@ -50,9 +53,10 @@ def _espera_backoff(intento: int) -> float:
 async def consultar_gemini_json(prompt: str, model_name: str | None = None) -> dict[str, Any]:
     """Llama a un modelo Gemini pidiendo salida JSON y parsea la respuesta como dict.
 
-    Reintenta ante 429 y 503 hasta MAX_INTENTOS veces; cualquier otro error se propaga de
-    inmediato. Si se agotan los reintentos, propaga el último error para que la tarea falle
-    de forma visible (en AWS, el mensaje vuelve a la cola y termina en la DLQ).
+    Reintenta ante 429, 503, 504 o sin respuesta en TIEMPO_LIMITE_SEGUNDOS, hasta MAX_INTENTOS
+    veces; cualquier otro error se propaga de inmediato. Si se agotan los reintentos, propaga
+    el último error para que la tarea falle de forma visible (en AWS, el mensaje vuelve a la
+    cola y termina en la DLQ).
     """
     modelo = model_name or settings.gemini_model
     configuracion = _configuracion_json()
@@ -60,19 +64,23 @@ async def consultar_gemini_json(prompt: str, model_name: str | None = None) -> d
 
     for intento in range(1, MAX_INTENTOS + 1):
         try:
-            respuesta = await _cliente().aio.models.generate_content(
-                model=modelo,
-                contents=prompt,
-                config=configuracion,
+            respuesta = await asyncio.wait_for(
+                _cliente().aio.models.generate_content(
+                    model=modelo,
+                    contents=prompt,
+                    config=configuracion,
+                ),
+                TIEMPO_LIMITE_SEGUNDOS,
             )
             break
-        except errors.APIError as exc:
-            if exc.code not in CODIGOS_REINTENTABLES or intento == MAX_INTENTOS:
+        except (errors.APIError, TimeoutError) as exc:
+            sin_respuesta = isinstance(exc, TimeoutError)
+            if (not sin_respuesta and exc.code not in CODIGOS_REINTENTABLES) or intento == MAX_INTENTOS:
                 raise
             espera = _espera_backoff(intento)
             logger.warning(
                 "Gemini respondió %s con el modelo %s; reintento %d de %d en %.1f s",
-                exc.code,
+                f"sin respuesta en {TIEMPO_LIMITE_SEGUNDOS:.0f} s" if sin_respuesta else exc.code,
                 modelo,
                 intento,
                 MAX_INTENTOS - 1,

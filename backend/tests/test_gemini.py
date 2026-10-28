@@ -1,7 +1,8 @@
-"""Pruebas del cliente de Gemini (DEV-C-04): JSON, reintento ante 429/503 y errores.
+"""Pruebas del cliente de Gemini (DEV-C-04): JSON, reintento ante 429/503/504 y llamadas colgadas, y errores.
 
 No llaman a la API real: se reemplaza el cliente por uno simulado.
 """
+import asyncio
 import logging
 from types import SimpleNamespace
 from typing import Any
@@ -10,6 +11,9 @@ import pytest
 from google.genai import errors
 
 from app.core import gemini
+
+
+COLGADA = object()  # respuesta que nunca llega
 
 
 class _ModelosFalsos:
@@ -22,6 +26,8 @@ class _ModelosFalsos:
     async def generate_content(self, **kwargs: Any) -> Any:
         self.llamadas.append(kwargs)
         siguiente = self._respuestas.pop(0)
+        if siguiente is COLGADA:
+            await asyncio.Event().wait()
         if isinstance(siguiente, Exception):
             raise siguiente
         return SimpleNamespace(text=siguiente)
@@ -63,12 +69,31 @@ async def test_usa_el_modelo_configurado_y_pide_json(cliente_falso: Any) -> None
     assert llamada["config"].response_mime_type == "application/json"
 
 
-@pytest.mark.parametrize("codigo", [429, 503])
-async def test_reintenta_ante_429_y_503(cliente_falso: Any, codigo: int) -> None:
-    """Ante cuota agotada o servicio saturado, reintenta y termina devolviendo el resultado."""
+@pytest.mark.parametrize("codigo", [429, 503, 504])
+async def test_reintenta_ante_429_503_y_504(cliente_falso: Any, codigo: int) -> None:
+    """Ante cuota agotada, servicio saturado o plazo vencido, reintenta y termina devolviendo el resultado."""
     modelos = cliente_falso([_error(codigo), _error(codigo), '{"ok": true}'])
     assert await gemini.consultar_gemini_json("prompt") == {"ok": True}
     assert len(modelos.llamadas) == 3
+
+
+async def test_corta_y_reintenta_una_llamada_colgada(cliente_falso: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Una llamada sin respuesta se corta en TIEMPO_LIMITE_SEGUNDOS y se reintenta."""
+    monkeypatch.setattr(gemini, "TIEMPO_LIMITE_SEGUNDOS", 0.05)
+    modelos = cliente_falso([COLGADA, '{"ok": true}'])
+    assert await gemini.consultar_gemini_json("prompt") == {"ok": True}
+    assert len(modelos.llamadas) == 2
+
+
+async def test_propaga_el_tiempo_agotado_al_agotar_los_reintentos(
+    cliente_falso: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Si ninguna llamada responde, propaga TimeoutError y el análisis falla de forma visible."""
+    monkeypatch.setattr(gemini, "TIEMPO_LIMITE_SEGUNDOS", 0.05)
+    modelos = cliente_falso([COLGADA] * gemini.MAX_INTENTOS)
+    with pytest.raises(TimeoutError):
+        await gemini.consultar_gemini_json("prompt")
+    assert len(modelos.llamadas) == gemini.MAX_INTENTOS
 
 
 async def test_no_reintenta_errores_no_transitorios(cliente_falso: Any) -> None:
