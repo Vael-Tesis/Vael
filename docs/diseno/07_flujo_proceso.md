@@ -1,4 +1,4 @@
-> COPIA del documento del Drive `VAEL/Docs/07_flujo_proceso.md`, versión 2.0, copiada el 2026-10-18.
+> COPIA del documento del Drive `VAEL/Docs/07_flujo_proceso.md`, versión 2.0, copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 07 — Flujo del Proceso de Selección

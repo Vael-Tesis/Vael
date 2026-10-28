@@ -1,17 +1,17 @@
-> COPIA del documento del Drive `VAEL/Docs/05_modelos_bd.md`, versión 2.1, copiada el 2026-10-18.
+> COPIA del documento del Drive `VAEL/Docs/05_modelos_bd.md`, versión 2.2, copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 05 — Modelos de Base de Datos
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.1 |
-| Actualizado | 2026-10-18 |
-| Fuente de verdad | Código en `backend/app/models/` (migración `48978732de6a_esquema_inicial`) + DEC-007, DEC-009, DEC-010, DEC-011, DEC-014, DEC-015, DEC-018 + doc 15 |
+| Versión | 2.2 |
+| Actualizado | 2026-10-27 |
+| Fuente de verdad | Código en `backend/app/models/` (migraciones hasta `a6b7c8d9e0f1`, Sprint 1) + DEC-007, DEC-009, DEC-010, DEC-011, DEC-014, DEC-015, DEC-018 + doc 15 |
 | Copia en el repositorio | `docs/diseno/05_modelos_bd.md` (DEC-019). La fuente es este documento |
 
 Todos los modelos usan SQLModel y residen en `backend/app/models/`, un archivo por dominio. Cada tabla y campo indica su estado:
-- **Implementado:** existe en el código y en la migración verificada el 2026-10-13.
+- **Implementado:** existe en el código y en su migración. Lo integrado en el Sprint 1 indica la tarea y el PR.
 - **Planificado (tarea · historia):** definido por una decisión o por el doc 15; se implementa en esa tarea.
 
 ## Convenciones generales
@@ -42,12 +42,13 @@ class TimestampMixin(SQLModel):
 | tenant_id | str(36) | Único, indexado |
 | nombre | str | |
 | logo_url | str? | Key en S3 |
+| email_contacto | str(255)? | **Implementado (DEV-C-10 · PR #13).** Contacto de la empresa para datos personales; aparece en el correo de cierre (DEC-013). Nulo: el correo omite la línea |
 | activa | bool | Default true |
 | created_at | datetime | |
 
 Se crea con el comando `python -m app.scripts.crear_empresa` (DEC-015), nunca por un endpoint.
 
-### Usuario — `usuarios` — Implementado (+ campo planificado)
+### Usuario — `usuarios` — Implementado
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -59,22 +60,24 @@ Se crea con el comando `python -m app.scripts.crear_empresa` (DEC-015), nunca po
 | rol | enum | `admin` / `reclutador` / `evaluador` / `gerente` |
 | telefono | str? | |
 | activo | bool | Default true |
-| token_version | int | **Planificado (DEV-A-02 · HU-02).** Default 0. Se incrementa al desactivar o cambiar la contraseña; invalida todos los tokens del usuario (DEC-011) |
+| token_version | int | **Implementado (DEV-A-02 · PR #18).** Default 0. Viaja en el access token como `ver`. Se incrementa al desactivar o cambiar la contraseña; invalida todos los tokens del usuario (DEC-011) |
 | created_at, updated_at | datetime | |
 
 Roles: `admin` (todo, usuarios y configuración); `reclutador` (vacantes y candidatos; confirma o revierte recomendaciones); `gerente` (lectura de todo, dashboard; confirma o revierte recomendaciones); `evaluador` (solo lectura de evaluaciones).
 
-### Sesion — `sesiones` — Planificado (DEV-A-02 · HU-02, DEC-011)
+### Sesion — `sesiones` — Implementado (DEV-A-02 · PR #18, DEC-011)
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | str (UUID) | PK |
 | tenant_id | str(36) | |
 | usuario_id | str | FK a `usuarios`, indexado |
-| token_hash | str | Hash del refresh token; **nunca el token en claro** |
+| token_hash | str(64) | SHA-256 del refresh token; **nunca el token en claro** |
 | creado_en, expira_en | datetime | |
 | revocado_en | datetime? | Logout, rotación o detección de reutilización |
 | reemplazado_por | str? | FK a `sesiones` |
+
+Cada renovación revoca la sesión usada y crea otra. Presentar un refresh token ya revocado revoca todas las sesiones activas del usuario (detección de reutilización). Tiene RLS.
 
 ### TokenAcceso — `tokens_acceso` — Implementado
 
@@ -107,11 +110,11 @@ Se emite solo cuando RRHH confirma un avance (DEC-009).
 | activa | bool | Default true |
 | created_at, updated_at | datetime | |
 
-Regla (doc 15): un área con vacantes no se elimina; se desactiva.
+Reglas (doc 15, implementadas en DEV-A-01 · PR #17): un área con vacantes no se elimina (409); se desactiva. El `codigo_corto` no se repite dentro de la empresa, sin distinguir mayúsculas (409).
 
 ## models/vacante.py
 
-### Vacante — `vacantes` — Implementado (+ campo planificado)
+### Vacante — `vacantes` — Implementado
 
 Datos básicos: `id`, `tenant_id`, `area_id` (FK), `codigo` (str(30), único, `{AREA}-{AÑO}-{NNN}`), `titulo`, `descripcion?`, `responsabilidades?`, `requisitos?`, `requisitos_deseables?`, `beneficios?`, `habilidades` (JSON, lista), `tecnologias` (JSON, lista).
 
@@ -132,13 +135,13 @@ Campo nuevo:
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| textos_publicacion | JSON (objeto)? | **Planificado (DEV-A-04 · HU-10).** Textos de difusión generados por la IA y editados por RRHH, por canal |
+| textos_publicacion | JSON (objeto)? | **Implementado (DEV-A-04 · PR #20).** Textos de difusión generados por la IA y editados por RRHH, por canal |
 
-Regla (doc 15): una vacante solo se elimina en estado `borrador`.
+Reglas (doc 15, implementadas en DEV-A-04): una vacante solo se elimina en estado `borrador` y sin candidatos (409). Transiciones válidas: `borrador` → `abierta`; `abierta` ↔ `pausada`; `abierta` o `pausada` → `cerrada`. **`cerrada` es final** (pendiente de confirmar por el Product Owner).
 
 ## models/candidato.py
 
-### Candidato — `candidatos` — Implementado (+ estados y campo planificados)
+### Candidato — `candidatos` — Implementado (+ campo planificado)
 
 Datos personales: `id`, `tenant_id`, `vacante_id` (FK), `nombre`, `apellidos`, `email` (indexado), `telefono?`, `linkedin?`, `github?`, `portfolio?`, `cv_url?` (key en S3), `pretension_salarial?`, `fecha_postulacion`.
 
@@ -153,9 +156,9 @@ Resultados de IA: `score_cv?` (0-100), `match_porcentaje?`, `clasificacion_ia?` 
 
 #### Máquina de estados (DEC-009)
 
-Implementado hoy: `postulado`, `cv_analizando`, `cv_aprobado`, `cv_rechazado`, `examen_pendiente`, `examen_rendido`, `examen_aprobado`, `examen_rechazado`, `entrevista_pendiente`, `entrevista_realizada`, `finalista`, `contratado`, `descartado`.
+Implementado (DEV-C-10 · PR #13): `postulado`, `cv_analizando`, `cv_por_confirmar`, `cv_aprobado`, `cv_rechazado`, `examen_pendiente`, `examen_rendido`, `examen_por_confirmar`, `examen_aprobado`, `examen_rechazado`, `entrevista_pendiente`, `entrevista_realizada`, `finalista`, `contratado`, `descartado`. Los estados de avance y descarte solo se alcanzan con una decisión humana registrada; una prueba automática lo verifica (TST-C-04 · PR #14).
 
-**Planificado (DEV-C-10 · HU-21):** se agregan `cv_por_confirmar` y `examen_por_confirmar`; los estados de avance y descarte solo se alcanzan con una decisión humana registrada.
+Un CV escaneado (sin texto extraíble) no pasa por la IA: queda en `cv_por_confirmar` con clasificación `requiere_revision` para revisión manual (DEV-A-05).
 
 | Estado | Cómo se llega |
 |---|---|
@@ -173,7 +176,7 @@ Implementado hoy: `postulado`, `cv_analizando`, `cv_aprobado`, `cv_rechazado`, `
 
 `id`, `tenant_id`, `nombre` (str(50)), `color?` (str(20), hexadecimal).
 
-### CandidatoTag — `candidato_tags` — Planificado (DEV-C-05 · HU-21)
+### CandidatoTag — `candidato_tags` — Implementado (DEV-C-05 · PR #12)
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -181,7 +184,9 @@ Implementado hoy: `postulado`, `cv_analizando`, `cv_aprobado`, `cv_rechazado`, `
 | tag_id | str | FK; parte de la PK |
 | tenant_id | str(36) | Para la política de RLS |
 
-### NotaCandidato — `notas_candidato` — Implementado (+ campo planificado)
+Las dos FK son `ON DELETE CASCADE`: borrar una etiqueta o un candidato borra sus asignaciones. Índice por `tag_id` para el filtro del listado.
+
+### NotaCandidato — `notas_candidato` — Implementado
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -191,13 +196,13 @@ Implementado hoy: `postulado`, `cv_analizando`, `cv_aprobado`, `cv_rechazado`, `
 | autor_id | str | FK a `usuarios`, indexado |
 | contenido | str | |
 | created_at | datetime | |
-| updated_at | datetime? | **Planificado (DEV-A-01 · HU-13).** Fecha de la última edición; nulo si nunca se editó |
+| updated_at | datetime? | **Implementado (DEV-A-01 · PR #17).** Fecha de la última edición; nulo si nunca se editó |
 
 Solo el autor edita su nota; el autor o un admin la eliminan. Nunca visibles para el candidato.
 
-### DecisionCandidato — `decisiones_candidato` — Planificado (DEV-C-10 · HU-21, DEC-009)
+### DecisionCandidato — `decisiones_candidato` — Implementado (DEV-C-10 · PR #13, DEC-009)
 
-Registro de **solo inserción**. Fuente del indicador del OE3.
+Registro de **solo inserción**. Fuente del indicador del OE3 (consulta en `docs/metricas/oe3_registro_decisiones.sql`, TST-C-04).
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -239,18 +244,18 @@ Plantillas predefinidas: Técnico Estándar (Claridad 20%, Coherencia 20%, Preci
 ## Relaciones principales
 
 ```
-Empresa 1—N Usuario · Usuario 1—N Sesion [planificado]
+Empresa 1—N Usuario · Usuario 1—N Sesion
 Empresa 1—N Area · Area 1—N Vacante · Vacante 1—N Candidato
-Candidato 1—N TokenAcceso · Candidato 1—N DecisionCandidato [planificado]
+Candidato 1—N TokenAcceso · Candidato 1—N DecisionCandidato
 Candidato 1—1 Examen · Examen 1—N PreguntaExamen · Examen 1—N EventoAuditoria
 Candidato 1—1 EntrevistaIA · EntrevistaIA 1—N EventoAuditoria · EntrevistaIA 1—N CapturaAuditoria
 EntrevistaIA N—1 PlantillaEvaluacion · PlantillaEvaluacion 1—N DimensionEvaluacion
-Candidato N—N Tag (candidato_tags) [planificado] · Candidato 1—N NotaCandidato
+Candidato N—N Tag (candidato_tags) · Candidato 1—N NotaCandidato
 ```
 
-Total: 15 tablas implementadas + 3 planificadas (`sesiones`, `candidato_tags`, `decisiones_candidato`) = 18 tablas.
+Total: 18 tablas implementadas (las 15 iniciales más `sesiones`, `candidato_tags` y `decisiones_candidato`). Queda planificado un campo: `Candidato.en_banco_talento`.
 
-## Aislamiento en la base de datos (DEC-010, DEC-014, DEC-018) — Planificado (DEV-C-11 · HU-21)
+## Aislamiento en la base de datos (DEC-010, DEC-014, DEC-018, DEC-021) — Implementado (DEV-C-11 · PR #10)
 
 ```sql
 ALTER TABLE <tabla> ENABLE ROW LEVEL SECURITY;
@@ -264,7 +269,7 @@ CREATE POLICY aislamiento_tenant ON <tabla>
 |---|---|
 | `vael_owner` | Dueño de las tablas; migraciones |
 | `vael_app` | Peticiones normales; sin superusuario ni `BYPASSRLS` |
-| `vael_system` | Solo la lista cerrada: login, postulación pública por código, listado público de vacantes y feed XML (DEC-014) |
+| `vael_system` | Solo la lista cerrada: login, postulación pública por código, listado público de vacantes, feed XML (DEC-014) y resolución del código del candidato (DEC-021) |
 
 El `tenant_id` se fija al inicio de cada transacción (evento `after_begin`). **Las Lambdas no acceden a la base de datos** (DEC-018): entregan sus resultados al backend, que persiste con `vael_app` y el tenant del mensaje.
 
@@ -277,3 +282,4 @@ Toda tabla nueva con datos de una empresa incluye `tenant_id` y su política de 
 | 1 | 2026-09-15 | Versión inicial |
 | 2.0 | 2026-10-13 | Alineado con el código real; estados y decisiones (DEC-009); score (DEC-007); RLS (DEC-010); sesiones (DEC-011) |
 | 2.1 | 2026-10-18 | Campos planificados de la retrospectiva: `Vacante.textos_publicacion`, `Candidato.en_banco_talento`, `NotaCandidato.updated_at`; reglas de eliminación de áreas y vacantes; alta de empresa por script (DEC-015); lista cerrada con el feed XML (DEC-014); Lambdas sin acceso a la base de datos (DEC-018); referencias a historias de usuario |
+| 2.2 | 2026-10-27 | Cierre del Sprint 1: pasan a implementados `sesiones`, `candidato_tags`, `decisiones_candidato`, los estados `*_por_confirmar`, `token_version`, `textos_publicacion`, `NotaCandidato.updated_at` y la RLS. Campo nuevo `Empresa.email_contacto`. Reglas de áreas (código único) y vacantes (sin candidatos, `cerrada` final). DEC-021 en la lista cerrada |
