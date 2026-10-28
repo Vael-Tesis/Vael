@@ -1,4 +1,4 @@
-"""Modelos: Candidato, Tag, NotaCandidato."""
+"""Modelos: Candidato, Tag, CandidatoTag, NotaCandidato."""
 from datetime import datetime
 from enum import Enum
 
@@ -9,14 +9,20 @@ from app.models.base import TenantBase, TimestampMixin, new_id, utcnow
 
 
 class EstadoCandidato(str, Enum):
-    """Estado del candidato a lo largo del proceso de selección."""
+    """Estado del candidato a lo largo del proceso de selección.
+
+    Los análisis de IA dejan al candidato en `*_por_confirmar`; los estados de avance y de
+    descarte solo los asigna el servicio de decisiones (DEC-009).
+    """
 
     POSTULADO = "postulado"
     CV_ANALIZANDO = "cv_analizando"
+    CV_POR_CONFIRMAR = "cv_por_confirmar"
     CV_APROBADO = "cv_aprobado"
     CV_RECHAZADO = "cv_rechazado"
     EXAMEN_PENDIENTE = "examen_pendiente"
     EXAMEN_RENDIDO = "examen_rendido"
+    EXAMEN_POR_CONFIRMAR = "examen_por_confirmar"
     EXAMEN_APROBADO = "examen_aprobado"
     EXAMEN_RECHAZADO = "examen_rechazado"
     ENTREVISTA_PENDIENTE = "entrevista_pendiente"
@@ -79,6 +85,19 @@ class Tag(TenantBase, table=True):
     color: str | None = Field(default=None, max_length=20)
 
 
+class CandidatoTag(TenantBase, table=True):
+    """Asignación de una etiqueta a un candidato (DEV-C-05).
+
+    Al borrar el candidato o la etiqueta se borran sus asignaciones; DELETE /tags/{id}
+    elimina la etiqueta "y sus asignaciones" (doc 06).
+    """
+
+    __tablename__ = "candidato_tags"
+
+    candidato_id: str = Field(primary_key=True, foreign_key="candidatos.id", ondelete="CASCADE")
+    tag_id: str = Field(primary_key=True, foreign_key="tags.id", ondelete="CASCADE", index=True)
+
+
 class NotaCandidato(TenantBase, table=True):
     """Nota interna dejada por un usuario de RRHH sobre un candidato."""
 
@@ -89,3 +108,4 @@ class NotaCandidato(TenantBase, table=True):
     autor_id: str = Field(nullable=False, index=True, foreign_key="usuarios.id")
     contenido: str = Field(nullable=False)
     created_at: datetime = Field(default_factory=utcnow, nullable=False)
+    updated_at: datetime | None = Field(default=None)  # última edición; nulo si nunca se editó

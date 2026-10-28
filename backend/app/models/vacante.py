@@ -97,3 +97,7 @@ class Vacante(TenantBase, TimestampMixin, table=True):
     nota_minima_examen: int = Field(default=13, nullable=False)
     top_candidatos_finalistas: int = Field(default=5, nullable=False)
     instruccion_ia_extra: str | None = Field(default=None)
+
+    # Textos de difusión por canal (linkedin, whatsapp, indeed), generados por la IA y editados
+    # por RRHH (HU-10). Nulo mientras no se guarden.
+    textos_publicacion: dict[str, str] | None = Field(default=None, sa_column=Column(JSON, nullable=True))

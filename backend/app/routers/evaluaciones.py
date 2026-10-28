@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_db, get_system_db
 from app.core.dependencies import get_current_candidate, get_current_candidato, get_current_user
 from app.models.area import Area
 from app.models.candidato import Candidato
@@ -206,13 +206,13 @@ async def auditoria_general(
 @router.post("/candidato/resolver-codigo", response_model=ResolverCodigoResponse)
 async def resolver_codigo_candidato(
     body: ResolverCodigoRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_system_db)],
 ) -> ResolverCodigoResponse:
     """Intercambia el código corto (VAEL-XXXX-XXXX) ingresado manualmente por su JWT asociado.
 
     Sin autenticación: es el paso previo a tener un token — el candidato todavía no
     tiene ningún Bearer que mandar. El código es único globalmente, así que no se
-    filtra por tenant.
+    filtra por tenant: usa la sesión del sistema (DEC-021), solo lectura de un registro.
     """
     statement = select(TokenAcceso).where(TokenAcceso.codigo_corto == body.codigo_corto)
     result = await db.exec(statement)

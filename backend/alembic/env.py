@@ -2,7 +2,6 @@
 import asyncio
 from logging.config import fileConfig
 
-import sqlmodel
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -12,13 +11,15 @@ from alembic import context
 from app.core.config import settings
 
 # Importa todos los modelos existentes para que sus tablas se registren en SQLModel.metadata
-from app.models import area, candidato, entrevista, evaluacion, usuario, vacante  # noqa: F401
+from app.models import area, candidato, decision, entrevista, evaluacion, usuario, vacante  # noqa: F401
 
 # Objeto de configuración de Alembic (lee alembic.ini)
 config = context.config
 
-# La URL de conexión viene de settings (.env), nunca hardcodeada en alembic.ini
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Las migraciones corren como vael_owner, dueño de las tablas (DEC-010), nunca como vael_app.
+# La URL viene de settings (.env), nunca hardcodeada en alembic.ini. Los tests pasan la URL
+# de su base dedicada en config.attributes (ver tests/conftest.py).
+config.set_main_option("sqlalchemy.url", config.attributes.get("database_url", settings.database_owner_url))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -30,7 +31,7 @@ target_metadata = SQLModel.metadata
 def run_migrations_offline() -> None:
     """Corre las migraciones en modo 'offline': genera SQL sin conectarse a la BD."""
     context.configure(
-        url=settings.database_url,
+        url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},

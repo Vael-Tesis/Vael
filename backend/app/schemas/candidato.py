@@ -88,15 +88,25 @@ class NotaResponse(BaseModel):
     tenant_id: str
     candidato_id: str
     autor_id: str
+    autor_nombre: str | None = None
     contenido: str
     created_at: datetime
+    updated_at: datetime | None = None
+
+
+class ArchivoFallido(BaseModel):
+    """Archivo de una carga masiva que no generó candidato, con el motivo."""
+
+    nombre: str
+    motivo: str
 
 
 class CargaMasivaResponse(BaseModel):
-    """Resumen de una carga masiva de CVs."""
+    """Resumen de una carga masiva de CVs: los creados y los archivos que fallaron (CA-11)."""
 
     creados: int
     candidato_ids: list[str]
+    fallidos: list[ArchivoFallido] = []
 
 
 class MensajeResponse(BaseModel):

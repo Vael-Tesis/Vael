@@ -1,0 +1,14 @@
+{% extends "base_correo.html" %}
+{% block titulo %}Actualización de tu postulación{% endblock %}
+{% block contenido %}
+<h2 style="margin-top:0;">Hola {{ candidato_nombre }},</h2>
+<p>Gracias por tu interés y por el tiempo que dedicaste a postular a <strong>{{ vacante_titulo }}</strong>{% if empresa_nombre %} en <strong>{{ empresa_nombre }}</strong>{% endif %}.</p>
+<p>Te informamos que tu proceso para esta vacante no continuará.</p>
+<p>En la evaluación se utilizó inteligencia artificial como apoyo, y cada decisión fue revisada y confirmada por el equipo de Recursos Humanos.</p>
+{% if email_contacto %}
+<p>Si tienes consultas sobre el tratamiento de tus datos personales, puedes escribir a <a href="mailto:{{ email_contacto }}">{{ email_contacto }}</a>.</p>
+{% else %}
+<p>Si tienes consultas sobre el tratamiento de tus datos personales, puedes comunicarte con el área de Recursos Humanos{% if empresa_nombre %} de {{ empresa_nombre }}{% endif %}.</p>
+{% endif %}
+<p>Te deseamos éxito en tu búsqueda.<br>El equipo de VAEL</p>
+{% endblock %}

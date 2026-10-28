@@ -1,0 +1,21 @@
+Andrés Salazar Huamán
+andres.salazar@example.com | +51 900 000 101 | Lima, Perú
+github.com/andres-salazar-ejemplo
+
+PERFIL
+Desarrollador backend con 5 años de experiencia en Python, FastAPI y PostgreSQL.
+Diseño de APIs REST, pruebas automatizadas y despliegue con Docker.
+
+EXPERIENCIA
+2022 - actualidad | Desarrollador Backend Senior | Finanzas Andinas Digital S.A.C. (ficticia)
+- Diseñó 40 endpoints en FastAPI con SQLAlchemy y PostgreSQL 16.
+- Redujo en 35 % el tiempo de respuesta con índices y consultas optimizadas.
+- Implementó pruebas con pytest y CI en GitHub Actions.
+2020 - 2022 | Desarrollador Python | Servicios Logísticos del Sur S.A.C. (ficticia)
+- Migró scripts de reportes a una API con Flask y PostgreSQL.
+
+FORMACIÓN
+Ingeniería de Sistemas, Universidad Nacional de Ejemplo, 2019.
+
+HABILIDADES
+Python, FastAPI, Flask, PostgreSQL, SQLAlchemy, Alembic, Docker, pytest, Git, AWS (S3, ECS).

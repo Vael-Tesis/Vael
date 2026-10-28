@@ -1,11 +1,12 @@
 """Endpoints de la entrevista con EVA vía Gemini Live — /api/entrevista/."""
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.database import get_db
+from app.core.despacho import TipoTarea, despachar_tarea
 from app.core.dependencies import get_current_candidate, get_current_candidato, get_current_user
 from app.core.proctoring import CATALOGO_EVENTOS_PROCTORING, EVENTO_DEFAULT
 from app.models.base import new_id, utcnow
@@ -26,7 +27,6 @@ from app.schemas.entrevista import (
 from app.schemas.evaluacion import CandidatoAccesoResponse
 from app.services.aws_services import subir_archivo
 from app.services.entrevista_ia import (
-    analizar_entrevista_candidato,
     generar_pool_preguntas,
     generar_token_efimero_live,
 )
@@ -165,7 +165,6 @@ async def iniciar_entrevista(
 @router.post("/finalizar", response_model=MensajeResponse, status_code=status.HTTP_202_ACCEPTED)
 async def finalizar_entrevista(
     body: FinalizarEntrevistaRequest,
-    background_tasks: BackgroundTasks,
     claims: Annotated[dict[str, Any], Depends(get_current_candidate)],
     candidato: Annotated[Candidato, Depends(get_current_candidato)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -182,7 +181,10 @@ async def finalizar_entrevista(
     db.add(entrevista)
     await db.commit()
 
-    background_tasks.add_task(analizar_entrevista_candidato, entrevista.id)
+    await despachar_tarea(
+        TipoTarea.ANALISIS_ENTREVISTA,
+        {"tenant_id": entrevista.tenant_id, "entrevista_id": entrevista.id},
+    )
 
     return MensajeResponse(detail="Entrevista finalizada, análisis en curso")
 

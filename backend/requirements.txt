@@ -14,8 +14,9 @@ alembic==1.14.0
 # Base de datos — PostgreSQL 16 (driver async)
 asyncpg==0.30.0
 
-# Autenticación JWT y hashing de contraseñas
-python-jose[cryptography]==3.3.0
+# Autenticación: PyJWT (solo JWS HS256) reemplaza a python-jose, afectado por
+# CVE-2024-33663 y CVE-2024-33664 hasta la 3.3.0 (DEC-011). Hashing de contraseñas con bcrypt.
+PyJWT==2.15.1
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 
@@ -30,11 +31,9 @@ pydantic==2.13.5
 # Validación de emails (EmailStr) — usada en schemas/auth.py y schemas/candidato.py
 email-validator==2.2.0
 
-# Google Gemini — análisis de CV, exámenes, calificación (SDK estándar)
-google-generativeai==0.8.0
-
-# Google Gemini Live — tokens efímeros para la entrevista por voz (SDK nuevo, distinto del
-# de arriba; google-generativeai no soporta auth_tokens.create todavía).
+# Google Gemini — único SDK del proyecto (DEV-C-04): análisis de CV, exámenes, calificación,
+# textos de vacantes (core/gemini.py) y tokens efímeros de Gemini Live (services/entrevista_ia.py).
+# google-generativeai está deprecado y se eliminó.
 # OJO: estaba pineado en 0.2.2 (una versión temprana que NO tiene client.aio.auth_tokens
 # en absoluto — se agregó después). Verificado durante esta auditoría contra el paquete
 # real: 2.24.0 sí expone auth_tokens.create, CreateAuthTokenConfig y LiveConnectConstraints
@@ -47,7 +46,7 @@ Jinja2==3.1.4
 # Envío de correo SMTP async en desarrollo (services/correos.py) — en producción, SES vía aws_services.py
 aiosmtplib==3.0.2
 
-# AWS — Rekognition, Transcribe, Comprehend, S3, SQS, SES (services/aws_services.py)
+# AWS — Rekognition (solo detección de rostros), Transcribe, S3, SQS, SES (services/aws_services.py)
 # boto3 fijado en el rango que exige aiobotocore 2.15.2 (dependencia de aioboto3 13.2.0):
 # >=1.35.16,<1.35.37 — no puede ir más abajo (1.35.0, como estaba) ni más arriba sin
 # actualizar aioboto3 también.

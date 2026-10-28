@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import api from '../../services/api.js'
-import { sinBackend } from '../../utils/devFallback.js'
-import PageHeader from '../../components/ui/PageHeader.jsx'
-import Card from '../../components/ui/Card.jsx'
-import Badge from '../../components/ui/Badge.jsx'
-import Button from '../../components/ui/Button.jsx'
-import EmptyState from '../../components/ui/EmptyState.jsx'
+import api from '../../services/api'
+import { sinBackend } from '../../utils/devFallback'
+import PageHeader from '../../components/ui/PageHeader'
+import Card from '../../components/ui/Card'
+import Badge from '../../components/ui/Badge'
+import Button from '../../components/ui/Button'
+import EmptyState from '../../components/ui/EmptyState'
+import ConfirmModal from '../../components/ui/ConfirmModal'
+import Input from '../../components/ui/Input'
 
 const DEMO = [
   { id: '1', nombre: 'Gabriel', apellidos: 'Llanos', email: 'gabriel@empresa.com', rol: 'admin', activo: true },
@@ -121,10 +123,62 @@ const menuItemStyle = {
   padding: '9px 14px', fontSize: 13, color: 'var(--text-primary)',
 }
 
+function ModalCambiarPassword({ usuario, onCerrar }) {
+  const [nueva, setNueva] = useState('')
+  const [repetida, setRepetida] = useState('')
+  const [intentado, setIntentado] = useState(false)
+  const [procesando, setProcesando] = useState(false)
+
+  const errorNueva = nueva.length < 8 ? 'Mínimo 8 caracteres' : ''
+  const errorRepetida = repetida !== nueva ? 'Las contraseñas no coinciden' : ''
+
+  async function confirmar() {
+    setIntentado(true)
+    if (errorNueva || errorRepetida) return
+    setProcesando(true)
+    try {
+      await api.put(`/auth/usuarios/${usuario.id}/cambiar-password`, { password_nueva: nueva })
+      toast.success('Contraseña actualizada')
+      onCerrar()
+    } catch {
+      toast.error('No se pudo cambiar la contraseña')
+    } finally {
+      setProcesando(false)
+    }
+  }
+
+  return (
+    <ConfirmModal
+      abierto={usuario !== null}
+      titulo="Cambiar contraseña"
+      textoConfirmar="Cambiar contraseña"
+      procesando={procesando}
+      onConfirmar={confirmar}
+      onCancelar={onCerrar}
+    >
+      <p style={{ marginBottom: 14 }}>
+        Nueva contraseña para <strong>{usuario?.nombre} {usuario?.apellidos}</strong> ({usuario?.email}).
+      </p>
+      <form
+        onSubmit={(e) => { e.preventDefault(); confirmar() }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+      >
+        <Input label="Nueva contraseña" type="password" value={nueva}
+          onChange={(e) => setNueva(e.target.value)} error={intentado ? errorNueva : ''} />
+        <Input label="Repite la contraseña" type="password" value={repetida}
+          onChange={(e) => setRepetida(e.target.value)} error={intentado ? errorRepetida : ''} />
+        {/* Enter dentro de los campos envía el formulario */}
+        <button type="submit" hidden />
+      </form>
+    </ConfirmModal>
+  )
+}
+
 export default function Usuarios() {
   const queryClient = useQueryClient()
   const [menuAbiertoId, setMenuAbiertoId] = useState(null)
   const [creando, setCreando] = useState(false)
+  const [cambiandoPassword, setCambiandoPassword] = useState(null)
 
   const { data } = useQuery({
     queryKey: ['usuarios'],
@@ -164,18 +218,9 @@ export default function Usuarios() {
     }
   }
 
-  async function cambiarPassword(id) {
+  function cambiarPassword(usuario) {
     cerrarMenu()
-    const nueva = window.prompt('Nueva contraseña (mínimo 8 caracteres):')
-    if (!nueva) return
-    if (nueva.length < 8) return toast.error('La contraseña debe tener al menos 8 caracteres')
-
-    try {
-      await api.put(`/auth/usuarios/${id}/cambiar-password`, { password_nueva: nueva })
-      toast.success('Contraseña actualizada')
-    } catch {
-      toast.error('No se pudo cambiar la contraseña')
-    }
+    setCambiandoPassword(usuario)
   }
 
   return (
@@ -237,12 +282,16 @@ export default function Usuarios() {
                 onToggle={() => setMenuAbiertoId(menuAbiertoId === u.id ? null : u.id)}
                 onActivar={() => activarUsuario(u.id)}
                 onDesactivar={() => desactivarUsuario(u.id)}
-                onCambiarPassword={() => cambiarPassword(u.id)}
+                onCambiarPassword={() => cambiarPassword(u)}
               />
             </motion.div>
           ))
         )}
       </Card>
+
+      {/* key: cada apertura empieza con los campos vacíos */}
+      <ModalCambiarPassword key={cambiandoPassword?.id ?? 'cerrado'} usuario={cambiandoPassword}
+        onCerrar={() => setCambiandoPassword(null)} />
     </div>
   )
 }

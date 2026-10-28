@@ -1,21 +1,29 @@
-"""Endpoints públicos sin autenticación — formulario de postulación — /api/publico/."""
+"""Endpoints públicos sin autenticación — formulario de postulación — /api/publico/.
+
+Los tres usan la sesión del sistema (lista cerrada de DEC-010): no hay JWT del que
+obtener la empresa, la vacante se ubica por su código o por su estado público.
+"""
+import logging
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import EmailStr
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_system_db
+from app.core.despacho import TipoTarea, despachar_tarea
 from app.models.base import new_id
 from app.models.candidato import Candidato
 from app.models.usuario import Empresa
 from app.models.vacante import EstadoVacante, Vacante
 from app.schemas.publico import PostulacionResponse, VacantePublicaResponse
-from app.services.analisis_cv import analizar_cv_candidato
+from app.services import candidatos as servicio_candidatos
 from app.services.aws_services import subir_archivo
 
 router = APIRouter(prefix="/api/publico", tags=["publico"])
+
+logger = logging.getLogger(__name__)
 
 
 async def _obtener_vacante_publica_por_codigo(codigo: str, db: AsyncSession) -> Vacante:
@@ -59,7 +67,7 @@ def _construir_vacante_publica(vacante: Vacante, empresa: Empresa | None) -> Vac
 @router.get("/postular/{codigo}", response_model=VacantePublicaResponse)
 async def obtener_vacante_publica(
     codigo: str,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_system_db)],
 ) -> VacantePublicaResponse:
     """Info de una vacante abierta para el formulario público de postulación.
 
@@ -78,8 +86,7 @@ async def obtener_vacante_publica(
 @router.post("/postular/{codigo}/enviar", response_model=PostulacionResponse, status_code=status.HTTP_201_CREATED)
 async def enviar_postulacion(
     codigo: str,
-    background_tasks: BackgroundTasks,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_system_db)],
     nombre: Annotated[str, Form()],
     apellidos: Annotated[str, Form()],
     email: Annotated[EmailStr, Form()],
@@ -94,8 +101,16 @@ async def enviar_postulacion(
     vacante = await _obtener_vacante_publica_por_codigo(codigo, db)
 
     contenido = await cv.read()
+    # Mismas reglas que el registro desde el panel (RF-A-09)
+    motivo = servicio_candidatos.motivo_de_rechazo_cv(cv.filename, contenido)
+    if motivo is not None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=motivo)
     clave = f"cvs/{vacante.tenant_id}/{vacante.id}/{new_id()}_{cv.filename}"
-    cv_url = await subir_archivo(contenido, clave, cv.content_type or "application/pdf")
+    try:
+        cv_url = await subir_archivo(contenido, clave, "application/pdf")
+    except Exception as exc:
+        logger.exception("No se pudo subir el CV de una postulación a S3", extra={"tenant_id": vacante.tenant_id})
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="No se pudo guardar el CV; intenta de nuevo") from exc
 
     candidato = Candidato(
         tenant_id=vacante.tenant_id,
@@ -114,14 +129,14 @@ async def enviar_postulacion(
     await db.commit()
     await db.refresh(candidato)
 
-    background_tasks.add_task(analizar_cv_candidato, candidato.id)
+    await despachar_tarea(TipoTarea.ANALISIS_CV, {"tenant_id": candidato.tenant_id, "candidato_id": candidato.id})
 
     return PostulacionResponse(candidato_id=candidato.id, mensaje="Postulación recibida correctamente")
 
 
 @router.get("/vacantes", response_model=list[VacantePublicaResponse])
 async def listar_vacantes_publicas(
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_system_db)],
 ) -> list[VacantePublicaResponse]:
     """Lista las vacantes públicas: abiertas y no confidenciales, de cualquier tenant."""
     statement = select(Vacante).where(Vacante.estado == EstadoVacante.ABIERTA, Vacante.confidencial.is_(False))

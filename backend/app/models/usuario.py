@@ -1,4 +1,4 @@
-"""Modelos: Usuario, Empresa, TokenAcceso."""
+"""Modelos: Usuario, Sesion, Empresa, TokenAcceso."""
 from datetime import datetime
 from enum import Enum
 
@@ -32,6 +32,8 @@ class Empresa(SQLModel, table=True):
     tenant_id: str = Field(unique=True, index=True, nullable=False, max_length=36)
     nombre: str = Field(nullable=False)
     logo_url: str | None = Field(default=None)
+    # Contacto para consultas sobre datos personales; va en el correo de cierre (DEC-013)
+    email_contacto: str | None = Field(default=None, max_length=255)
     activa: bool = Field(default=True, nullable=False)
     created_at: datetime = Field(default_factory=utcnow, nullable=False)
 
@@ -49,6 +51,26 @@ class Usuario(TenantBase, TimestampMixin, table=True):
     rol: RolUsuario = Field(nullable=False)
     telefono: str | None = Field(default=None)
     activo: bool = Field(default=True, nullable=False)
+    # Se incrementa al desactivar al usuario o cambiar su contraseña: invalida sus tokens (DEC-011)
+    token_version: int = Field(default=0, nullable=False)
+
+
+class Sesion(TenantBase, table=True):
+    """Sesión de un usuario de RRHH: guarda el hash de su refresh token, nunca el token (DEC-011).
+
+    Cada renovación revoca la sesión usada y crea otra (`reemplazado_por`). Presentar el
+    refresh token de una sesión ya revocada revoca todas las sesiones activas del usuario.
+    """
+
+    __tablename__ = "sesiones"
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    usuario_id: str = Field(nullable=False, index=True, foreign_key="usuarios.id")
+    token_hash: str = Field(nullable=False, max_length=64)
+    creado_en: datetime = Field(default_factory=utcnow, nullable=False)
+    expira_en: datetime = Field(nullable=False)
+    revocado_en: datetime | None = Field(default=None)
+    reemplazado_por: str | None = Field(default=None, foreign_key="sesiones.id")
 
 
 class TokenAcceso(TenantBase, table=True):

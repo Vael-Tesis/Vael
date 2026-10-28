@@ -1,0 +1,17 @@
+Paola Gutiérrez Salas
+paola.gutierrez@example.com | +51 900 000 109 | Chiclayo, Perú
+
+PERFIL
+Desarrolladora Python con experiencia en APIs y bases de datos.
+
+EXPERIENCIA
+2021 (marzo) - 2024 (diciembre) | Desarrolladora Python a tiempo completo | Retail Ejemplo S.A.C. (ficticia)
+- APIs con FastAPI y PostgreSQL.
+2022 (junio) - 2024 (junio) | Desarrolladora Python a tiempo completo | Logística Ejemplo S.A.C. (ficticia)
+- Automatización de rutas con Python.
+
+FORMACIÓN
+Ingeniería de Sistemas, Universidad de Ejemplo, 2020.
+
+HABILIDADES
+Python, FastAPI, PostgreSQL, pandas, Git.

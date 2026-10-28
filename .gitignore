@@ -4,6 +4,8 @@ backend/__pycache__/
 backend/**/__pycache__/
 *.pyc
 backend/.env
+# PDF de los CV semilla: se regeneran con python -m app.scripts.generar_cvs (DEV-C-03)
+backend/seeds/cvs/
 
 # Frontend (Node)
 frontend/node_modules/

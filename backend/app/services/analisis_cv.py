@@ -10,15 +10,17 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.database import async_session_factory
 from app.core.gemini import como_lista_str, consultar_gemini_json
-from app.core.security import emitir_token_candidato
+from app.core.logs import medir_operacion, tenant_actual
 from app.models.area import Area
 from app.models.base import utcnow
 from app.models.candidato import Candidato, ClasificacionIA, EstadoCandidato
-from app.models.usuario import TipoToken
 from app.models.vacante import Vacante
-from app.services.correos import correo_bienvenida_examen
 
 logger = logging.getLogger(__name__)
+
+MENSAJE_CV_SIN_TEXTO = (
+    "No se pudo extraer texto del CV (posible documento escaneado). No se analizó con IA: requiere revisión manual."
+)
 
 
 def _extraer_con_pypdf2(pdf_bytes: bytes) -> str:
@@ -127,14 +129,25 @@ async def analizar_cv(candidato: Candidato, vacante: Vacante, area: Area | None,
     4. Llama a Gemini 3 Flash
     5. Parsea la respuesta JSON
     6. Actualiza el candidato en BD
-    7. Si score >= score_cv_minimo de la vacante: genera el token de examen y envía el correo
-    8. Si score < score_cv_minimo: pasa a cv_rechazado, sin correo
+    7. Deja al candidato en cv_por_confirmar: avanzar o descartar lo decide RRHH (DEC-009)
     """
     if not candidato.cv_url:
         raise ValueError(f"El candidato {candidato.id} no tiene cv_url — no hay CV para analizar")
 
     pdf_bytes = await _descargar_pdf(candidato.cv_url)
     texto_cv = extraer_texto_pdf(pdf_bytes)
+    if not texto_cv.strip():
+        # PDF escaneado o sin texto: no se envía a la IA; RRHH lo revisa a mano (doc 13, CV-TI-11)
+        candidato.score_cv = None
+        candidato.clasificacion_ia = ClasificacionIA.REQUIERE_REVISION
+        candidato.resumen_ia = MENSAJE_CV_SIN_TEXTO
+        candidato.analizado_en = utcnow()
+        candidato.updated_at = utcnow()
+        candidato.estado = EstadoCandidato.CV_POR_CONFIRMAR
+        db.add(candidato)
+        await db.commit()
+        return
+
     prompt = construir_prompt_analisis(texto_cv, vacante, area)
     resultado = await consultar_gemini_json(prompt)
 
@@ -149,18 +162,11 @@ async def analizar_cv(candidato: Candidato, vacante: Vacante, area: Area | None,
     candidato.analizado_en = utcnow()
     candidato.updated_at = utcnow()
 
-    if candidato.score_cv >= vacante.score_cv_minimo:
-        candidato.estado = EstadoCandidato.CV_APROBADO
-        db.add(candidato)
-        await db.commit()
-        await db.refresh(candidato)
-
-        token = await emitir_token_candidato(candidato.id, candidato.tenant_id, TipoToken.EXAMEN, db)
-        await correo_bienvenida_examen(candidato, token)
-    else:
-        candidato.estado = EstadoCandidato.CV_RECHAZADO
-        db.add(candidato)
-        await db.commit()
+    # DEC-009: la IA recomienda; RRHH decide. La recomendación (score_cv frente a
+    # score_cv_minimo) la calcula el servicio de decisiones; aquí no se emiten tokens ni correos.
+    candidato.estado = EstadoCandidato.CV_POR_CONFIRMAR
+    db.add(candidato)
+    await db.commit()
 
 
 async def analizar_cv_candidato(candidato_id: str) -> None:
@@ -178,9 +184,11 @@ async def analizar_cv_candidato(candidato_id: str) -> None:
             return
 
         area = await db.get(Area, vacante.area_id)
+        tenant_actual.set(candidato.tenant_id)
 
         try:
-            await analizar_cv(candidato, vacante, area, db)
+            with medir_operacion(logger, "analisis_cv", candidato_id=candidato_id):
+                await analizar_cv(candidato, vacante, area, db)
         except Exception:
             logger.exception("Falló el análisis de CV del candidato %s", candidato_id)
             candidato.estado = EstadoCandidato.POSTULADO

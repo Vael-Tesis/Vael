@@ -1,6 +1,7 @@
 """Configuración de la aplicación cargada desde variables de entorno (.env)."""
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,18 +14,24 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
 
-    # PostgreSQL
-    database_url: str
+    # PostgreSQL, un rol por uso (DEC-010). Nunca un superusuario: ignora la RLS.
+    database_url: str  # vael_app: peticiones normales y procesos asíncronos
+    database_system_url: str  # vael_system (BYPASSRLS): solo la lista cerrada de operaciones
+    database_owner_url: str  # vael_owner: dueño de las tablas, solo para las migraciones
+    # Administrador del servidor: solo lo usa app.scripts.crear_roles; la app nunca se conecta con él.
+    database_admin_url: str | None = None
 
     # JWT
     secret_key: str
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 15  # DEC-011
     refresh_token_expire_days: int = 7
 
     # Google Gemini
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3-flash"
+    # ID verificado contra la API en DEV-C-04 (gemini-3-flash no existe). Se fija una versión
+    # concreta, no un alias como -latest, para que las mediciones del OE2 sean reproducibles.
+    gemini_model: str = "gemini-3.8-flash"
     gemini_live_model: str = "gemini-2.5-flash-native-audio-preview-12-2025"
 
     # AWS
@@ -32,6 +39,8 @@ class Settings(BaseSettings):
     aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
     s3_bucket_name: str = "vael-storage"
+    # Solo en desarrollo: S3 local (Adobe S3Mock en docker-compose, DEC-023). Vacío = S3 de AWS.
+    s3_endpoint_url: str | None = None
     ses_region: str = "us-east-1"
 
     # Correos
@@ -49,6 +58,14 @@ class Settings(BaseSettings):
     # Interno
     internal_service_key: str
 
+    # Contraseñas de los usuarios semilla (app.scripts.semillas, doc 13). Nunca en el repositorio.
+    # SEED_PASSWORD es la de respaldo para los roles que no tengan la suya.
+    seed_password: str | None = None
+    seed_password_admin: str | None = None
+    seed_password_reclutador: str | None = None
+    seed_password_evaluador: str | None = None
+    seed_password_gerente: str | None = None
+
     # Frontend
     frontend_url: str = "http://localhost:5173"
     allowed_origins: str = "http://localhost:5173,http://localhost:3000"
@@ -62,6 +79,13 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Indica si el entorno actual es de producción."""
         return self.environment.lower() == "production"
+
+    @model_validator(mode="after")
+    def _sin_debug_en_produccion(self) -> "Settings":
+        """Impide arrancar con DEBUG=true en producción (expondría /docs y detalles de errores)."""
+        if self.is_production and self.debug:
+            raise ValueError("DEBUG debe ser false cuando ENVIRONMENT=production")
+        return self
 
 
 @lru_cache
