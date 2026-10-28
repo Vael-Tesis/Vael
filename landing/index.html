@@ -38,10 +38,7 @@
       <a href="#score">El puntaje</a>
       <a href="#para-quien">Para quién es</a>
       <a href="#faq">Preguntas</a>
-      <!-- {{DATO_PENDIENTE: dominio real del panel de administración}}
-           Sin href a propósito: lo asigna main.js desde ADMIN_LOGIN_URL.
-           Mientras esa constante esté vacía el botón queda deshabilitado, así
-           que el landing se puede publicar sin ningún enlace roto. -->
+      <!-- Sin href a propósito: lo asigna main.js desde ADMIN_LOGIN_URL. -->
       <a class="btn btn--ghost btn--sm nav__cta" id="admin-login" rel="noopener">Ingresar</a>
       <a class="btn btn--primary btn--sm nav__cta" href="#demo">Solicitar demo</a>
     </nav>
@@ -493,20 +490,16 @@
 
     <div class="founders">
       <article class="founder reveal">
-        <div class="founder__photo ph-box">
-          <span>{{DATO_PENDIENTE: foto de Gabriel Llanos — 800×800 px}}</span>
-        </div>
+        <div class="founder__photo founder__photo--iniciales" aria-hidden="true">GL</div>
         <h3 class="founder__name">Gabriel Llanos</h3>
-        <p class="founder__role">Cofundador · <span class="ph">{{DATO_PENDIENTE: rol exacto de Gabriel}}</span></p>
+        <p class="founder__role">Cofundador · Producto</p>
         <p class="founder__quote">«Un proceso de selección debería terminar con una decisión que puedas explicar en una frase y sustentar en una pantalla.»</p>
       </article>
 
       <article class="founder reveal" style="--d:100ms">
-        <div class="founder__photo ph-box">
-          <span>{{DATO_PENDIENTE: foto de Diego Nina — 800×800 px}}</span>
-        </div>
+        <div class="founder__photo founder__photo--iniciales" aria-hidden="true">DN</div>
         <h3 class="founder__name">Diego Nina</h3>
-        <p class="founder__role">Cofundador · <span class="ph">{{DATO_PENDIENTE: rol exacto de Diego}}</span></p>
+        <p class="founder__role">Cofundador · Tecnología</p>
         <p class="founder__quote">«Queremos que la persona correcta llegue a la entrevista aunque haya postulado la número 287.»</p>
       </article>
     </div>
@@ -534,17 +527,17 @@
 
       <details class="qa">
         <summary><span>¿Qué pasa con los datos de mis candidatos?</span><i class="qa__plus" aria-hidden="true"></i></summary>
-        <div class="qa__body"><p>Son tuyos. Se guardan en un espacio aislado por empresa, con accesos por rol y registro de quién revisó cada evaluación. No se comparten con otras empresas ni se usan para entrenar modelos, y puedes solicitar la eliminación de los datos de un candidato o de un proceso completo. Almacenamiento y retención: <span class="ph">{{DATO_PENDIENTE: región de almacenamiento y política de retención}}</span>.</p></div>
+        <div class="qa__body"><p>Son tuyos. Se guardan en un espacio aislado por empresa, con accesos por rol y registro de quién revisó cada evaluación. No se comparten con otras empresas ni se usan para entrenar modelos, y puedes solicitar la eliminación de los datos de un candidato o de un proceso completo. Se almacenan en Amazon Web Services (región Norte de Virginia, EE. UU.) y se eliminan 12 meses después del cierre de la vacante, salvo que el candidato forme parte del banco de talento de tu empresa. Detalle en el <a href="privacidad.html">aviso de privacidad</a>.</p></div>
       </details>
 
       <details class="qa">
         <summary><span>¿Se integra con lo que ya uso?</span><i class="qa__plus" aria-hidden="true"></i></summary>
-        <div class="qa__body"><p>VAEL funciona por sí solo: publicas el puesto, compartes el enlace de postulación donde ya publicas y recibes los resultados. Integraciones disponibles hoy: <span class="ph">{{DATO_PENDIENTE: lista de integraciones y sistemas compatibles}}</span>. Si trabajas con una herramienta específica, cuéntanoslo en la demo.</p></div>
+        <div class="qa__body"><p>VAEL funciona por sí solo: publicas el puesto, compartes el enlace de postulación donde ya publicas y recibes los resultados. Hoy ofrecemos el enlace de postulación de cada vacante, para compartirlo en cualquier canal, y un feed XML para bolsas de empleo. Si trabajas con una herramienta específica, cuéntanoslo en la demo.</p></div>
       </details>
 
       <details class="qa">
         <summary><span>¿Cuánto cuesta?</span><i class="qa__plus" aria-hidden="true"></i></summary>
-        <div class="qa__body"><p>Planes y precios: <span class="ph">{{DATO_PENDIENTE: precio y estructura de planes}}</span>. Durante el acceso temprano trabajamos con un grupo reducido de equipos para ajustar el producto a procesos reales; escríbenos y te decimos qué incluye.</p></div>
+        <div class="qa__body"><p>Durante el acceso temprano VAEL no tiene costo: trabajamos con un grupo reducido de equipos para ajustar el producto a procesos reales. Los planes previstos, en dólares, son Freemium (gratis: 2 vacantes y 10 candidatos al mes), Starter (99 al mes: 5 vacantes y 100 candidatos), Business (299 al mes: 20 vacantes y candidatos ilimitados), Enterprise (a medida) y pago por uso (12 por candidato, para contratación estacional). Son referenciales y pueden cambiar antes del lanzamiento.</p></div>
       </details>
     </div>
   </div>
@@ -557,7 +550,7 @@
     <p class="cta__sub">Estamos abriendo acceso temprano a equipos que contratan ahora. Déjanos tu correo y coordinamos una demo de 20 minutos.</p>
 
     <form class="cta__form" id="demo-form" novalidate
-          action="{{DATO_PENDIENTE: endpoint del formulario de demo}}" method="post">
+          action="mailto:contacto@vael.work" method="post">
       <label class="sr-only" for="email">Correo de trabajo</label>
       <input class="cta__input" id="email" name="email" type="email" inputmode="email"
              autocomplete="email" placeholder="tu@empresa.com" required />
@@ -603,17 +596,17 @@
 
     <div class="footer__col">
       <h2 class="footer__h">Contacto</h2>
-      <a href="mailto:{{DATO_PENDIENTE: correo de contacto}}">{{DATO_PENDIENTE: correo de contacto}}</a>
-      <p class="footer__muted">{{DATO_PENDIENTE: ciudad y país de la empresa}}</p>
+      <a href="mailto:contacto@vael.work">contacto@vael.work</a>
+      <p class="footer__muted">Perú</p>
     </div>
   </div>
 
   <div class="wrap footer__bottom">
     <p>© <span id="year">2026</span> VAEL. Todos los derechos reservados.</p>
     <p class="footer__legal">
-      <a href="{{DATO_PENDIENTE: URL del aviso de privacidad}}">Aviso de privacidad</a>
+      <a href="privacidad.html">Aviso de privacidad</a>
       <span aria-hidden="true">·</span>
-      <a href="{{DATO_PENDIENTE: URL de términos de servicio}}">Términos</a>
+      <a href="terminos.html">Términos</a>
     </p>
   </div>
 </footer>

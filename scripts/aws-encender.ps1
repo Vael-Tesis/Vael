@@ -128,7 +128,7 @@ $pendientes = Select-String -Path (Join-Path $raiz "landing\*.html") -Pattern "D
 if ($pendientes) {
   Write-Warning "La landing tiene datos pendientes ({{DATO_PENDIENTE}}) en: $($pendientes.Filename -join ', '). No se publica."
 } else {
-  Aws s3 sync (Join-Path $raiz "landing") "s3://$($base.BucketLanding)" --delete
+  Aws s3 sync (Join-Path $raiz "landing") "s3://$($base.BucketLanding)" --delete --exclude "README.md" --exclude "assets/README.md"
   Aws cloudfront create-invalidation --distribution-id $base.DistribucionLandingId --paths "/*" | Out-Null
 }
 

@@ -8,8 +8,10 @@
 
   /* ===================== CONFIGURACIÓN ===================== */
   // URL del panel de administración. Vacío = botón deshabilitado.
-  // Cuando se compre el dominio, poner aquí: 'https://app.vael.ai/login'
-  const ADMIN_LOGIN_URL = '';
+  const ADMIN_LOGIN_URL = 'https://app.vael.work/login';
+  // Destino de las solicitudes de demo: no hay backend para el formulario, así que se abre
+  // el cliente de correo con el mensaje listo para enviar.
+  const CORREO_CONTACTO = 'contacto@vael.work';
   /* ========================================================= */
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -342,10 +344,12 @@
 
       input.removeAttribute('aria-invalid');
       msg.classList.remove('is-error');
-      msg.textContent = 'Listo. Te escribimos a ' + value + ' para coordinar la demo.';
+      // Nada se envía desde la página: se abre el correo del visitante con la solicitud lista
+      var asunto = encodeURIComponent('Solicitud de demo de VAEL');
+      var cuerpo = encodeURIComponent('Hola, quiero coordinar una demo de VAEL. Mi correo de trabajo es ' + value + '.');
+      window.location.href = 'mailto:' + CORREO_CONTACTO + '?subject=' + asunto + '&body=' + cuerpo;
+      msg.textContent = 'Se abrió tu correo con la solicitud lista: solo envíala. Si no se abrió, escríbenos a ' + CORREO_CONTACTO + '.';
       form.reset();
-
-      // TODO: conectar con el endpoint real del formulario (ver action del <form>).
     });
 
     input.addEventListener('input', function () {
