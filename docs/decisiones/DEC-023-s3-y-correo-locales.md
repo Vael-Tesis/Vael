@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Aprobada por el Product Owner; pendiente de revisión del equipo en el PR |
+| Estado | Aprobada (Product Owner; revisión del equipo en los PR #23 y #24, 2026-10-28) |
 | Fecha | 2026-10-28 |
 | Tarea de origen | TST-A-01 (prueba manual del perfil Admin) |
 | Decidido por | Gabriel Llanos (Product Owner) |

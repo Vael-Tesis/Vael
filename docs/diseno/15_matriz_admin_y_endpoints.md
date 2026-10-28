@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/15_matriz_admin_y_endpoints.md`, versión 1.3 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-27, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/15_matriz_admin_y_endpoints.md`, versión 1.4 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-28, copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 15 — Matriz de vistas del perfil Admin y endpoints faltantes
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.3 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-27 |
+| Versión | 1.4 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-28 |
 | Tareas de origen | PLN-A-01 (matriz) y PLN-A-02 (endpoints faltantes) |
 | Criterio | El Figma no es definitivo. **VAEL deriva de MENTIS: sus vistas se asimilan y se adaptan al formato de VAEL** (decisiones DEC-007 a DEC-019, contrato del backend FastAPI, TypeScript) |
 | Alcance aprobado | **Todo lo de esta matriz se desarrolla en este ciclo** (perfil Admin completo) |
@@ -30,8 +30,8 @@ Todas las vistas cumplen el criterio de DEC-008: `.tsx`, cliente tipado, sin moc
 | V-01 | Login | P-01 Login | Asimilar | — | Refresh transparente y logout efectivo (DEC-011) | HU-01, HU-02 |
 | V-02 | *(raíz redirige a vacantes)* | P-02 Dashboard | **Nueva** | — | Pendientes de decisión, minutos de revisión y concordancia | HU-20 |
 | V-03 | VacantesList | P-03 Vacantes | Asimilar | Duplicar y eliminar desde el listado | Eliminar solo en borrador | HU-08 |
-| V-04 | VacanteForm | P-04 Formulario de vacante | Asimilar | Solo áreas activas | Selector de plantilla de evaluación | HU-08 |
-| V-05 | VacanteDetalle | P-05 Detalle de vacante | Asimilar | Textos de publicación guardados y editables | "Despublicar" = pausar; "reactivar" = publicar | HU-09, HU-10 |
+| V-04 | VacanteForm | P-04 Formulario de vacante | Asimilar | Solo áreas activas | Sin selector de plantilla (decisión del Product Owner del 2026-10-28) | HU-08 |
+| V-05 | VacanteDetalle | P-05 Detalle de vacante | Asimilar | Textos de publicación guardados y editables; enlace de postulación copiable | "Despublicar" = pausar; "reactivar" = publicar | HU-09, HU-10 |
 | V-06 | CandidatosList | P-06 Candidatos | Asimilar | Botón analizar | Muestra los estados `*_por_confirmar` | HU-11, HU-12 |
 | V-07 | CandidatoForm | P-07 Registrar candidato | Asimilar | — | — | HU-11 |
 | V-08 | CargaMasiva | P-07 (pestaña) | Asimilar | Solo vacantes abiertas | Pestaña dentro de P-07 | HU-11 |
@@ -48,7 +48,7 @@ Todas las vistas cumplen el criterio de DEC-008: `.tsx`, cliente tipado, sin moc
 | V-19 | *(no existe)* | P-16 Plantillas | **Nueva** | — | **Corregir la ruta** (`/plantillas`); edición de dimensiones | HU-06 |
 | V-20 | Areas | P-17 Áreas | Asimilar | Editar, activar, desactivar y eliminar | Eliminar solo sin vacantes | HU-05 |
 | V-21 | BancoTalento | P-18 Banco de talento | Asimilar | Filtro por área; agregar al banco | — | HU-14 |
-| V-22 | Usuarios | P-19 Usuarios | Asimilar | Reenviar credenciales | Desactivar invalida la sesión (DEC-011) | HU-07 |
+| V-22 | Usuarios | P-19 Usuarios | Asimilar | Reenviar credenciales | Desactivar invalida la sesión (DEC-011); cambiar contraseña en un modal del sistema de diseño | HU-07 |
 
 Elementos transversales a asimilar: `ConfirmModal` (confirmación antes de acciones irreversibles) y `ProtectedRoute` (guard de rutas), que en VAEL valida también el rol. **Ambos implementados:** `ConfirmModal` (DEV-A-03) y `ProtectedRoute` + `RutaPorRol`, con el menú filtrado por rol (DEV-A-02).
 
@@ -60,7 +60,10 @@ Elementos transversales a asimilar: `ConfirmModal` (confirmación antes de accio
 | Pendientes (Sprint 2) | P-02 Dashboard (DEV-A-10) · P-10 Ranking (DEV-A-06) · P-11 a P-15 Evaluaciones y auditoría (DEV-A-07) · P-18 Banco de talento (DEV-A-08) · P-19 Usuarios (DEV-A-09) |
 
 Observaciones:
-- **V-04, selector de plantilla:** no se implementó porque `Vacante` no tiene `plantilla_id` (doc 05). Pendiente de decisión del Product Owner, junto con la columna "Plantilla" del doc 13.
+- **V-04, selector de plantilla:** **DECISIÓN del Product Owner (2026-10-28):** no se implementa. `Vacante` no tiene `plantilla_id` (doc 05) y se retiró la referencia también del doc 13.
+- **V-05, enlace de postulación (observación de TST-A-01 · PR #23):** en la pestaña Publicación, encima del feed XML, se muestra `/postular/{codigo}`, copiable con un clic o con el icono. Solo con la vacante abierta; en una confidencial avisa que solo postula quien tenga el enlace.
+- **V-22, cambiar contraseña (observación de TST-A-01 · PR #23):** abre un modal (`ConfirmModal` + `Input`) con confirmación y mínimo de 8 caracteres, en lugar del diálogo del navegador. La pantalla sigue en JavaScript hasta DEV-A-09.
+- **V-16, ruta de la lista de entrevistas:** la pantalla actual llama a `/api/entrevista/lista`, que no existe (la ruta es `GET /api/entrevista`); se corrige al migrarla en DEV-A-07.
 - **V-11, enviar al banco:** depende de DEV-A-08.
 - **P-09, requisitos de diseño:** los seis requisitos de abajo están implementados. El diseño en Figma (P-07 del Sprint 0) sigue pendiente.
 - Las vistas migradas se verificaron con `tsc`, el build y una prueba de humo por HTTP; **falta la revisión visual en el navegador**.
@@ -123,3 +126,4 @@ Sin endpoint: `python -m app.scripts.crear_empresa`.
 | 1.1 | 2026-10-16 | Retrospectiva MENTIS → VAEL |
 | 1.2 | 2026-10-18 | Aprobado; alcance completo en este ciclo; historias asociadas; corrección del conteo (16 endpoints nuevos, no 14) |
 | 1.3 | 2026-10-27 | Estado al cierre del Sprint 1: 10 vistas migradas y 14 de 16 endpoints nuevos implementados; eliminar vacante exige además que no tenga candidatos; selector de plantilla pendiente de decisión |
+| 1.4 | 2026-10-28 | Sin selector de plantilla (decisión del Product Owner); enlace de postulación en V-05 y modal de contraseña en V-22 (PR #23); ruta rota de la lista de entrevistas registrada |

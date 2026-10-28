@@ -1,12 +1,12 @@
-> COPIA del documento del Drive `VAEL/Docs/06_api_endpoints.md`, versión 2.2, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/06_api_endpoints.md`, versión 2.3, copiada el 2026-10-28.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 06 — API: Endpoints
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.2 |
-| Actualizado | 2026-10-27 |
+| Versión | 2.3 |
+| Actualizado | 2026-10-28 |
 | Fuente de verdad | Código en `backend/app/routers/` (83 rutas en 9 routers, contadas en `frontend/openapi.json` al cierre del Sprint 1) + DEC-001, DEC-008 a DEC-015, DEC-018, DEC-021 + doc 15 |
 | Copia en el repositorio | `docs/diseno/06_api_endpoints.md` (DEC-019). La fuente es este documento |
 
@@ -132,7 +132,7 @@ Request ilustrativo de decisión individual:
 
 Reglas: justificación obligatoria si la decisión no coincide con la IA (422 si falta); repetir la decisión vigente es idempotente; cambiarla = decisión nueva enlazada con `reemplaza_a`; avance → estado, token y correo de la etapa siguiente; descarte → estado, invalidación de los tokens del candidato y un único correo de cierre. El lote es todo o nada. `revision_inicio` con zona horaria se normaliza a UTC.
 
-**Pendiente de decisión (HU-18, DEV-A-06):** en la etapa `entrevista` no hay umbral, así que el lote no tiene recomendación con la cual coincidir. Propuesta: usar `top_candidatos_finalistas` como criterio, registrada en un ADR nuevo (DEC-022).
+**Decidido por el Product Owner el 2026-10-28 (HU-18, DEV-A-06):** en la etapa `entrevista` no hay umbral, así que el lote usa `top_candidatos_finalistas` de la vacante como recomendación: los N primeros del ranking por `score_final` coinciden con la IA; cualquier otra decisión exige justificación (DEC-009). El ADR DEC-022 se registra en el PR de DEV-A-06. **Cambia (DEV-A-06 · HU-18).**
 
 ## /api/tags — Implementado (DEV-A-01 · PR #17 · HU-13)
 
@@ -179,7 +179,7 @@ Reglas: firma HMAC-SHA256 del cuerpo y de una marca de tiempo con un secreto de 
 | Método | Ruta | Permiso | Estado |
 |---|---|---|---|
 | GET | `/publico/postular/{codigo}` | Público (sesión del sistema) | Implementado |
-| POST | `/publico/postular/{codigo}/enviar` | Público (sesión del sistema) | Implementado. Aviso previo de IA en el ciclo siguiente |
+| POST | `/publico/postular/{codigo}/enviar` | Público (sesión del sistema) | Implementado. **Ajustado (TST-A-01 · PR #23):** 422 con el motivo si el archivo no es un PDF válido (mismas reglas que `POST /candidatos`); 502 si falla el almacenamiento (antes respondía 500). Aviso previo de IA en el ciclo siguiente |
 | GET | `/publico/vacantes` | Público (sesión del sistema) | Implementado |
 
 ## /health
@@ -198,3 +198,4 @@ No es un endpoint: `python -m app.scripts.crear_empresa` (DEC-015).
 | 2.0 | 2026-10-13 | Alineado con las 57 rutas reales; decisiones planificadas |
 | 2.1 | 2026-10-18 | 16 endpoints nuevos de la retrospectiva (doc 15): eliminar vacante en borrador, textos de publicación, editar y eliminar notas, etiquetas, banco de talento, activar, desactivar y eliminar áreas, métricas; endpoints internos de las Lambdas (DEC-018); feed XML en la lista cerrada (DEC-014); alta de empresa por script (DEC-015); referencias a historias de usuario |
 | 2.2 | 2026-10-27 | Cierre del Sprint 1 (83 rutas): pasan a implementados auth con sesiones, áreas, tags, notas, decisiones, textos y eliminación de vacantes. `marcar-finalista` eliminado. Ampliación de `PUT /plantillas/{id}` con `dimensiones`. Códigos 401/403/409/422/502 documentados. Resolución del código del candidato en la lista cerrada (DEC-021). Pendiente: lote de la etapa entrevista (DEC-022) |
+| 2.3 | 2026-10-28 | Postulación pública con 422 y 502 (PR #23); criterio del lote de finalistas decidido (DEC-022, por registrar en DEV-A-06) |
