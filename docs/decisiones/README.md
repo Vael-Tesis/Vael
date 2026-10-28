@@ -26,5 +26,6 @@ Cada decisión de implementación se registra como `DEC-NNN` en formato ADR (*Ar
 | DEC-019 | Copia de los documentos de diseño en `docs/diseno/` | [DEC-019](DEC-019-copia-diseno-repositorio.md) |
 | DEC-020 | Herramientas: GitHub Projects + Excel del curso; Playwright para E2E | [DEC-020](DEC-020-herramientas-tablero-e2e.md) |
 | DEC-021 | Resolución del código del candidato en la lista cerrada de operaciones del sistema | [DEC-021](DEC-021-codigo-candidato-lista-cerrada.md) |
+| DEC-023 | S3 y correo locales para desarrollo: Adobe S3Mock y Mailpit | [DEC-023](DEC-023-s3-y-correo-locales.md) |
 
-La siguiente decisión usa el número DEC-022.
+DEC-022 queda reservada para el criterio del lote de finalistas (`top_candidatos_finalistas`, aprobado por el Product Owner), que se registra en el PR de DEV-A-06. La siguiente decisión nueva usa el número DEC-024.

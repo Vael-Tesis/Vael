@@ -64,9 +64,10 @@ async def _enviar_por_smtp(destinatario: str, asunto: str, html: str) -> None:
         mensaje,
         hostname=settings.smtp_host,
         port=settings.smtp_port,
-        username=settings.smtp_user,
-        password=settings.smtp_password,
-        start_tls=settings.smtp_user is not None,
+        # `SMTP_USER=` vacío (Mailpit, DEC-023) equivale a sin autenticación ni STARTTLS
+        username=settings.smtp_user or None,
+        password=settings.smtp_password or None,
+        start_tls=bool(settings.smtp_user),
     )
 
 

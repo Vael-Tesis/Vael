@@ -9,6 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.candidato import ClasificacionIA, EstadoCandidato
 from app.models.evaluacion import SemaforoExamen
 from app.routers import candidatos as router_candidatos
+from app.routers import publico as router_publico
 from app.scripts import generar_cvs
 from app.services import analisis_cv
 from tests.test_decisiones import _candidato, _examen, _vacante
@@ -138,3 +139,39 @@ async def test_la_bandeja_muestra_el_semaforo_del_examen(
     bandeja = client.get("/api/candidatos/por-confirmar", headers=admin_headers).json()
 
     assert [(i["etapa"], i["semaforo"]) for i in bandeja] == [("examen", "rojo")]
+
+
+async def test_la_postulacion_publica_valida_el_cv_y_reporta_el_error_de_s3(
+    client: TestClient, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Observación de TST-A-01: sin S3 la postulación respondía 500 sin mensaje."""
+    vacante = await _vacante(db_session)
+    ruta = f"/api/publico/postular/{vacante.codigo}/enviar"
+    datos = {"nombre": "Ana", "apellidos": "Ruiz", "email": "ana@example.com"}
+    tareas: list[dict[str, Any]] = []
+
+    async def subir_que_falla(*_args: Any) -> str:
+        raise RuntimeError("NoCredentialsError")
+
+    async def despachar_falso(tipo: Any, payload: dict[str, Any]) -> None:
+        tareas.append(payload)
+
+    monkeypatch.setattr(router_publico, "subir_archivo", subir_que_falla)
+    monkeypatch.setattr(router_publico, "despachar_tarea", despachar_falso)
+
+    danado = client.post(ruta, data=datos, files={"cv": ("cv.pdf", CV_DANADO, "application/pdf")})
+    assert danado.status_code == 422
+    assert danado.json()["detail"] == "El PDF está dañado o no se puede leer"
+
+    sin_s3 = client.post(ruta, data=datos, files={"cv": ("cv.pdf", CV_VALIDO, "application/pdf")})
+    assert sin_s3.status_code == 502
+    assert sin_s3.json()["detail"] == "No se pudo guardar el CV; intenta de nuevo"
+    assert tareas == []
+
+    async def subir_falso(_contenido: bytes, clave: str, _tipo: str) -> str:
+        return f"https://s3.example.com/{clave}"
+
+    monkeypatch.setattr(router_publico, "subir_archivo", subir_falso)
+    ok = client.post(ruta, data=datos, files={"cv": ("cv.pdf", CV_VALIDO, "application/pdf")})
+    assert ok.status_code == 201, ok.text
+    assert tareas == [{"tenant_id": vacante.tenant_id, "candidato_id": ok.json()["candidato_id"]}]

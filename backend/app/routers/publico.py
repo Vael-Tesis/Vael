@@ -3,6 +3,7 @@
 Los tres usan la sesión del sistema (lista cerrada de DEC-010): no hay JWT del que
 obtener la empresa, la vacante se ubica por su código o por su estado público.
 """
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -17,9 +18,12 @@ from app.models.candidato import Candidato
 from app.models.usuario import Empresa
 from app.models.vacante import EstadoVacante, Vacante
 from app.schemas.publico import PostulacionResponse, VacantePublicaResponse
+from app.services import candidatos as servicio_candidatos
 from app.services.aws_services import subir_archivo
 
 router = APIRouter(prefix="/api/publico", tags=["publico"])
+
+logger = logging.getLogger(__name__)
 
 
 async def _obtener_vacante_publica_por_codigo(codigo: str, db: AsyncSession) -> Vacante:
@@ -97,8 +101,16 @@ async def enviar_postulacion(
     vacante = await _obtener_vacante_publica_por_codigo(codigo, db)
 
     contenido = await cv.read()
+    # Mismas reglas que el registro desde el panel (RF-A-09)
+    motivo = servicio_candidatos.motivo_de_rechazo_cv(cv.filename, contenido)
+    if motivo is not None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=motivo)
     clave = f"cvs/{vacante.tenant_id}/{vacante.id}/{new_id()}_{cv.filename}"
-    cv_url = await subir_archivo(contenido, clave, cv.content_type or "application/pdf")
+    try:
+        cv_url = await subir_archivo(contenido, clave, "application/pdf")
+    except Exception as exc:
+        logger.exception("No se pudo subir el CV de una postulación a S3", extra={"tenant_id": vacante.tenant_id})
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="No se pudo guardar el CV; intenta de nuevo") from exc
 
     candidato = Candidato(
         tenant_id=vacante.tenant_id,
