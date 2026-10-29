@@ -13,13 +13,13 @@ $env:AWS_PAGER = ""  # sin paginador: el script no debe quedarse esperando una t
 $raiz = Split-Path $PSScriptRoot -Parent
 
 function Aws {
-  & aws @args --profile $Perfil --region $Region
+  & aws.exe @args --profile $Perfil --region $Region
   if ($LASTEXITCODE -ne 0) { throw "Falló: aws $($args[0]) $($args[1])" }
 }
 
 function AwsOpcional {
   $previa = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-  $salida = & aws @args --profile $Perfil --region $Region 2>$null
+  $salida = & aws.exe @args --profile $Perfil --region $Region 2>$null
   $ok = $LASTEXITCODE -eq 0
   $ErrorActionPreference = $previa
   if ($ok) { return ($salida -join "`n").Trim() } else { return $null }
