@@ -110,8 +110,9 @@ def recomendacion_de_etapa(
     """Recomendación de la IA para la etapa, con el criterio de la vacante.
 
     CV: `score_cv` frente a `score_cv_minimo`. Examen: la nota frente a `nota_minima_examen`.
-    Entrevista: no hay umbral, así que la recomendación es nula (DEC-009) y el puntaje es el
-    `score_final` (DEC-007).
+    Entrevista: sin `score_final` todavía no hay con qué calcular el ranking (DEC-022), así que
+    la recomendación es nula; con `score_final` la calcula `calcular_recomendacion`, que sí
+    puede consultar el ranking de la vacante.
     """
     if etapa is EtapaDecision.CV:
         puntaje = float(candidato.score_cv) if candidato.score_cv is not None else None
@@ -123,8 +124,54 @@ def recomendacion_de_etapa(
     return Recomendacion(etapa, None, candidato.score_final, None, None)
 
 
+async def ranking_vacante(vacante_id: str, tenant_id: str, db: AsyncSession) -> list[Candidato]:
+    """Candidatos de la vacante con `score_final` (proceso completo), de mayor a menor (DEC-007).
+
+    Es el mismo ranking que consulta `GET /candidatos/ranking` y el que usa la recomendación de
+    finalistas de la etapa `entrevista` (DEC-022). Los procesos incompletos (`score_final` nulo)
+    quedan fuera: no tienen con qué ordenarse ni reciben recomendación.
+    """
+    statement = (
+        select(Candidato)
+        .where(Candidato.tenant_id == tenant_id, Candidato.vacante_id == vacante_id, Candidato.score_final.is_not(None))
+        .order_by(Candidato.score_final.desc())
+    )
+    return list((await db.exec(statement)).all())
+
+
+def recomendaciones_finalistas(ranking: list[Candidato], top: int) -> dict[str, TipoDecision]:
+    """Recomendación de avance de cada candidato de un ranking ya ordenado por `score_final`
+    descendente (DEC-022): `avanzar` para los primeros `top` puestos; los empates con el
+    puntaje del puesto `top` también avanzan, así que nadie queda fuera por un orden arbitrario.
+    """
+    if not ranking:
+        return {}
+    corte = ranking[min(top, len(ranking)) - 1].score_final
+    return {c.id: (TipoDecision.AVANZAR if c.score_final >= corte else TipoDecision.DESCARTAR) for c in ranking}
+
+
+async def _recomendacion_entrevista(candidato: Candidato, vacante: Vacante, db: AsyncSession) -> Recomendacion:
+    """Recomendación de finalistas de la etapa `entrevista` (DEC-022): sin `score_final` no hay
+    con qué ordenar, así que no hay recomendación; con él, se ubica al candidato en el ranking
+    de su vacante y se compara su posición con `top_candidatos_finalistas`.
+    """
+    if candidato.score_final is None:
+        return Recomendacion(EtapaDecision.ENTREVISTA, None, None, None, None)
+
+    ranking = await ranking_vacante(candidato.vacante_id, candidato.tenant_id, db)
+    top = vacante.top_candidatos_finalistas
+    recomendaciones = recomendaciones_finalistas(ranking, top)
+    posicion = next((i + 1 for i, c in enumerate(ranking) if c.id == candidato.id), None)
+    justificacion = f"Posición {posicion} de {len(ranking)} en el ranking por score_final (top {top})."
+    return Recomendacion(EtapaDecision.ENTREVISTA, recomendaciones.get(candidato.id), candidato.score_final, float(top), justificacion)
+
+
 async def calcular_recomendacion(candidato: Candidato, vacante: Vacante, etapa: EtapaDecision, db: AsyncSession) -> Recomendacion:
-    """Como recomendacion_de_etapa, pero busca la nota del examen cuando la etapa la necesita."""
+    """Como recomendacion_de_etapa, pero puede consultar la base de datos: la nota del examen
+    cuando la etapa la necesita, o el ranking de la vacante en la etapa entrevista (DEC-022).
+    """
+    if etapa is EtapaDecision.ENTREVISTA:
+        return await _recomendacion_entrevista(candidato, vacante, db)
     nota = await nota_examen(candidato, db) if etapa is EtapaDecision.EXAMEN else None
     return recomendacion_de_etapa(candidato, vacante, etapa, nota)
 

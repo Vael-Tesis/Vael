@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.candidato import ClasificacionIA, EstadoCandidato
+from app.models.decision import TipoDecision
 
 
 class CandidatoUpdateRequest(BaseModel):
@@ -61,10 +62,18 @@ class CandidatoResponse(BaseModel):
 
 
 class RankingCandidatoResponse(CandidatoResponse):
-    """Candidato en el ranking de una vacante, con la nota de cada etapa que ya rindió."""
+    """Candidato en el ranking de una vacante, con la nota de cada etapa que ya rindió.
+
+    `proceso_completo` distingue a quienes aún no tienen `score_final` (RF-A-14): el ranking
+    los muestra aparte, sin puesto. `recomendacion_finalista` es la recomendación de la etapa
+    `entrevista` (DEC-022): `avanzar` para los primeros `top_candidatos_finalistas` del ranking
+    (empates incluidos), `descartar` para el resto; nula si el proceso está incompleto.
+    """
 
     nota_examen: float | None = None
     nota_entrevista: float | None = None
+    proceso_completo: bool
+    recomendacion_finalista: TipoDecision | None = None
 
 
 class CambiarEstadoRequest(BaseModel):

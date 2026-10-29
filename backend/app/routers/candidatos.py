@@ -184,23 +184,28 @@ async def ranking_candidatos(
     db: Annotated[AsyncSession, Depends(get_db)],
     vacante_id: str,
 ) -> list[RankingCandidatoResponse]:
-    """Ranking de candidatos de una vacante, ordenado por score_final descendente.
+    """Ranking de candidatos de una vacante, ordenado por score_final descendente (RF-A-14).
 
-    Incluye la nota de examen y de entrevista de cada candidato (si ya las rindió),
-    para que RRHH vea el desglose de las tres componentes del score ponderado.
+    Los procesos incompletos (sin score_final) aparecen aparte, al final y sin recomendación.
+    Incluye la nota de examen y de entrevista de cada candidato (si ya las rindió), para el
+    desglose de las tres componentes del score, y la recomendación de finalistas de la etapa
+    entrevista (DEC-022), según `top_candidatos_finalistas` de la vacante.
     """
-    statement = (
-        select(Candidato)
-        .where(
-            Candidato.tenant_id == actor.tenant_id,
-            Candidato.vacante_id == vacante_id,
-            Candidato.score_final.is_not(None),
-        )
-        .order_by(Candidato.score_final.desc())
-    )
-    result = await db.exec(statement)
-    candidatos = list(result.all())
+    vacante = await db.get(Vacante, vacante_id)
+    if vacante is None or vacante.tenant_id != actor.tenant_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vacante no encontrada")
 
+    completos = await servicio_decisiones.ranking_vacante(vacante_id, actor.tenant_id, db)
+    recomendaciones = servicio_decisiones.recomendaciones_finalistas(completos, vacante.top_candidatos_finalistas)
+
+    incompletos_statement = select(Candidato).where(
+        Candidato.tenant_id == actor.tenant_id,
+        Candidato.vacante_id == vacante_id,
+        Candidato.score_final.is_(None),
+    )
+    incompletos = list((await db.exec(incompletos_statement.order_by(Candidato.fecha_postulacion))).all())
+
+    candidatos = completos + incompletos
     candidato_ids = [c.id for c in candidatos]
     notas_examen: dict[str, float] = {}
     notas_entrevista: dict[str, float] = {}
@@ -219,6 +224,8 @@ async def ranking_candidatos(
             **CandidatoResponse.model_validate(c).model_dump(),
             nota_examen=notas_examen.get(c.id),
             nota_entrevista=notas_entrevista.get(c.id),
+            proceso_completo=c.score_final is not None,
+            recomendacion_finalista=recomendaciones.get(c.id),
         )
         for c in candidatos
     ]

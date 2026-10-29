@@ -403,6 +403,135 @@ async def test_el_lote_no_acepta_la_etapa_de_entrevista_sin_recomendacion(
     assert respuesta.status_code == 422
 
 
+# --- DEC-022: recomendación de finalistas con top_candidatos_finalistas -------------------
+
+
+async def _finalista(
+    db_session: AsyncSession, vacante: Vacante, score_final: float | None, sufijo: str
+) -> Candidato:
+    """Candidato que ya rindió la entrevista, con el score_final que ordena el ranking."""
+    candidato = await _candidato(db_session, vacante, EstadoCandidato.ENTREVISTA_REALIZADA, sufijo=sufijo)
+    candidato.score_final = score_final
+    db_session.add(candidato)
+    await db_session.commit()
+    await db_session.refresh(candidato)
+    return candidato
+
+
+async def test_dec022_el_lote_avanza_a_los_primeros_del_ranking_y_descarta_al_resto(
+    client: TestClient, admin_headers: dict[str, str], db_session: AsyncSession, enviados: list[Any]
+) -> None:
+    """Con top_candidatos_finalistas = 3 y cinco candidatos completos, los tres de mayor
+    score_final avanzan y los otros dos se descartan (DEC-022, validación 1)."""
+    vacante = await _vacante(db_session)
+    vacante.top_candidatos_finalistas = 3
+    db_session.add(vacante)
+    await db_session.commit()
+    candidatos = [await _finalista(db_session, vacante, score, str(i)) for i, score in enumerate([20, 18, 16, 14, 12])]
+
+    respuesta = client.post(
+        "/api/candidatos/decisiones/lote",
+        json={
+            "etapa": "entrevista",
+            "decisiones": [
+                {"candidato_id": c.id, "decision": "avanzar" if i < 3 else "descartar"} for i, c in enumerate(candidatos)
+            ],
+        },
+        headers=admin_headers,
+    )
+
+    assert respuesta.status_code == 200, respuesta.text
+    assert all(fila["coincide_con_ia"] for fila in respuesta.json())
+    assert await _estado(db_session, candidatos[0].id) is EstadoCandidato.FINALISTA
+    assert await _estado(db_session, candidatos[2].id) is EstadoCandidato.FINALISTA
+    assert await _estado(db_session, candidatos[3].id) is EstadoCandidato.DESCARTADO
+    assert await _estado(db_session, candidatos[4].id) is EstadoCandidato.DESCARTADO
+
+
+async def test_dec022_el_empate_en_el_ultimo_puesto_avanza_a_todos_los_empatados(
+    client: TestClient, admin_headers: dict[str, str], db_session: AsyncSession, enviados: list[Any]
+) -> None:
+    """Un empate en el tercer puesto da avanzar a todos los empatados (DEC-022, validación 2)."""
+    vacante = await _vacante(db_session)
+    vacante.top_candidatos_finalistas = 3
+    db_session.add(vacante)
+    await db_session.commit()
+    primero = await _finalista(db_session, vacante, 20, "a")
+    empatado_1 = await _finalista(db_session, vacante, 15, "b")
+    empatado_2 = await _finalista(db_session, vacante, 15, "c")
+    ultimo = await _finalista(db_session, vacante, 10, "d")
+
+    respuesta = client.post(
+        "/api/candidatos/decisiones/lote",
+        json={
+            "etapa": "entrevista",
+            "decisiones": [
+                {"candidato_id": primero.id, "decision": "avanzar"},
+                {"candidato_id": empatado_1.id, "decision": "avanzar"},
+                {"candidato_id": empatado_2.id, "decision": "avanzar"},
+                {"candidato_id": ultimo.id, "decision": "descartar"},
+            ],
+        },
+        headers=admin_headers,
+    )
+
+    assert respuesta.status_code == 200, respuesta.text
+    assert await _estado(db_session, empatado_1.id) is EstadoCandidato.FINALISTA
+    assert await _estado(db_session, empatado_2.id) is EstadoCandidato.FINALISTA
+    assert await _estado(db_session, ultimo.id) is EstadoCandidato.DESCARTADO
+
+
+async def test_dec022_sin_score_final_no_hay_recomendacion_ni_entra_en_el_lote(
+    client: TestClient, admin_headers: dict[str, str], db_session: AsyncSession, enviados: list[Any]
+) -> None:
+    """Un proceso incompleto (score_final nulo) no recibe recomendación: se decide individual,
+    sin justificación, pero el lote lo rechaza (DEC-022, validación 3)."""
+    vacante = await _vacante(db_session)
+    incompleto = await _finalista(db_session, vacante, None, "a")
+
+    individual = _decidir(client, admin_headers, incompleto.id, etapa="entrevista", decision="avanzar")
+    assert individual.status_code == 200, individual.text
+    assert individual.json()["recomendacion_ia"] is None
+
+    otro = await _finalista(db_session, vacante, None, "b")
+    en_lote = client.post(
+        "/api/candidatos/decisiones/lote",
+        json={"etapa": "entrevista", "decisiones": [{"candidato_id": otro.id, "decision": "avanzar"}]},
+        headers=admin_headers,
+    )
+    assert en_lote.status_code == 422
+    assert await _decisiones(db_session, otro.id) == []
+
+
+async def test_dec022_el_lote_rechaza_una_decision_que_no_coincide_con_el_ranking(
+    client: TestClient, admin_headers: dict[str, str], db_session: AsyncSession, enviados: list[Any]
+) -> None:
+    """El lote rechaza una decisión que no coincide con la recomendación (DEC-022, validación 4):
+    descartar a quien el ranking ubica entre los finalistas."""
+    vacante = await _vacante(db_session)
+    vacante.top_candidatos_finalistas = 1
+    db_session.add(vacante)
+    await db_session.commit()
+    primero = await _finalista(db_session, vacante, 20, "a")
+    segundo = await _finalista(db_session, vacante, 15, "b")
+
+    respuesta = client.post(
+        "/api/candidatos/decisiones/lote",
+        json={
+            "etapa": "entrevista",
+            "decisiones": [
+                {"candidato_id": primero.id, "decision": "descartar"},
+                {"candidato_id": segundo.id, "decision": "descartar"},
+            ],
+        },
+        headers=admin_headers,
+    )
+
+    assert respuesta.status_code == 422
+    assert await _decisiones(db_session, primero.id) == []
+    assert await _decisiones(db_session, segundo.id) == []
+
+
 # --- cambiar-estado, correos, bandeja e historial -----------------------------------------
 
 

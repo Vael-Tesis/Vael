@@ -430,10 +430,12 @@ export interface paths {
         };
         /**
          * Ranking Candidatos
-         * @description Ranking de candidatos de una vacante, ordenado por score_final descendente.
+         * @description Ranking de candidatos de una vacante, ordenado por score_final descendente (RF-A-14).
          *
-         *     Incluye la nota de examen y de entrevista de cada candidato (si ya las rindió),
-         *     para que RRHH vea el desglose de las tres componentes del score ponderado.
+         *     Los procesos incompletos (sin score_final) aparecen aparte, al final y sin recomendación.
+         *     Incluye la nota de examen y de entrevista de cada candidato (si ya las rindió), para el
+         *     desglose de las tres componentes del score, y la recomendación de finalistas de la etapa
+         *     entrevista (DEC-022), según `top_candidatos_finalistas` de la vacante.
          */
         get: operations["ranking_candidatos_api_candidatos_ranking_get"];
         put?: never;
@@ -2523,6 +2525,11 @@ export interface components {
         /**
          * RankingCandidatoResponse
          * @description Candidato en el ranking de una vacante, con la nota de cada etapa que ya rindió.
+         *
+         *     `proceso_completo` distingue a quienes aún no tienen `score_final` (RF-A-14): el ranking
+         *     los muestra aparte, sin puesto. `recomendacion_finalista` es la recomendación de la etapa
+         *     `entrevista` (DEC-022): `avanzar` para los primeros `top_candidatos_finalistas` del ranking
+         *     (empates incluidos), `descartar` para el resto; nula si el proceso está incompleto.
          */
         RankingCandidatoResponse: {
             /** Analizado En */
@@ -2572,6 +2579,9 @@ export interface components {
             portfolio: string | null;
             /** Pretension Salarial */
             pretension_salarial: number | null;
+            /** Proceso Completo */
+            proceso_completo: boolean;
+            recomendacion_finalista?: components["schemas"]["TipoDecision"] | null;
             /** Resumen Ia */
             resumen_ia: string | null;
             /** Score Cv */

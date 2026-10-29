@@ -2937,7 +2937,7 @@
         "type": "object"
       },
       "RankingCandidatoResponse": {
-        "description": "Candidato en el ranking de una vacante, con la nota de cada etapa que ya rindió.",
+        "description": "Candidato en el ranking de una vacante, con la nota de cada etapa que ya rindió.\n\n`proceso_completo` distingue a quienes aún no tienen `score_final` (RF-A-14): el ranking\nlos muestra aparte, sin puesto. `recomendacion_finalista` es la recomendación de la etapa\n`entrevista` (DEC-022): `avanzar` para los primeros `top_candidatos_finalistas` del ranking\n(empates incluidos), `descartar` para el resto; nula si el proceso está incompleto.",
         "properties": {
           "analizado_en": {
             "anyOf": [
@@ -3097,6 +3097,20 @@
             ],
             "title": "Pretension Salarial"
           },
+          "proceso_completo": {
+            "title": "Proceso Completo",
+            "type": "boolean"
+          },
+          "recomendacion_finalista": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TipoDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "resumen_ia": {
             "anyOf": [
               {
@@ -3180,7 +3194,8 @@
           "score_final",
           "fecha_postulacion",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "proceso_completo"
         ],
         "title": "RankingCandidatoResponse",
         "type": "object"
@@ -6012,7 +6027,7 @@
     },
     "/api/candidatos/ranking": {
       "get": {
-        "description": "Ranking de candidatos de una vacante, ordenado por score_final descendente.\n\nIncluye la nota de examen y de entrevista de cada candidato (si ya las rindió),\npara que RRHH vea el desglose de las tres componentes del score ponderado.",
+        "description": "Ranking de candidatos de una vacante, ordenado por score_final descendente (RF-A-14).\n\nLos procesos incompletos (sin score_final) aparecen aparte, al final y sin recomendación.\nIncluye la nota de examen y de entrevista de cada candidato (si ya las rindió), para el\ndesglose de las tres componentes del score, y la recomendación de finalistas de la etapa\nentrevista (DEC-022), según `top_candidatos_finalistas` de la vacante.",
         "operationId": "ranking_candidatos_api_candidatos_ranking_get",
         "parameters": [
           {
