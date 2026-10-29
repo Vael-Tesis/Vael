@@ -18,14 +18,14 @@ $raiz = Split-Path $PSScriptRoot -Parent
 $inicio = Get-Date
 
 function Aws {
-  & aws @args --profile $Perfil --region $Region
+  & aws.exe @args --profile $Perfil --region $Region
   if ($LASTEXITCODE -ne 0) { throw "Falló: aws $($args[0]) $($args[1])" }
 }
 
 # Devuelve $null en vez de fallar (para consultar si algo existe)
 function AwsOpcional {
   $previa = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-  $salida = & aws @args --profile $Perfil --region $Region 2>$null
+  $salida = & aws.exe @args --profile $Perfil --region $Region 2>$null
   $ok = $LASTEXITCODE -eq 0
   $ErrorActionPreference = $previa
   if ($ok) { return ($salida -join "`n").Trim() } else { return $null }
@@ -88,7 +88,7 @@ if ($existe) {
   Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM `
     --parameter-overrides "ImagenUri=$imagen" --no-fail-on-empty-changeset
 } else {
-  $prefijos = Aws ec2 describe-managed-prefix-lists --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing `
+  $prefijos = Aws ec2 describe-managed-prefix-lists --filters "Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing" `
     --query "PrefixLists[0].PrefixListId" --output text
   Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM `
     --parameter-overrides "ImagenUri=$imagen" "PrefixListCloudFront=$prefijos" "OrigenSecreto=$origenSecreto" `
