@@ -271,9 +271,14 @@ async def _preparar(
 
 
 async def _ejecutar(
-    preparada: _Preparada, solicitud: DecisionSolicitada, actor: Usuario, db: AsyncSession
+    preparada: _Preparada, solicitud: DecisionSolicitada, actor: Usuario, db: AsyncSession, *, enviar_correos: bool = True
 ) -> DecisionCandidato:
-    """Inserta la decisión, cambia el estado y después emite el token y envía el correo."""
+    """Inserta la decisión, cambia el estado y después emite el token y envía el correo.
+
+    `enviar_correos=False` registra la decisión y su efecto (estado, token) igual que siempre,
+    pero no dispara la notificación: la usan las semillas (`scripts/semillas.py`) para que
+    encender el entorno en AWS no envíe correos reales por SES a direcciones @example.com.
+    """
     candidato, etapa, decision = preparada.candidato, solicitud.etapa, solicitud.decision
     enviar_cierre = decision is TipoDecision.DESCARTAR and not await _hubo_descarte(candidato.id, candidato.tenant_id, db)
 
@@ -306,10 +311,11 @@ async def _ejecutar(
 
     # La decisión ya quedó registrada; si el correo falla se registra y RRHH puede reenviarlo
     # con reenviar-correo-etapa.
-    try:
-        await _notificar(candidato, preparada.vacante, etapa, decision, enviar_cierre, db)
-    except Exception:
-        logger.exception("Decisión %s registrada, pero falló su notificación", fila.id, extra={"candidato_id": candidato.id})
+    if enviar_correos:
+        try:
+            await _notificar(candidato, preparada.vacante, etapa, decision, enviar_cierre, db)
+        except Exception:
+            logger.exception("Decisión %s registrada, pero falló su notificación", fila.id, extra={"candidato_id": candidato.id})
     return fila
 
 
@@ -337,18 +343,21 @@ async def _notificar(
 
 
 async def registrar_decision(
-    candidato_id: str, solicitud: DecisionSolicitada, actor: Usuario, db: AsyncSession
+    candidato_id: str, solicitud: DecisionSolicitada, actor: Usuario, db: AsyncSession, *, enviar_correos: bool = True
 ) -> DecisionCandidato:
     """Registra una decisión individual y ejecuta su efecto.
 
     Si el candidato ya tiene esa misma decisión vigente en la etapa, la devuelve sin insertar
     otra fila ni reenviar correos (idempotencia). Una decisión distinta de la vigente la
     revierte: se inserta una fila nueva con `reemplaza_a`.
+
+    `enviar_correos=False` (por defecto `True`, el comportamiento del endpoint no cambia) omite
+    la notificación; la usan las semillas, nunca el endpoint de decisiones.
     """
     preparada = await _preparar(candidato_id, actor.tenant_id, solicitud, db, solo_si_coincide=False)
     if preparada.existente is not None:
         return preparada.existente
-    return await _ejecutar(preparada, solicitud, actor, db)
+    return await _ejecutar(preparada, solicitud, actor, db, enviar_correos=enviar_correos)
 
 
 async def registrar_decisiones_lote(

@@ -13,7 +13,7 @@ from app.core.database import CLAVE_TENANT
 from app.models.area import Area
 from app.models.candidato import Candidato, NotaCandidato
 from app.models.decision import DecisionCandidato
-from app.models.entrevista import DimensionEvaluacion, PlantillaEvaluacion
+from app.models.entrevista import DimensionEvaluacion, EntrevistaIA, PlantillaEvaluacion
 from app.models.evaluacion import Examen
 from app.models.usuario import Empresa, Usuario
 from app.models.vacante import Vacante
@@ -132,6 +132,20 @@ def con_password(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(correos, "_enviar_correo", enviar_falso)
 
 
+@pytest.fixture
+def con_password_y_registro_de_correos(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Como `con_password`, pero registra los destinatarios en lugar de descartarlos, para
+    comprobar que las semillas no envían ninguno (corrección de DEV-A-07)."""
+    monkeypatch.setattr(settings, "seed_password", PASSWORD_SEMILLA)
+    enviados: list[str] = []
+
+    async def enviar_falso(destinatario: str, asunto: str, html: str) -> None:
+        enviados.append(destinatario)
+
+    monkeypatch.setattr(correos, "_enviar_correo", enviar_falso)
+    return enviados
+
+
 async def test_las_semillas_son_idempotentes(
     abrir: alta.AbrirSesion, con_password: None, system_engine: AsyncEngine
 ) -> None:
@@ -146,14 +160,29 @@ async def test_las_semillas_son_idempotentes(
         PlantillaEvaluacion: 4,
         DimensionEvaluacion: 17,  # 5 + 4 + 4 + 4 (doc 05)
         Vacante: 5,
-        Candidato: 3,
+        # B: 3 candidatos de siempre · A: 7 con proceso completo + 1 con examen sin entrevista
+        # en TI-2026-001, más candidatos que top_candidatos_finalistas para el ranking (DEC-022)
+        Candidato: 3 + len(semillas.CANDIDATOS_TI_COMPLETOS) + 1,
         NotaCandidato: 1,
-        Examen: 1,
-        DecisionCandidato: 1,
+        Examen: 1 + len(semillas.CANDIDATOS_TI_COMPLETOS) + 1,
+        EntrevistaIA: len(semillas.CANDIDATOS_TI_COMPLETOS),
+        # B: 1 decisión (CV) · A: CV + examen por cada candidato de TI-2026-001
+        DecisionCandidato: 1 + (len(semillas.CANDIDATOS_TI_COMPLETOS) + 1) * 2,
     }
     for modelo, cantidad in esperados.items():
         assert await _contar(system_engine, modelo) == cantidad, modelo.__name__
     assert resumen[semillas.EMPRESA_A]["vacantes"] == ["TI-2026-001", "VEN-2026-001", "OPE-2026-001", "TI-2026-002"]
+
+
+async def test_las_semillas_no_envian_correos(
+    abrir: alta.AbrirSesion, con_password_y_registro_de_correos: list[str]
+) -> None:
+    """Las decisiones de CV y examen que avanzan a los candidatos (empresa B y TI-2026-001) no
+    deben disparar correos reales: encender el entorno en AWS enviaría correos por SES a
+    direcciones @example.com (corrección de DEV-A-07, DEC-009, DEC-013)."""
+    await semillas.cargar(abrir, generar_pdfs=False)
+
+    assert con_password_y_registro_de_correos == []
 
 
 async def test_los_usuarios_semilla_inician_sesion_y_cada_empresa_ve_lo_suyo(
@@ -170,7 +199,10 @@ async def test_los_usuarios_semilla_inician_sesion_y_cada_empresa_ve_lo_suyo(
 
     headers_a = {"Authorization": f"Bearer {login_a.json()['access_token']}"}
     headers_b = {"Authorization": f"Bearer {login_b.json()['access_token']}"}
-    assert client.get("/api/candidatos", headers=headers_a).json() == []
+    candidatos_a = client.get("/api/candidatos", headers=headers_a).json()
+    correos_b = {correo for _, _, correo, _, _ in semillas.CANDIDATOS_B}
+    assert len(candidatos_a) == len(semillas.CANDIDATOS_TI_COMPLETOS) + 1
+    assert not (correos_b & {c["email"] for c in candidatos_a})
     bandeja = client.get("/api/candidatos/por-confirmar", headers=headers_b).json()
     assert sorted(item["etapa"] for item in bandeja) == ["cv", "cv", "examen"]
 
