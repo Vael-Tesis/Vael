@@ -74,6 +74,10 @@ class Candidato(TenantBase, TimestampMixin, table=True):
     score_final: float | None = Field(default=None)
     fecha_postulacion: datetime = Field(default_factory=utcnow, nullable=False)
 
+    # Banco de talento (DEV-A-08, HU-14): disponible para procesos futuros. Lo marca RRHH desde
+    # el detalle del candidato (POST /candidatos/{id}/banco-talento); nunca se infiere solo.
+    en_banco_talento: bool = Field(default=False, nullable=False)
+
 
 class Tag(TenantBase, table=True):
     """Etiqueta libre para clasificar candidatos."""

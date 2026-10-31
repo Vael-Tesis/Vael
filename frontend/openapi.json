@@ -550,6 +550,10 @@
             "title": "Email",
             "type": "string"
           },
+          "en_banco_talento": {
+            "title": "En Banco Talento",
+            "type": "boolean"
+          },
           "es_finalista": {
             "title": "Es Finalista",
             "type": "boolean"
@@ -728,6 +732,7 @@
           "inconsistencias",
           "analizado_en",
           "score_final",
+          "en_banco_talento",
           "fecha_postulacion",
           "created_at",
           "updated_at"
@@ -784,6 +789,10 @@
             "format": "email",
             "title": "Email",
             "type": "string"
+          },
+          "en_banco_talento": {
+            "title": "En Banco Talento",
+            "type": "boolean"
           },
           "es_finalista": {
             "title": "Es Finalista",
@@ -955,6 +964,7 @@
           "inconsistencias",
           "analizado_en",
           "score_final",
+          "en_banco_talento",
           "fecha_postulacion",
           "created_at",
           "updated_at"
@@ -3071,6 +3081,10 @@
             "title": "Email",
             "type": "string"
           },
+          "en_banco_talento": {
+            "title": "En Banco Talento",
+            "type": "boolean"
+          },
           "es_finalista": {
             "title": "Es Finalista",
             "type": "boolean"
@@ -3277,6 +3291,7 @@
           "inconsistencias",
           "analizado_en",
           "score_final",
+          "en_banco_talento",
           "fecha_postulacion",
           "created_at",
           "updated_at",
@@ -5908,8 +5923,26 @@
     },
     "/api/candidatos/banco-talento": {
       "get": {
-        "description": "Candidatos con buena clasificación IA que no avanzaron en su proceso (banco de talento).",
+        "description": "Candidatos disponibles para procesos futuros (RF-A-17): los que RRHH marcó explícitamente\ndesde su detalle (`en_banco_talento`), nunca por una clasificación o un estado por sí solos.\nFiltro opcional por el área de la vacante a la que postularon.",
         "operationId": "banco_talento_api_candidatos_banco_talento_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "area_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Area Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -5924,6 +5957,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -6309,6 +6352,54 @@
           }
         ],
         "summary": "Analizar Candidato",
+        "tags": [
+          "candidatos"
+        ]
+      }
+    },
+    "/api/candidatos/{candidato_id}/banco-talento": {
+      "post": {
+        "description": "Marca al candidato como disponible en el banco de talento (HU-14, RF-A-17). Idempotente.",
+        "operationId": "enviar_a_banco_talento_api_candidatos__candidato_id__banco_talento_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidato_id",
+            "required": true,
+            "schema": {
+              "title": "Candidato Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidatoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Enviar A Banco Talento",
         "tags": [
           "candidatos"
         ]

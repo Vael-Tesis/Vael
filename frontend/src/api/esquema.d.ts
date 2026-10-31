@@ -343,7 +343,9 @@ export interface paths {
         };
         /**
          * Banco Talento
-         * @description Candidatos con buena clasificación IA que no avanzaron en su proceso (banco de talento).
+         * @description Candidatos disponibles para procesos futuros (RF-A-17): los que RRHH marcó explícitamente
+         *     desde su detalle (`en_banco_talento`), nunca por una clasificación o un estado por sí solos.
+         *     Filtro opcional por el área de la vacante a la que postularon.
          */
         get: operations["banco_talento_api_candidatos_banco_talento_get"];
         put?: never;
@@ -484,6 +486,26 @@ export interface paths {
          * @description Dispara el análisis IA del CV de un candidato en background y responde de inmediato.
          */
         post: operations["analizar_candidato_api_candidatos__candidato_id__analizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/candidatos/{candidato_id}/banco-talento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enviar A Banco Talento
+         * @description Marca al candidato como disponible en el banco de talento (HU-14, RF-A-17). Idempotente.
+         */
+        post: operations["enviar_a_banco_talento_api_candidatos__candidato_id__banco_talento_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1702,6 +1724,8 @@ export interface components {
              * Format: email
              */
             email: string;
+            /** En Banco Talento */
+            en_banco_talento: boolean;
             /** Es Finalista */
             es_finalista: boolean;
             estado: components["schemas"]["EstadoCandidato"];
@@ -1773,6 +1797,8 @@ export interface components {
              * Format: email
              */
             email: string;
+            /** En Banco Talento */
+            en_banco_talento: boolean;
             /** Es Finalista */
             es_finalista: boolean;
             estado: components["schemas"]["EstadoCandidato"];
@@ -2614,6 +2640,8 @@ export interface components {
              * Format: email
              */
             email: string;
+            /** En Banco Talento */
+            en_banco_talento: boolean;
             /** Es Finalista */
             es_finalista: boolean;
             estado: components["schemas"]["EstadoCandidato"];
@@ -3774,7 +3802,9 @@ export interface operations {
     };
     banco_talento_api_candidatos_banco_talento_get: {
         parameters: {
-            query?: never;
+            query?: {
+                area_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3788,6 +3818,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CandidatoResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4005,6 +4044,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["app__schemas__candidato__MensajeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enviar_a_banco_talento_api_candidatos__candidato_id__banco_talento_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidato_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatoResponse"];
                 };
             };
             /** @description Validation Error */
