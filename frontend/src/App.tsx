@@ -39,7 +39,7 @@ import EntrevistaDetalle from './pages/admin/EntrevistaDetalle'
 import Auditoria from './pages/admin/Auditoria'
 import Plantillas from './pages/admin/Plantillas'
 import Areas from './pages/admin/Areas'
-import Usuarios from './pages/admin/Usuarios.jsx'
+import Usuarios from './pages/admin/Usuarios'
 
 /** Exige sesión iniciada (HU-01). */
 function ProtectedRoute({ children }: { children: ReactNode }) {
