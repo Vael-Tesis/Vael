@@ -1037,6 +1037,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/metricas/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dashboard
+         * @description Resumen del tenant para el dashboard (RF-A-19): vacantes y candidatos por estado,
+         *     recomendaciones pendientes por etapa, postulaciones por día, minutos promedio de revisión
+         *     (OE1) y tasa de concordancia (M-02). `desde`/`hasta` acotan las dos últimas y las
+         *     postulaciones por día; sin ellos, cubren todo el histórico del tenant.
+         */
+        get: operations["dashboard_api_metricas_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plantillas": {
         parameters: {
             query?: never;
@@ -2313,6 +2336,35 @@ export interface components {
             refresh_token: string;
         };
         /**
+         * MetricasDashboardResponse
+         * @description Resumen del dashboard (RF-A-19): fotografía del estado actual más las métricas del
+         *     periodo `desde`/`hasta`.
+         *
+         *     `vacantes_por_estado`, `candidatos_por_estado` y `recomendaciones_pendientes_por_etapa`
+         *     son el estado actual del tenant, sin filtrar por fecha. `postulaciones_por_dia`,
+         *     `minutos_promedio_revision` (OE1) y `tasa_concordancia` (M-02) sí se acotan al rango.
+         */
+        MetricasDashboardResponse: {
+            /** Candidatos Por Estado */
+            candidatos_por_estado: {
+                [key: string]: number;
+            };
+            /** Minutos Promedio Revision */
+            minutos_promedio_revision: number | null;
+            /** Postulaciones Por Dia */
+            postulaciones_por_dia: components["schemas"]["PostulacionPorDia"][];
+            /** Recomendaciones Pendientes Por Etapa */
+            recomendaciones_pendientes_por_etapa: {
+                [key: string]: number;
+            };
+            /** Tasa Concordancia */
+            tasa_concordancia: number | null;
+            /** Vacantes Por Estado */
+            vacantes_por_estado: {
+                [key: string]: number;
+            };
+        };
+        /**
          * Modalidad
          * @description Modalidad de trabajo de una vacante.
          * @enum {string}
@@ -2437,6 +2489,19 @@ export interface components {
             dimensiones?: components["schemas"]["DimensionCreateRequest"][] | null;
             /** Nombre */
             nombre?: string | null;
+        };
+        /**
+         * PostulacionPorDia
+         * @description Candidatos postulados en un día (`Candidato.fecha_postulacion`), dentro del rango pedido.
+         */
+        PostulacionPorDia: {
+            /** Cantidad */
+            cantidad: number;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
         };
         /**
          * PostulacionResponse
@@ -4785,6 +4850,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventoAuditoriaResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dashboard_api_metricas_dashboard_get: {
+        parameters: {
+            query?: {
+                desde?: string | null;
+                hasta?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricasDashboardResponse"];
                 };
             };
             /** @description Validation Error */

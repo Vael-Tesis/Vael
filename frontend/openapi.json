@@ -2416,6 +2416,71 @@
         "title": "LogoutRequest",
         "type": "object"
       },
+      "MetricasDashboardResponse": {
+        "description": "Resumen del dashboard (RF-A-19): fotografía del estado actual más las métricas del\nperiodo `desde`/`hasta`.\n\n`vacantes_por_estado`, `candidatos_por_estado` y `recomendaciones_pendientes_por_etapa`\nson el estado actual del tenant, sin filtrar por fecha. `postulaciones_por_dia`,\n`minutos_promedio_revision` (OE1) y `tasa_concordancia` (M-02) sí se acotan al rango.",
+        "properties": {
+          "candidatos_por_estado": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Candidatos Por Estado",
+            "type": "object"
+          },
+          "minutos_promedio_revision": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutos Promedio Revision"
+          },
+          "postulaciones_por_dia": {
+            "items": {
+              "$ref": "#/components/schemas/PostulacionPorDia"
+            },
+            "title": "Postulaciones Por Dia",
+            "type": "array"
+          },
+          "recomendaciones_pendientes_por_etapa": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Recomendaciones Pendientes Por Etapa",
+            "type": "object"
+          },
+          "tasa_concordancia": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tasa Concordancia"
+          },
+          "vacantes_por_estado": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Vacantes Por Estado",
+            "type": "object"
+          }
+        },
+        "required": [
+          "vacantes_por_estado",
+          "candidatos_por_estado",
+          "recomendaciones_pendientes_por_etapa",
+          "postulaciones_por_dia",
+          "minutos_promedio_revision",
+          "tasa_concordancia"
+        ],
+        "title": "MetricasDashboardResponse",
+        "type": "object"
+      },
       "Modalidad": {
         "description": "Modalidad de trabajo de una vacante.",
         "enum": [
@@ -2709,6 +2774,26 @@
           }
         },
         "title": "PlantillaUpdateRequest",
+        "type": "object"
+      },
+      "PostulacionPorDia": {
+        "description": "Candidatos postulados en un día (`Candidato.fecha_postulacion`), dentro del rango pedido.",
+        "properties": {
+          "cantidad": {
+            "title": "Cantidad",
+            "type": "integer"
+          },
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fecha",
+          "cantidad"
+        ],
+        "title": "PostulacionPorDia",
         "type": "object"
       },
       "PostulacionResponse": {
@@ -7675,6 +7760,79 @@
         "summary": "Auditoria Examen",
         "tags": [
           "evaluaciones"
+        ]
+      }
+    },
+    "/api/metricas/dashboard": {
+      "get": {
+        "description": "Resumen del tenant para el dashboard (RF-A-19): vacantes y candidatos por estado,\nrecomendaciones pendientes por etapa, postulaciones por día, minutos promedio de revisión\n(OE1) y tasa de concordancia (M-02). `desde`/`hasta` acotan las dos últimas y las\npostulaciones por día; sin ellos, cubren todo el histórico del tenant.",
+        "operationId": "dashboard_api_metricas_dashboard_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "desde",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Desde"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hasta",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hasta"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricasDashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Dashboard",
+        "tags": [
+          "metricas"
         ]
       }
     },
