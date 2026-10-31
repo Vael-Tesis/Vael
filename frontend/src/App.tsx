@@ -22,7 +22,7 @@ import EntrevistaVoz from './pages/candidato/EntrevistaVoz.jsx'
 import SesionExpirada from './pages/candidato/SesionExpirada.jsx'
 
 // Admin
-import Dashboard from './pages/admin/Dashboard.jsx'
+import Dashboard from './pages/admin/Dashboard'
 import Vacantes from './pages/admin/Vacantes'
 import VacanteForm from './pages/admin/VacanteForm'
 import VacanteDetalle from './pages/admin/VacanteDetalle'
