@@ -53,8 +53,6 @@ router = APIRouter(prefix="/api/candidatos", tags=["candidatos"])
 logger = logging.getLogger(__name__)
 
 _RECLUTADOR_O_SUPERIOR = (RolUsuario.ADMIN, RolUsuario.GERENTE, RolUsuario.RECLUTADOR)
-_ESTADOS_BANCO_TALENTO = (EstadoCandidato.CV_RECHAZADO, EstadoCandidato.EXAMEN_RECHAZADO, EstadoCandidato.DESCARTADO)
-_CLASIFICACIONES_BUEN_SCORE = (ClasificacionIA.ALTAMENTE_RECOMENDADO, ClasificacionIA.RECOMENDADO)
 
 
 async def _obtener_candidato_del_tenant(candidato_id: str, tenant_id: str, db: AsyncSession) -> Candidato:
@@ -235,15 +233,37 @@ async def ranking_candidatos(
 async def banco_talento(
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    area_id: str | None = None,
 ) -> list[Candidato]:
-    """Candidatos con buena clasificación IA que no avanzaron en su proceso (banco de talento)."""
+    """Candidatos disponibles para procesos futuros (RF-A-17): los que RRHH marcó explícitamente
+    desde su detalle (`en_banco_talento`), nunca por una clasificación o un estado por sí solos.
+    Filtro opcional por el área de la vacante a la que postularon.
+    """
     statement = select(Candidato).where(
         Candidato.tenant_id == actor.tenant_id,
-        Candidato.clasificacion_ia.in_(_CLASIFICACIONES_BUEN_SCORE),
-        Candidato.estado.in_(_ESTADOS_BANCO_TALENTO),
+        Candidato.en_banco_talento.is_(True),
     )
+    if area_id is not None:
+        statement = statement.join(Vacante, Vacante.id == Candidato.vacante_id).where(Vacante.area_id == area_id)
     result = await db.exec(statement)
     return list(result.all())
+
+
+@router.post("/{candidato_id}/banco-talento", response_model=CandidatoResponse)
+async def enviar_a_banco_talento(
+    candidato_id: str,
+    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Candidato:
+    """Marca al candidato como disponible en el banco de talento (HU-14, RF-A-17). Idempotente."""
+    candidato = await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
+    if not candidato.en_banco_talento:
+        candidato.en_banco_talento = True
+        candidato.updated_at = utcnow()
+        db.add(candidato)
+        await db.commit()
+        await db.refresh(candidato)
+    return candidato
 
 
 @router.post("/carga-masiva", response_model=CargaMasivaResponse, status_code=status.HTTP_202_ACCEPTED)

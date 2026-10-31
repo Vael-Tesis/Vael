@@ -56,6 +56,7 @@ class CandidatoResponse(BaseModel):
     analizado_en: datetime | None
 
     score_final: float | None
+    en_banco_talento: bool
     fecha_postulacion: datetime
     created_at: datetime
     updated_at: datetime

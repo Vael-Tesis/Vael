@@ -367,6 +367,11 @@ export default function CandidatoDetalle() {
     onSuccess: () => { toast.success('Candidato marcado como contratado'); queryClient.invalidateQueries({ queryKey: ['candidato', id] }) },
     onError: (e) => toast.error(mensajeDe(e, 'No se pudo actualizar el estado')),
   })
+  const enviarBanco = useMutation({
+    mutationFn: async () => datos(await api.POST('/api/candidatos/{candidato_id}/banco-talento', ruta)),
+    onSuccess: () => { toast.success('Candidato enviado al banco de talento'); queryClient.invalidateQueries({ queryKey: ['candidato', id] }) },
+    onError: (e) => toast.error(mensajeDe(e, 'No se pudo enviar al banco de talento')),
+  })
 
   if (candidato.isLoading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
   if (!candidato.data) {
@@ -410,6 +415,11 @@ export default function CandidatoDetalle() {
             )}
             {c.estado === 'finalista' && (
               <Button onClick={() => contratar.mutate()} disabled={contratar.isPending}>Marcar como contratado</Button>
+            )}
+            {c.en_banco_talento ? (
+              <Badge variant="info">En el banco de talento</Badge>
+            ) : (
+              <Button variant="secondary" onClick={() => enviarBanco.mutate()} disabled={enviarBanco.isPending}>Enviar al banco de talento</Button>
             )}
           </div>
         )}
