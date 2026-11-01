@@ -141,6 +141,14 @@ async def crear_roles(
         existe_versiones = await conexion.fetchval("SELECT to_regclass('public.alembic_version') IS NOT NULL")
         if existe_versiones:
             await conexion.execute(f"REVOKE ALL ON public.alembic_version FROM {ROL_APP}, {ROL_SYSTEM}")
+
+        # decisiones_candidato es de solo inserción (DEC-009, RF-A-12): ni vael_app ni
+        # vael_system editan ni borran filas, aunque el GRANT general de arriba lo permita.
+        # Se repite en cada ejecución porque ese GRANT general se re-otorga cada vez; la
+        # migración c8d9e0f1a2b3 deja esta misma revocación la primera vez que la tabla existe.
+        existe_decisiones = await conexion.fetchval("SELECT to_regclass('public.decisiones_candidato') IS NOT NULL")
+        if existe_decisiones:
+            await conexion.execute(f"REVOKE UPDATE, DELETE ON decisiones_candidato FROM {ROL_APP}, {ROL_SYSTEM}")
     finally:
         await conexion.close()
 
