@@ -214,8 +214,9 @@ async def test_desde_y_hasta_acotan_postulaciones_y_decisiones(
 async def test_cifras_coherentes_con_los_datos_semilla(
     client: TestClient, abrir: alta.AbrirSesion, con_password: None
 ) -> None:
-    """Contra los ocho candidatos de TI-2026-001 (doc 13): siete con entrevista realizada y
-    pendiente de decisión, uno con el examen aprobado y sin entrevista (proceso incompleto)."""
+    """Contra los nueve candidatos de TI-2026-001 (doc 13): siete con entrevista realizada y
+    pendiente de decisión, uno con el examen aprobado y sin entrevista (proceso incompleto),
+    y uno más en cv_por_confirmar sin decidir, para la bandeja (TST-A-03)."""
     await semillas.cargar(abrir, generar_pdfs=False)
 
     login = client.post("/api/auth/login", json={"email": "admin@andina.example.com", "password": PASSWORD_SEMILLA})
@@ -230,9 +231,10 @@ async def test_cifras_coherentes_con_los_datos_semilla(
     assert cuerpo["candidatos_por_estado"]["entrevista_realizada"] == len(semillas.CANDIDATOS_TI_COMPLETOS)
     assert cuerpo["candidatos_por_estado"]["examen_aprobado"] == 1  # Jorge Salcedo Peña, incompleto
     assert cuerpo["recomendaciones_pendientes_por_etapa"] == {
-        "cv": 0, "examen": 0, "entrevista": len(semillas.CANDIDATOS_TI_COMPLETOS),
+        # "cv": 1 es Sofía Ramírez Cueva, pendiente en la bandeja a propósito (TST-A-03)
+        "cv": 1, "examen": 0, "entrevista": len(semillas.CANDIDATOS_TI_COMPLETOS),
     }
-    assert sum(p["cantidad"] for p in cuerpo["postulaciones_por_dia"]) == len(semillas.CANDIDATOS_TI_COMPLETOS) + 1
+    assert sum(p["cantidad"] for p in cuerpo["postulaciones_por_dia"]) == len(semillas.CANDIDATOS_TI_COMPLETOS) + 1 + 1
     # Las semillas no fijan revision_inicio (DEV-A-07): nada que promediar para OE1
     assert cuerpo["minutos_promedio_revision"] is None
     # Todas las decisiones de CV y examen coinciden con la recomendación (umbrales superados)

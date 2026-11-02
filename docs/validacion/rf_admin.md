@@ -8,7 +8,9 @@ contra las pruebas automáticas del repositorio. Fecha: 2026-11-01. SHA del comm
 **Verde** (criterio cubierto y en verde) o **Rojo** (criterio sin cubrir u observación
 abierta). Cuando una parte del criterio no es automatizable desde el backend (comportamiento
 visual o de UX del frontend), se declara aparte en "Verificación manual" y no baja el
-resultado a Rojo si el backend que la sostiene sí está verde.
+resultado a Rojo si el backend que la sostiene sí está verde — aunque, desde TST-A-03, esa
+sección queda vacía: la prueba E2E con Playwright cubrió las dos partes que antes eran
+manuales (RF-A-01, RF-A-02).
 
 Tres criterios no tenían prueba automática antes de esta tarea y se agregaron:
 **RF-A-10** (`test_consulta_analisis.py`), **RF-A-12** (ampliación de
@@ -17,8 +19,8 @@ y ampliación de `test_sesiones.py`, respectivamente).
 
 | RF | HU | Requerimiento | Criterio de aceptación | Pruebas automáticas | Resultado |
 |---|---|---|---|---|---|
-| RF-A-01 | HU-01 | Iniciar sesión | Credenciales válidas → dashboard; inválidas → 401; inactivo → 403 | `test_sesiones.py::test_login_valido_crea_la_sesion_y_un_access_de_15_minutos`, `test_credenciales_invalidas_401_y_usuario_inactivo_403`; `test_matriz_permisos.py::test_usuario_inactivo_no_inicia_sesion` | **Verde** (ver Verificación manual: redirección al dashboard) |
-| RF-A-02 | HU-02 | Mantener y cerrar la sesión | Renovación sin intervención mientras el refresh es válido; logout rechaza ese refresh; desactivar invalida tokens | `test_sesiones.py::test_refresh_rota_el_token_y_revoca_el_anterior`, `test_reutilizar_un_refresh_revoca_todas_las_sesiones`, `test_tras_el_logout_el_refresh_de_esa_sesion_es_rechazado`, `test_desactivar_o_cambiar_la_contrasena_invalida_los_tokens_al_instante`; `test_matriz_permisos.py::test_matriz_logout_es_autenticado` | **Verde** (ver Verificación manual: refresco transparente en el navegador) |
+| RF-A-01 | HU-01 | Iniciar sesión | Credenciales válidas → dashboard; inválidas → 401; inactivo → 403 | `test_sesiones.py::test_login_valido_crea_la_sesion_y_un_access_de_15_minutos`, `test_credenciales_invalidas_401_y_usuario_inactivo_403`; `test_matriz_permisos.py::test_usuario_inactivo_no_inicia_sesion`; **E2E (TST-A-03):** `frontend/e2e/flujo-principal.spec.ts` — el paso "login → dashboard" navega de verdad en Chromium y confirma la redirección (antes, verificación manual) | **Verde** |
+| RF-A-02 | HU-02 | Mantener y cerrar la sesión | Renovación sin intervención mientras el refresh es válido; logout rechaza ese refresh; desactivar invalida tokens | `test_sesiones.py::test_refresh_rota_el_token_y_revoca_el_anterior`, `test_reutilizar_un_refresh_revoca_todas_las_sesiones`, `test_tras_el_logout_el_refresh_de_esa_sesion_es_rechazado`, `test_desactivar_o_cambiar_la_contrasena_invalida_los_tokens_al_instante`; `test_matriz_permisos.py::test_matriz_logout_es_autenticado`; **E2E (TST-A-03):** `frontend/e2e/renovacion-sesion.spec.ts` — espera a que el access token expire de verdad (backend con `ACCESS_TOKEN_EXPIRE_MINUTES=2`) y confirma que la persona nunca ve el login: la petición original se reintenta sola tras `POST /auth/refresh` (antes, verificación manual) | **Verde** |
 | RF-A-03 | HU-03 | Controlar el acceso por rol | Cada rol accede solo a lo del doc 15; el evaluador no crea ni decide; 403 aunque se intente fuera de la interfaz | `test_permisos_por_rol.py::test_el_evaluador_no_escribe`; `test_matriz_permisos.py::test_matriz_de_permisos` (258 casos, 4 roles × 62 endpoints + multipart y logout), `test_la_matriz_cubre_todos_los_endpoints_rrhh` | **Verde** |
 | RF-A-04 | HU-05 | Gestionar áreas | Admin/gerente crean, editan, activan, desactivan; código corto único; área con vacantes no se elimina | `test_areas.py::test_crud_feliz_de_areas`, `test_reclutador_no_puede_crear_area`; `test_notas_etiquetas_areas.py::test_activar_y_desactivar_un_area`, `test_el_codigo_corto_es_unico_en_la_empresa`, `test_un_area_con_vacantes_no_se_elimina`, `test_permisos_de_areas` | **Verde** |
 | RF-A-05 | HU-06 | Gestionar plantillas | Se crean y editan con dimensiones; pesos que no suman 100 se rechazan con mensaje claro | `test_plantillas.py::test_crud_feliz_de_plantillas_y_dimensiones`, `test_los_pesos_deben_sumar_100`, `test_reclutador_no_puede_crear_plantilla` | **Verde** |
@@ -40,13 +42,13 @@ y ampliación de `test_sesiones.py`, respectivamente).
 
 ## Verificación manual pendiente (no automatizable desde el backend)
 
-| RF | Qué verificar | Por qué no se automatiza aquí |
-|---|---|---|
-| RF-A-01 | Con credenciales válidas, el navegador redirige al dashboard (`App.tsx`, `/` → `/dashboard`) | Es el enrutamiento del frontend (React Router), no una respuesta del backend; los tests de `test_sesiones.py` verifican que el backend emite los tokens correctos, no la navegación del navegador |
-| RF-A-02 | La sesión se renueva **sin que la persona lo note** mientras usa el panel (el frontend debe llamar a `/auth/refresh` antes de que expire el access_token, en segundo plano) | Es un comportamiento de temporización del cliente (interceptor HTTP del frontend); el backend ya expone `/auth/refresh` y su rotación están verificados |
+Ninguna. RF-A-01 (redirección al dashboard) y RF-A-02 (renovación transparente de la
+sesión) eran las dos únicas partes de un criterio que solo se podían verificar a mano, en
+el navegador — por ser comportamiento del frontend (enrutamiento y temporización del
+cliente), no una respuesta del backend. TST-A-03 (HU-25, DEC-020) las cubre con Playwright
+contra el backend y el frontend reales: ver el detalle en las filas de RF-A-01 y RF-A-02.
 
-**Resultado global:** 20/20 RF-A en verde. Las dos verificaciones manuales pendientes son de
-experiencia de usuario en el frontend, no bloquean el criterio del backend.
+**Resultado global:** 20/20 RF-A en verde, sin verificaciones manuales pendientes.
 
 ## Historial
 
@@ -54,3 +56,4 @@ experiencia de usuario en el frontend, no bloquean el criterio del backend.
 |---|---|
 | 2026-11-01 | Primer registro (TST-A-01): 20/20 RF-A en verde; se agregaron las pruebas automáticas que faltaban para RF-A-10, RF-A-12, RF-A-16 y RF-A-18 |
 | 2026-11-01 | RF-A-12 reforzado en la base de datos: `decisiones_candidato` revoca `UPDATE`/`DELETE` a `vael_app` y `vael_system` (migración `c8d9e0f1a2b3`); ya no depende solo de la convención del código |
+| 2026-11-01 | TST-A-03 (E2E con Playwright, DEC-020): RF-A-01 y RF-A-02 pasan de verificación manual a automática; sin verificaciones manuales pendientes |
