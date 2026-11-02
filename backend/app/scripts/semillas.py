@@ -14,7 +14,9 @@ Uso (con SEED_PASSWORD o SEED_PASSWORD_<ROL> definidas; nunca van en el reposito
 - TI-2026-001 (empresa A): candidatos con el proceso completo (CV, examen y entrevista),
   más que `top_candidatos_finalistas`, para demostrar el ranking y el lote de finalistas con
   datos reales (RF-A-14, RF-A-15, DEC-022); uno más con el examen rendido y sin entrevista,
-  para el caso de proceso incompleto (doc 13, DEV-A-07).
+  para el caso de proceso incompleto (doc 13, DEV-A-07); uno más en `cv_por_confirmar` sin
+  decidir, para que la bandeja (RF-A-11) y la prueba E2E (TST-A-03) siempre tengan una
+  recomendación real para confirmar.
 
 Las decisiones de CV y examen de este script pasan por `decisiones.registrar_decision` con
 `enviar_correos=False`: avanzan al candidato (estado, token) igual que un avance real, pero no
@@ -303,6 +305,29 @@ CANDIDATO_TI_INCOMPLETO = CandidatoIncompletoSemilla(
 )
 
 
+async def _candidato_pendiente_bandeja(db: AsyncSession, tenant_id: str, vacante: Vacante) -> Candidato:
+    """Un candidato de TI-2026-001 que se queda en `cv_por_confirmar`, sin decisión — a
+    diferencia de `_candidatos_proceso_completo_ti`, que decide CV y examen por los siete
+    candidatos completos. Así la bandeja (RF-A-11) y la prueba E2E (TST-A-03) siempre tienen
+    una recomendación real para confirmar, sin depender del orden en que se registren datos
+    por la aplicación durante las pruebas manuales."""
+    email = "sofia.ramirez@example.com"
+    filtro = (Candidato.tenant_id == tenant_id, Candidato.vacante_id == vacante.id, Candidato.email == email)
+    candidato = (await db.exec(select(Candidato).where(*filtro))).first()
+    if candidato is not None:
+        return candidato
+    candidato = Candidato(
+        tenant_id=tenant_id, vacante_id=vacante.id, nombre="Sofía", apellidos="Ramírez Cueva", email=email,
+        estado=EstadoCandidato.CV_POR_CONFIRMAR, score_cv=72, clasificacion_ia=ClasificacionIA.RECOMENDADO,
+        resumen_ia="Tres años de experiencia con Python y proyectos verificables publicados en GitHub.",
+        habilidades_detectadas=["Python", "Git", "PostgreSQL"],
+    )
+    db.add(candidato)
+    await db.commit()
+    await db.refresh(candidato)
+    return candidato
+
+
 def _dimensiones_entrevista_semilla(
     dimensiones: list[DimensionEvaluacion], notas: dict[str, float], nivel: str
 ) -> tuple[dict[str, Any], float]:
@@ -551,6 +576,7 @@ async def cargar(abrir_sesion: AbrirSesion = sesion_con_tenant, generar_pdfs: bo
                 if empresa == EMPRESA_A:
                     vacante_ti = next(v for v in vacantes if v.codigo == "TI-2026-001")
                     await _candidatos_proceso_completo_ti(db, tenant_id, vacante_ti, alta.administrador)
+                    await _candidato_pendiente_bandeja(db, tenant_id, vacante_ti)
                 if empresa == EMPRESA_B:
                     await _datos_empresa_b(db, tenant_id, vacantes[0], alta.administrador)
         resumen[empresa] = {"tenant_id": tenant_id, "vacantes": [v.codigo for v in vacantes]}

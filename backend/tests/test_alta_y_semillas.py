@@ -162,7 +162,8 @@ async def test_las_semillas_son_idempotentes(
         Vacante: 5,
         # B: 3 candidatos de siempre · A: 7 con proceso completo + 1 con examen sin entrevista
         # en TI-2026-001, más candidatos que top_candidatos_finalistas para el ranking (DEC-022)
-        Candidato: 3 + len(semillas.CANDIDATOS_TI_COMPLETOS) + 1,
+        # + 1 pendiente de confirmar en la bandeja, sin decisión (RF-A-11, TST-A-03)
+        Candidato: 3 + len(semillas.CANDIDATOS_TI_COMPLETOS) + 1 + 1,
         NotaCandidato: 1,
         Examen: 1 + len(semillas.CANDIDATOS_TI_COMPLETOS) + 1,
         EntrevistaIA: len(semillas.CANDIDATOS_TI_COMPLETOS),
@@ -201,10 +202,15 @@ async def test_los_usuarios_semilla_inician_sesion_y_cada_empresa_ve_lo_suyo(
     headers_b = {"Authorization": f"Bearer {login_b.json()['access_token']}"}
     candidatos_a = client.get("/api/candidatos", headers=headers_a).json()
     correos_b = {correo for _, _, correo, _, _ in semillas.CANDIDATOS_B}
-    assert len(candidatos_a) == len(semillas.CANDIDATOS_TI_COMPLETOS) + 1
+    assert len(candidatos_a) == len(semillas.CANDIDATOS_TI_COMPLETOS) + 1 + 1
     assert not (correos_b & {c["email"] for c in candidatos_a})
-    bandeja = client.get("/api/candidatos/por-confirmar", headers=headers_b).json()
-    assert sorted(item["etapa"] for item in bandeja) == ["cv", "cv", "examen"]
+    bandeja_b = client.get("/api/candidatos/por-confirmar", headers=headers_b).json()
+    assert sorted(item["etapa"] for item in bandeja_b) == ["cv", "cv", "examen"]
+
+    # La empresa A siempre tiene una recomendación de CV pendiente para la bandeja (RF-A-11,
+    # TST-A-03): no depende de datos que la aplicación registre durante otras pruebas.
+    bandeja_a = client.get("/api/candidatos/por-confirmar", headers=headers_a, params={"etapa": "cv"}).json()
+    assert [item["candidato"]["email"] for item in bandeja_a] == ["sofia.ramirez@example.com"]
 
 
 async def test_las_semillas_respetan_el_invariante_del_oe3(
