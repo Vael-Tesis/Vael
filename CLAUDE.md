@@ -1,6 +1,6 @@
 # CLAUDE.md — VAEL
 
-Instrucciones para Claude Code en este repositorio. Este archivo **se deriva** de la documentación del proyecto (Drive `VAEL/Docs`, la fuente de verdad) y de los ADRs de `docs/decisiones/`. Para el detalle de diseño, lee las copias en `docs/diseno/` (DEC-019): **no las edites**; si encuentras una contradicción, detente y avisa. Si este archivo contradice a un ADR, manda el ADR. Versión 2.2 — 2026-10-18.
+Instrucciones para Claude Code en este repositorio. Este archivo **se deriva** de la documentación del proyecto (Drive `VAEL/Docs`, la fuente de verdad) y de los ADRs de `docs/decisiones/`. Para el detalle de diseño, lee las copias en `docs/diseno/` (DEC-019): **no las edites**; si encuentras una contradicción, detente y avisa. Si este archivo contradice a un ADR, manda el ADR. Versión 2.3 — 2026-11-03.
 
 ## 1. Qué es VAEL
 
@@ -77,7 +77,8 @@ backend/app/
   core/       config, database (RLS), dependencies, despacho, gemini, logs, proctoring,
               scoring, security
   models/     un archivo por dominio (`docs/diseno/05_modelos_bd.md`)
-  routers/    auth, areas, plantillas, vacantes, candidatos, evaluaciones, entrevista, publico
+  routers/    auth, areas, plantillas, vacantes, candidatos, tags, metricas, evaluaciones,
+              entrevista, publico
   schemas/
   scripts/    crear_roles (DEC-010), crear_empresa (DEC-015), semillas y generar_cvs (doc 13),
               exportar_openapi (DEC-008)
@@ -88,8 +89,11 @@ backend/alembic/versions/
 backend/seeds/cvs_texto/   textos de los CV ficticios (los PDF se generan)
 backend/tests/
 frontend/src/
+frontend/e2e/      pruebas E2E con Playwright (TST-A-03, DEC-020); cómo correrlas: su README
 docs/decisiones/   ADRs
 docs/diseno/       copias de los docs de diseño del Drive, incluidas las convenciones (doc 17; no editar)
+docs/metricas/     consultas y datos crudos de las métricas (doc 14)
+docs/validacion/   resultado de RF-A-01 a RF-A-20 (TST-A-01, doc 16)
 drive_pendiente/   borradores de documentos del Drive (ignorada por Git)
 scripts/           sincronizar-diseno.ps1
 ```
@@ -128,9 +132,13 @@ cd frontend && npm run api:generar      # commitea openapi.json y src/api/esquem
 cd frontend
 npx tsc --noEmit
 npx vite build
+
+# E2E (DEC-020): si cambió una pantalla del flujo principal; necesita backend, frontend y
+# semillas levantados (frontend/e2e/README.md). La primera vez: npx playwright install chromium
+SEED_PASSWORD=<la de las semillas> npm run e2e
 ```
 
-El CI ejecuta lo mismo y bloquea el merge si falla.
+El CI ejecuta lo mismo, incluida la E2E en un job aparte, y bloquea el merge si falla.
 
 ## 13. Commits y ramas
 
