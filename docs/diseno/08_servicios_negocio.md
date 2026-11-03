@@ -1,16 +1,16 @@
-> COPIA del documento del Drive `VAEL/Docs/08_servicios_negocio.md`, versión 2.2, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/08_servicios_negocio.md`, versión 2.3, copiada el 2026-11-03.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 08 — Servicios de Negocio
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.2 |
-| Actualizado | 2026-10-27 |
-| Fuente de verdad | Código en `backend/app/services/`, `backend/app/core/` y `backend/app/scripts/` (revisado al cierre del Sprint 1, 2026-10-27) + DEC-001, DEC-002, DEC-007, DEC-009, DEC-010, DEC-013, DEC-015, DEC-016, DEC-018 |
+| Versión | 2.3 |
+| Actualizado | 2026-11-03 |
+| Fuente de verdad | Código en `backend/app/services/`, `backend/app/core/` y `backend/app/scripts/` (revisado tras el Sprint 2, 2026-11-03) + DEC-001, DEC-002, DEC-007, DEC-009, DEC-010, DEC-013, DEC-015, DEC-016, DEC-018, DEC-022 |
 | Copia en el repositorio | `docs/diseno/08_servicios_negocio.md` (DEC-019). La fuente es este documento |
 
-Los servicios contienen la lógica de negocio y no dependen de FastAPI. Estados: **Implementado** · **Cambia (tarea · historia)** · **Planificado (tarea · historia)** · **Se elimina (tarea)**. Lo integrado en el Sprint 1 indica la tarea y el PR.
+Los servicios contienen la lógica de negocio y no dependen de FastAPI. Estados: **Implementado** · **Cambia (tarea · historia)** · **Planificado (tarea · historia)** · **Se elimina (tarea)**. Lo integrado en los Sprints 1 y 2 indica la tarea y el PR.
 
 ## Reglas transversales
 
@@ -51,7 +51,7 @@ Colas: `vael-analisis-cv` y `vael-analisis-entrevista`, cada una con su DLQ (col
 | `consultar_gemini_json(prompt, model_name=None)` | Llama a Gemini pidiendo JSON y lo parsea |
 | `como_lista_str(valor)` | Normaliza listas devueltas por el modelo |
 
-Usa `google-genai` (`google-generativeai` se eliminó), con el ID de modelo verificado, registro del modelo y los parámetros de cada llamada (OE2) y **reintento con backoff exponencial ante 429 y 503** (`MAX_INTENTOS = 4`, espera base de 2 s).
+Usa `google-genai` (`google-generativeai` se eliminó), con el ID de modelo verificado, registro del modelo y los parámetros de cada llamada (OE2) y **reintento con backoff exponencial ante 429, 503 y 504** (`MAX_INTENTOS = 4`, espera base de 2 s) y **tiempo límite de 60 s por llamada** (`TIEMPO_LIMITE_SEGUNDOS`, observación de TST-A-01 · PR #23).
 
 ## core/scoring.py — Implementado (DEV-C-01 · PR #4)
 
@@ -107,7 +107,9 @@ Criterios del score (0-100): match de habilidades (0-40), experiencia (0-20), fo
 
 | Función | Descripción |
 |---|---|
-| `recomendacion_de_etapa(...)` / `calcular_recomendacion(...)` | Recomendación de la IA para la etapa: CV con `score_cv_minimo`, examen con `nota_minima_examen`; entrevista sin umbral (recomendación nula) |
+| `recomendacion_de_etapa(...)` / `calcular_recomendacion(...)` | Recomendación de la IA para la etapa: CV con `score_cv_minimo`, examen con `nota_minima_examen`; entrevista con `top_candidatos_finalistas` (DEC-022, DEV-A-06 · PR #27): nula mientras el candidato no tenga `score_final` |
+| `ranking_vacante(vacante_id, tenant_id)` | **Implementado (DEV-A-06 · PR #27).** Candidatos de la vacante con `score_final`, de mayor a menor (DEC-007). Lo usan `GET /candidatos/ranking` y la recomendación de la entrevista |
+| `recomendaciones_finalistas(ranking, top)` | **Implementado (DEV-A-06 · PR #27).** `avanzar` para los primeros `top` puestos, con los empates del puesto `top`; `descartar` para el resto. Se recalcula en cada consulta |
 | `registrar_decision(...)` | Valida la etapa, exige justificación si no coincide (422), inserta en `decisiones_candidato` y ejecuta el efecto. Repetir la decisión vigente es idempotente; cambiarla inserta una decisión nueva con `reemplaza_a` (así se revierte; no hay una función aparte). Al descartar invalida los tokens del candidato |
 | `registrar_decisiones_lote(...)` | Todo o nada; solo decisiones que coinciden con la recomendación |
 | `recomendaciones_pendientes(...)` | Bandeja: candidatos en `*_por_confirmar` con su recomendación |
@@ -115,7 +117,9 @@ Criterios del score (0-100): match de habilidades (0-40), experiencia (0-20), fo
 
 Constantes: `ESTADO_POR_CONFIRMAR`, `ESTADO_RESULTANTE` y `ESTADOS_DE_DECISION_HUMANA` (los usa `cambiar-estado` para rechazar esos estados).
 
-**Pendiente (HU-18, DEV-A-06):** criterio del lote en la etapa `entrevista`; propuesta: `top_candidatos_finalistas` (DEC-022).
+**Lote de finalistas (HU-18) — Implementado (DEV-A-06 · PR #27, DEC-022):** en la etapa `entrevista`, el lote acepta solo las decisiones que coinciden con la recomendación por `top_candidatos_finalistas`.
+
+`registrar_decision(..., enviar_correos=False)` registra la decisión y cambia el estado sin enviar el correo de la etapa. Solo lo usa el script de semillas (DEV-A-07 · PR #28), para que encender el entorno en AWS no envíe correos por SES a direcciones `@example.com`.
 
 | Etapa | Avanzar | Descartar |
 |---|---|---|
@@ -142,14 +146,16 @@ Guarda de envío (`ESTADOS_DESCARTE`): a un candidato rechazado o descartado nun
 
 `services/vacante_ia.py` — `generar_textos_marketing(vacante)` — Implementado.
 
-## services/candidatos.py — Implementado (DEV-A-01 · PR #17, DEV-A-05 · PR #21); banco de talento planificado (DEV-A-08 · HU-14)
+## services/candidatos.py — Implementado (DEV-A-01 · PR #17, DEV-A-05 · PR #21)
 
 | Función | Descripción |
 |---|---|
 | `editar_nota`, `eliminar_nota` | Solo el autor edita; el autor o un admin eliminan; actualiza `updated_at` |
 | `etiquetas_de`, `asignar_etiqueta`, `quitar_etiqueta`, `eliminar_tag` | Asignación idempotente; borrar una etiqueta borra sus asignaciones |
 | `motivo_de_rechazo_cv(nombre, contenido)` | Valida el CV antes de subirlo: no vacío, hasta 10 MB, extensión y firma de PDF, y que se pueda abrir. Un PDF escaneado sí se acepta (va a revisión manual). La carga masiva devuelve el motivo de cada archivo fallido |
-| Banco de talento | **Planificado (DEV-A-08 · HU-14)** |
+| Banco de talento | **Implementado (DEV-A-08 · PR #31)** en el router de candidatos, sin servicio aparte: marcar `en_banco_talento` (idempotente) y listar los marcados con filtro por área |
+
+Las métricas del dashboard (DEV-A-10 · PR #29) se calculan en `routers/metricas.py` con consultas de agregación sobre las tablas de la empresa; no tienen servicio aparte.
 
 ## services/sesiones.py — Implementado (DEV-A-02 · PR #18, DEC-011)
 
@@ -177,7 +183,7 @@ Guarda de envío (`ESTADOS_DESCARTE`): a un candidato rechazado o descartado nun
 |---|---|---|
 | `crear_roles` | DEV-C-11 · PR #10 | Crea `vael_owner`, `vael_app` y `vael_system` (DEC-010) |
 | `crear_empresa` | DEV-C-03 · PR #15 (DEC-015) | Crea la empresa y su administrador como `vael_app`, con contraseña temporal enviada por correo. El `tenant_id` es un UUID v5 de la razón social normalizada (`tenant_de`), así no necesita ver otras empresas ni ampliar la lista cerrada. Idempotente |
-| `semillas` | DEV-C-03 · PR #15 | Carga los datos del doc 13 (empresas A y B, usuarios por rol, áreas, plantillas, vacantes y los datos de la empresa testigo B). Contraseñas desde `SEED_PASSWORD` o `SEED_PASSWORD_<ROL>`; reutiliza `crear_empresa`. Idempotente |
+| `semillas` | DEV-C-03 · PR #15 | Carga los datos del doc 13 (empresas A y B, usuarios por rol, áreas, plantillas, vacantes y los datos de la empresa testigo B). Contraseñas desde `SEED_PASSWORD` o `SEED_PASSWORD_<ROL>`; reutiliza `crear_empresa`. Idempotente. **Ampliado (DEV-A-07 · PR #28):** candidatos de TI-2026-001 con el proceso completo (doc 13 v1.4), sin enviar correos |
 | `generar_cvs` | DEV-C-03 · PR #15 | Genera los PDF de los CV ficticios desde `backend/seeds/cvs_texto/`, incluidos el escaneado (CV-TI-11) y el dañado (CV-TI-12) |
 | `exportar_openapi` | DEV-C-09 · PR #16 (DEC-008) | Exporta el OpenAPI a `frontend/openapi.json` para generar el cliente tipado |
 
@@ -195,3 +201,4 @@ Guarda de envío (`ESTADOS_DESCARTE`): a un candidato rechazado o descartado nun
 | 2.0 | 2026-10-13 | Alineado con el código real; servicio de decisiones; correo de cierre; brechas |
 | 2.1 | 2026-10-18 | División cálculo/aplicación para las Lambdas (DEC-016, DEC-018); despachador; firma HMAC; reintento ante 429 asignado a DEV-C-04; servicios de vacantes y candidatos de la retrospectiva; script de alta de empresa (DEC-015); remitente `vael.work`; referencias a historias de usuario |
 | 2.2 | 2026-10-27 | Cierre del Sprint 1: implementados despachador en proceso, `google-genai` con reintento, score, logs JSON, servicio de decisiones, correo de cierre, sesiones, vacantes, candidatos y scripts. Emociones eliminadas. La división cálculo/aplicación y la firma HMAC quedan para HU-23. Pendiente: lote de la etapa entrevista (DEC-022) |
+| 2.3 | 2026-11-03 | Sprint 2: recomendación de finalistas por `top_candidatos_finalistas` con `ranking_vacante` y `recomendaciones_finalistas` (DEC-022, PR #27); `enviar_correos=False` para las semillas (PR #28); banco de talento y métricas implementados en sus routers (PR #29, #31); reintento ante 504 y tiempo límite de Gemini (PR #23) |
