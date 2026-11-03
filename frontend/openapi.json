@@ -665,6 +665,19 @@
             ],
             "title": "Score Cv"
           },
+          "score_desglose": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior",
+            "title": "Score Desglose"
+          },
           "score_final": {
             "anyOf": [
               {
@@ -904,6 +917,19 @@
               }
             ],
             "title": "Score Cv"
+          },
+          "score_desglose": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior",
+            "title": "Score Desglose"
           },
           "score_final": {
             "anyOf": [
@@ -3231,6 +3257,19 @@
               }
             ],
             "title": "Score Cv"
+          },
+          "score_desglose": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior",
+            "title": "Score Desglose"
           },
           "score_final": {
             "anyOf": [

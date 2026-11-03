@@ -126,7 +126,17 @@ async def test_el_analisis_de_cv_deja_por_confirmar_sin_token_ni_correo(
         return b"%PDF"
 
     async def gemini_falso(_prompt: str, model_name: str | None = None) -> dict[str, Any]:
-        return {"score": 95, "clasificacion": "altamente_recomendado", "resumen": "Encaja muy bien"}
+        return {
+            "criterios": {
+                "match_habilidades": {"puntaje": 38, "justificacion": "Python, FastAPI y PostgreSQL con evidencia"},
+                "experiencia": {"puntaje": 19, "justificacion": "Supera los años pedidos"},
+                "formacion": {"puntaje": 14, "justificacion": "Carrera afín, verificable"},
+                "coherencia": {"puntaje": 14, "justificacion": "Relato claro"},
+                "trayectoria": {"puntaje": 10, "justificacion": "Progresión clara"},
+            },
+            "clasificacion": "altamente_recomendado",
+            "resumen": "Encaja muy bien",
+        }
 
     monkeypatch.setattr(analisis_cv, "_descargar_pdf", pdf_falso)
     monkeypatch.setattr(analisis_cv, "extraer_texto_pdf", lambda _b: "Python FastAPI")

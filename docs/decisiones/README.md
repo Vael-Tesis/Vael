@@ -28,5 +28,6 @@ Cada decisión de implementación se registra como `DEC-NNN` en formato ADR (*Ar
 | DEC-021 | Resolución del código del candidato en la lista cerrada de operaciones del sistema | [DEC-021](DEC-021-codigo-candidato-lista-cerrada.md) |
 | DEC-022 | Recomendación de finalistas con `top_candidatos_finalistas` (modifica DEC-009, punto 2) | [DEC-022](DEC-022-lote-finalistas.md) |
 | DEC-023 | S3 y correo locales para desarrollo: Adobe S3Mock y Mailpit | [DEC-023](DEC-023-s3-y-correo-locales.md) |
+| DEC-024 | Desglose ponderado y auditable del `score_cv` (corrige el doc 08; se implementa en DEV-C-14) | [DEC-024](DEC-024-desglose-score-cv.md) |
 
-La siguiente decisión nueva usa el número DEC-024.
+La siguiente decisión nueva usa el número DEC-025.

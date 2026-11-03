@@ -1,5 +1,6 @@
 """Schemas de request y response para candidatos — /api/candidatos/."""
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -48,6 +49,9 @@ class CandidatoResponse(BaseModel):
     pretension_salarial: float | None
 
     score_cv: int | None
+    score_desglose: dict[str, Any] | None = Field(
+        default=None, description="Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior"
+    )
     match_porcentaje: float | None
     clasificacion_ia: ClasificacionIA | None
     resumen_ia: str | None

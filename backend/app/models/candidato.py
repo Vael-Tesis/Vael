@@ -1,6 +1,7 @@
 """Modelos: Candidato, Tag, CandidatoTag, NotaCandidato."""
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field
@@ -64,6 +65,9 @@ class Candidato(TenantBase, TimestampMixin, table=True):
     pretension_salarial: float | None = Field(default=None)
 
     score_cv: int | None = Field(default=None)
+    # DEC-024: desglose ponderado de score_cv por criterio ({"match_habilidades": {"puntaje":
+    # .., "justificacion": ..}, ...}). Nulo en candidatos analizados antes de esta decisión.
+    score_desglose: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     match_porcentaje: float | None = Field(default=None)
     clasificacion_ia: ClasificacionIA | None = Field(default=None)
     resumen_ia: str | None = Field(default=None)
