@@ -31,3 +31,12 @@ export const CLASIFICACIONES: Record<Clasificacion, { etiqueta: string; variante
   requiere_revision: { etiqueta: 'Requiere revisión', variante: 'warning' },
   no_apto: { etiqueta: 'No apto', variante: 'danger' },
 }
+
+/** DEC-024: los cinco criterios ponderados del desglose de score_cv, en el mismo orden del prompt. */
+export const CRITERIOS_SCORE_CV: readonly { clave: string; etiqueta: string; maximo: number }[] = [
+  { clave: 'match_habilidades', etiqueta: 'Match de habilidades', maximo: 40 },
+  { clave: 'experiencia', etiqueta: 'Experiencia', maximo: 20 },
+  { clave: 'formacion', etiqueta: 'Formación', maximo: 15 },
+  { clave: 'coherencia', etiqueta: 'Coherencia', maximo: 15 },
+  { clave: 'trayectoria', etiqueta: 'Trayectoria', maximo: 10 },
+]

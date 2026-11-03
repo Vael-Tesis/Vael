@@ -35,7 +35,7 @@ from app.models.vacante import Vacante
 from app.scripts import semillas
 from app.services.analisis_cv import (
     _como_clasificacion,
-    _como_score,
+    _validar_y_sumar_desglose,
     construir_prompt_analisis,
     extraer_texto_pdf,
 )
@@ -104,6 +104,9 @@ async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float) ->
     inicio = time.perf_counter()
     try:
         resultado = await consultar_gemini_json(prompt)
+        # DEC-024: la misma validación de producción — un desglose inválido es una ejecución
+        # fallida, igual que cualquier otro error de consultar_gemini_json.
+        score, _desglose = _validar_y_sumar_desglose(resultado.get("criterios"))
     except Exception as exc:  # noqa: BLE001 — se registra tal cual, no se reintenta en silencio
         duracion_ms = round((time.perf_counter() - inicio) * 1000, 1)
         print(f"  [{cv} #{numero}] FALLÓ tras los reintentos de consultar_gemini_json: {exc!r}", file=sys.stderr)
@@ -114,7 +117,6 @@ async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float) ->
         )
 
     duracion_ms = round((time.perf_counter() - inicio) * 1000, 1)
-    score = _como_score(resultado.get("score"))
     clasificacion = _como_clasificacion(resultado.get("clasificacion"))
     recomendacion = "avanzar" if score >= umbral else "descartar"
     print(f"  [{cv} #{numero}] score={score} clasificacion={clasificacion.value} recomendacion={recomendacion} ({duracion_ms:.0f} ms)")

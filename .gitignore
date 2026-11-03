@@ -23,3 +23,6 @@ drive_pendiente/
 
 # Entornos virtuales de Python
 .venv/
+
+# Configuración local de Claude Code
+.claude/

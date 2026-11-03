@@ -22,6 +22,22 @@ MENSAJE_CV_SIN_TEXTO = (
     "No se pudo extraer texto del CV (posible documento escaneado). No se analizó con IA: requiere revisión manual."
 )
 
+# DEC-024: desglose ponderado y auditable de score_cv. Los pesos son fijos para todo el
+# sistema en esta versión (DEC-024, punto 6).
+PESO_MAXIMO_MATCH_HABILIDADES = 40
+PESO_MAXIMO_EXPERIENCIA = 20
+PESO_MAXIMO_FORMACION = 15
+PESO_MAXIMO_COHERENCIA = 15
+PESO_MAXIMO_TRAYECTORIA = 10
+
+CRITERIOS_SCORE_CV: dict[str, int] = {
+    "match_habilidades": PESO_MAXIMO_MATCH_HABILIDADES,
+    "experiencia": PESO_MAXIMO_EXPERIENCIA,
+    "formacion": PESO_MAXIMO_FORMACION,
+    "coherencia": PESO_MAXIMO_COHERENCIA,
+    "trayectoria": PESO_MAXIMO_TRAYECTORIA,
+}
+
 
 def _extraer_con_pypdf2(pdf_bytes: bytes) -> str:
     """Extrae el texto de un PDF usando PyPDF2 (motor primario)."""
@@ -79,11 +95,19 @@ Tecnologías buscadas: {tecnologias}
 {texto_cv}
 
 ## Tarea
-Evalúa qué tan bien encaja este candidato con la vacante. Responde ÚNICAMENTE con un JSON
-(sin texto adicional, sin bloques de markdown) con exactamente esta forma:
+Evalúa qué tan bien encaja este candidato con la vacante, puntuando cada uno de los
+siguientes cinco criterios por separado (no calcules el total: lo calcula el sistema).
+Responde ÚNICAMENTE con un JSON (sin texto adicional, sin bloques de markdown) con
+exactamente esta forma:
 
 {{
-  "score": <entero 0-100>,
+  "criterios": {{
+    "match_habilidades": {{"puntaje": <entero 0-{PESO_MAXIMO_MATCH_HABILIDADES}>, "justificacion": "<breve>"}},
+    "experiencia": {{"puntaje": <entero 0-{PESO_MAXIMO_EXPERIENCIA}>, "justificacion": "<breve>"}},
+    "formacion": {{"puntaje": <entero 0-{PESO_MAXIMO_FORMACION}>, "justificacion": "<breve>"}},
+    "coherencia": {{"puntaje": <entero 0-{PESO_MAXIMO_COHERENCIA}>, "justificacion": "<breve>"}},
+    "trayectoria": {{"puntaje": <entero 0-{PESO_MAXIMO_TRAYECTORIA}>, "justificacion": "<breve>"}}
+  }},
   "clasificacion": "<altamente_recomendado|recomendado|requiere_revision|no_apto>",
   "resumen": "<3 a 4 oraciones resumiendo el encaje del candidato con la vacante>",
   "habilidades_detectadas": ["<habilidad1>", "<habilidad2>"],
@@ -100,12 +124,35 @@ async def _descargar_pdf(cv_url: str) -> bytes:
     return await descargar_archivo(clave_desde_url(cv_url))
 
 
-def _como_score(valor: Any) -> int:
-    """Normaliza el score de Gemini a un entero entre 0 y 100."""
-    try:
-        return max(0, min(100, int(valor)))
-    except (TypeError, ValueError):
-        return 0
+def _validar_y_sumar_desglose(criterios: Any) -> tuple[int, dict[str, dict[str, Any]]]:
+    """Valida el desglose de criterios de Gemini y calcula score_cv como su suma (DEC-024).
+
+    Verifica que estén los cinco criterios, que cada puntaje sea un entero dentro de su rango
+    (0 a su peso máximo). Si algo no cumple, lanza ValueError: el análisis se trata como
+    fallido por el camino de error que ya existe (analizar_cv_candidato); no se ajusta ningún
+    valor en silencio (DEC-024, punto 3).
+    """
+    if not isinstance(criterios, dict):
+        raise ValueError(f"Gemini no devolvió 'criterios' como un objeto: {criterios!r}")
+
+    desglose: dict[str, dict[str, Any]] = {}
+    score_total = 0
+
+    for nombre, maximo in CRITERIOS_SCORE_CV.items():
+        item = criterios.get(nombre)
+        if not isinstance(item, dict):
+            raise ValueError(f"Falta el criterio '{nombre}' en la respuesta de Gemini: {criterios!r}")
+
+        puntaje = item.get("puntaje")
+        if not isinstance(puntaje, int) or isinstance(puntaje, bool):
+            raise ValueError(f"El criterio '{nombre}' no tiene un puntaje entero: {puntaje!r}")
+        if not (0 <= puntaje <= maximo):
+            raise ValueError(f"El criterio '{nombre}' está fuera de rango (0-{maximo}): {puntaje!r}")
+
+        desglose[nombre] = {"puntaje": puntaje, "justificacion": str(item.get("justificacion") or "")}
+        score_total += puntaje
+
+    return score_total, desglose
 
 
 def _como_clasificacion(valor: Any) -> ClasificacionIA:
@@ -148,7 +195,12 @@ async def analizar_cv(candidato: Candidato, vacante: Vacante, area: Area | None,
     prompt = construir_prompt_analisis(texto_cv, vacante, area)
     resultado = await consultar_gemini_json(prompt)
 
-    candidato.score_cv = _como_score(resultado.get("score"))
+    # DEC-024: el backend valida y suma; si no cumple, se propaga y el candidato vuelve a
+    # `postulado` por el camino de error existente (analizar_cv_candidato), sin guardar nada.
+    score_cv, score_desglose = _validar_y_sumar_desglose(resultado.get("criterios"))
+
+    candidato.score_cv = score_cv
+    candidato.score_desglose = score_desglose
     candidato.clasificacion_ia = _como_clasificacion(resultado.get("clasificacion"))
     candidato.resumen_ia = resultado.get("resumen")
     candidato.habilidades_detectadas = como_lista_str(resultado.get("habilidades_detectadas"))

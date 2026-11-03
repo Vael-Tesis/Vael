@@ -1756,6 +1756,13 @@ export interface components {
             resumen_ia: string | null;
             /** Score Cv */
             score_cv: number | null;
+            /**
+             * Score Desglose
+             * @description Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior
+             */
+            score_desglose?: {
+                [key: string]: unknown;
+            } | null;
             /** Score Final */
             score_final: number | null;
             /**
@@ -1829,6 +1836,13 @@ export interface components {
             resumen_ia: string | null;
             /** Score Cv */
             score_cv: number | null;
+            /**
+             * Score Desglose
+             * @description Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior
+             */
+            score_desglose?: {
+                [key: string]: unknown;
+            } | null;
             /** Score Final */
             score_final: number | null;
             /** Telefono */
@@ -2679,6 +2693,13 @@ export interface components {
             resumen_ia: string | null;
             /** Score Cv */
             score_cv: number | null;
+            /**
+             * Score Desglose
+             * @description Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior
+             */
+            score_desglose?: {
+                [key: string]: unknown;
+            } | null;
             /** Score Final */
             score_final: number | null;
             /** Telefono */
