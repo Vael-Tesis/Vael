@@ -1,13 +1,13 @@
-> COPIA del documento del Drive `VAEL/Docs/16_requerimientos_admin.md`, versión 1.4 — **APROBADO** (2026-10-18); estado actualizado el 2026-11-03, copiada el 2026-11-03.
+> COPIA del documento del Drive `VAEL/Docs/16_requerimientos_admin.md`, versión 1.5 — **APROBADO** (2026-10-18); estado y CA de RF-A-15 actualizados el 2026-11-03, copiada el 2026-11-03.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 16 — Requerimientos funcionales del perfil Admin RRHH
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.4 — **APROBADO** (2026-10-18); estado actualizado el 2026-11-03 |
+| Versión | 1.5 — **APROBADO** (2026-10-18); estado y CA de RF-A-15 actualizados el 2026-11-03 |
 | Tarea de origen | PLN-A-03 |
-| Fuentes | Monografía, sección 1.3; doc 15 (matriz); DEC-007 a DEC-019 |
+| Fuentes | Monografía, sección 1.3; doc 15 (matriz); DEC-007 a DEC-019 y DEC-022 |
 | Backlog | Cada requerimiento corresponde a una historia de usuario del Product Backlog (`VAEL/Docs/Scrum`) |
 | Se ejecutan en | HU-25, tarea TST-A-01 (resultado y observaciones de cada RF). Registro: `docs/validacion/rf_admin.md` en el repositorio |
 
@@ -31,7 +31,7 @@ Cada requerimiento tiene un criterio de aceptación (CA) verificable con los dat
 | RF-A-12 | HU-16 | Consultar el historial de decisiones | Cada decisión muestra etapa, recomendación, puntaje, umbral, decisión, autor, fecha y justificación; ninguna se edita ni se borra | 1 | **OE3** |
 | RF-A-13 | HU-13 | Notas y etiquetas | Se agregan, editan y eliminan notas propias (autor y fecha); se asignan y quitan etiquetas; el listado se filtra por etiqueta | 1 | — |
 | RF-A-14 | HU-17 | Consultar el ranking | Ordena por `score_final` (DEC-007) con desglose; los procesos incompletos aparecen aparte | 2 | — |
-| RF-A-15 | HU-18 | Decidir finalistas | Marcar finalistas o descartar, individual o en lote, por el endpoint de decisiones, con los mismos registros y correos de RF-A-11 | 2 | OE3 |
+| RF-A-15 | HU-18 | Decidir finalistas | Marcar finalistas o descartar, individual o en lote, por el endpoint de decisiones, con los mismos registros y correos de RF-A-11. El lote solo acepta las decisiones que coinciden con la recomendación por `top_candidatos_finalistas`; los empatados con el puntaje del último puesto también reciben `avanzar`, y sin `score_final` no hay recomendación ni lote (DEC-022) | 2 | OE3 |
 | RF-A-16 | HU-19 | Revisar las evaluaciones | Detalle del examen, detalle de la entrevista (transcripción, dimensiones, capturas) y auditoría con semáforo | 2 | — |
 | RF-A-17 | HU-14 | Banco de talento | Lista candidatos de procesos anteriores con filtros por área y puntaje; un candidato puede enviarse al banco desde su detalle | 2 | — |
 | RF-A-18 | HU-07 | Gestionar usuarios | El admin crea usuarios (credenciales por correo), los activa, desactiva y reenvía credenciales; desactivar invalida la sesión al instante | 2 | — |
@@ -107,3 +107,4 @@ RF-A-01 a RF-A-20 en verde, la suite de aislamiento (TST-C-01) en verde y el per
 | 1.2 | 2026-10-27 | Estado al cierre del Sprint 1: RF-A-01 a RF-A-13 implementados con pruebas automáticas; falta la verificación con datos semilla en el navegador para declarar H-50 |
 | 1.3 | 2026-10-28 | Avance de la prueba manual (TST-A-01) y observaciones corregidas en el PR #23; esqueleto en AWS desplegado (PR #24); H-50 aún sin declarar |
 | 1.4 | 2026-11-03 | Resultado de TST-A-01: RF-A-01 a RF-A-20 en verde (PR #33) y E2E con Playwright (PR #34); RF-A-14 a RF-A-20 implementados en el Sprint 2; condiciones de H-50 cumplidas, pendiente su declaración; falta desplegar el Sprint 2 en AWS para el criterio de E3 |
+| 1.5 | 2026-11-03 | CA de RF-A-15 con la regla de DEC-022 (recomendación por ranking, empates en el último puesto y candidatos sin `score_final`), como lo pide su sección "Consecuencias". TST-A-01 ya lo verificó con sus cuatro pruebas de DEC-022 (`docs/validacion/rf_admin.md`): sigue en verde |
