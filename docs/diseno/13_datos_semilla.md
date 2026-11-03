@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/13_datos_semilla.md`, versión 1.3 — **APROBADO** (2026-10-18); ampliación aprobada por el Product Owner el 2026-10-28, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/13_datos_semilla.md`, versión 1.4 — **APROBADO** (2026-10-18); ampliación aprobada por el Product Owner el 2026-10-28 e implementada el 2026-10-30, copiada el 2026-11-03.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 13 — Datos semilla
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.3 — **APROBADO** (2026-10-18); ampliación aprobada por el Product Owner el 2026-10-28 |
+| Versión | 1.4 — **APROBADO** (2026-10-18); ampliación aprobada por el Product Owner el 2026-10-28 e implementada el 2026-10-30 |
 | Tarea de origen | PLN-C-05 |
 | Implementación | **Implementado** en HU-21, tarea DEV-C-03 (PR #15): `python -m app.scripts.semillas` (idempotente) y `python -m app.scripts.generar_cvs` |
 | Usado por | TST-C-01 (OE4), TST-A-04 (OE1), TST-A-05 (OE2), TST-A-03 (pruebas de extremo a extremo), demo de E3 |
@@ -99,16 +99,33 @@ Se generan como PDF en `backend/seeds/cvs/` **con un script a partir de plantill
 | CV-VEN-07 | Sin experiencia laboral | Negativo |
 | CV-VEN-08 | Perfil comercial con LinkedIn y portafolio | Extracción de enlaces |
 
-## Candidatos con el proceso completo (empresa A) — Planificado (DEV-A-07 · HU-19)
+## Candidatos con el proceso completo (empresa A) — Implementado (DEV-A-07 · PR #28 · HU-19)
 
 **Aprobado por el Product Owner el 2026-10-28.** El examen y la entrevista del candidato se construyen en el ciclo siguiente (perfil Candidato), así que sin estos datos el ranking (RF-A-14), los finalistas (RF-A-15, DEC-022) y la revisión de evaluaciones (RF-A-16) se verían vacíos en E3.
 
 | Candidatos (TI-2026-001) | Estado | Datos | Propósito |
 |---|---|---|---|
-| 3 o 4 | `entrevista_realizada` | Análisis de CV, examen calificado con eventos de proctoring (semáforos distintos), entrevista con transcripción y puntaje por dimensiones, notas | Ranking con `score_final` (DEC-007), lote de finalistas, auditoría |
+| 7 (aprobado: "3 o 4"; ver nota) | `entrevista_realizada` | Análisis de CV, examen calificado con eventos de proctoring (semáforos distintos), entrevista con transcripción y puntaje por dimensiones | Ranking con `score_final` (DEC-007), lote de finalistas, auditoría |
 | 1 | Examen rendido, sin entrevista | `score_final` nulo | Proceso incompleto aparte en el ranking (RF-A-14) |
+| 1 | `cv_por_confirmar` | Análisis de CV sin decisión | Recomendación real en la bandeja para la prueba E2E (TST-A-03) |
 
-Reglas: datos ficticios como el resto del documento; sin datos de emociones (DEC-001); las decisiones de avance se registran en `decisiones_candidato` como en un proceso real (DEC-009). El detalle de cada candidato se fija al implementarlo en DEV-A-07 y se agrega a este documento.
+Reglas: datos ficticios como el resto del documento; sin datos de emociones (DEC-001); las decisiones de avance se registran en `decisiones_candidato` como en un proceso real (DEC-009). **Las semillas no envían correos:** registran las decisiones con `enviar_correos=False`, para que encender el entorno en AWS no mande correos por SES a direcciones `@example.com` (PR #28).
+
+**Detalle implementado** (`backend/app/scripts/semillas.py`). La nota de la entrevista se calcula con la misma fórmula ponderada del análisis de la entrevista, y `score_final` con `calcular_score_final` (DEC-007); ninguno se fija a mano. El semáforo sale de los pesos de los eventos (CLAUDE.md, sección 11).
+
+| Candidato | Score CV | Clasificación | Examen | Eventos del examen (semáforo) | Evento de la entrevista |
+|---|---|---|---|---|---|
+| Patricia Nolasco Vega | 90 | Altamente recomendado | 19 | Ninguno (verde) | — |
+| Marco Villanueva Ríos | 85 | Altamente recomendado | 18 | `perdida_foco` (verde) | — |
+| Carla Espinoza Durand | 78 | Recomendado | 17 | `cambio_ventana`, `perdida_foco` (amarillo) | — |
+| Diego Farfán Rioja | 74 | Recomendado | 16 | `copy_paste`, `click_derecho` (amarillo) | `sin_rostro` |
+| Brenda Quispe Tello | 70 | Recomendado | 15 | `devtools`, `copy_paste`, `cambio_ventana` (amarillo) | — |
+| Álvaro Medina Ponce | 66 | Requiere revisión | 14 | `devtools`, `copy_paste`, `click_derecho` (rojo) | `multiples_voces` |
+| Yolanda Chumpitaz Rau | 60 | Requiere revisión | 14 | `devtools`, `copy_paste`, `click_derecho`, `cambio_ventana` (rojo) | — |
+| Jorge Salcedo Peña | 68 | Recomendado | 15 | Ninguno | Sin entrevista (proceso incompleto) |
+| Sofía Ramírez Cueva | 72 | Recomendado | — | — | Pendiente en la bandeja |
+
+**Nota sobre la cantidad:** el doc aprobó "3 o 4" candidatos completos. DEV-A-07 cargó 7 porque `top_candidatos_finalistas` de TI-2026-001 es 5: con menos de 5 completos, todos quedarían por encima del corte y la recomendación de descartar de DEC-022 no se vería. Con 7 se ven 5 recomendados para avanzar y 2 para descartar. **Pendiente de visto bueno del Product Owner.**
 
 ## Uso en AWS
 
@@ -133,3 +150,4 @@ Un área, una vacante, 3 candidatos con su análisis, un examen y una nota inter
 | 1.1 | 2026-10-18 | Aprobado: nombres de las empresas, muestras de OE1 y OE2; alta de empresas con el script de DEC-015; vacante en borrador usada también para la eliminación |
 | 1.2 | 2026-10-27 | Estado de implementación (DEV-C-03 · PR #15): scripts, variables `SEED_PASSWORD`, generación de los PDF confirmada; columna de plantilla sin campo en el modelo (pendiente de decisión); verificación en SUNAT pendiente |
 | 1.3 | 2026-10-28 | Decisiones del Product Owner: se retira la columna "Plantilla" (sin `plantilla_id` en la vacante) y se aprueban candidatos con el proceso completo para E3 (planificado en DEV-A-07); uso de las semillas en AWS |
+| 1.4 | 2026-11-03 | Candidatos con el proceso completo implementados (DEV-A-07 · PR #28): 7 completos (no 3 o 4, para que se vea el corte de DEC-022), 1 incompleto y 1 pendiente en la bandeja; las semillas no envían correos |

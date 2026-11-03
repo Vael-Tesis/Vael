@@ -1,15 +1,15 @@
-> COPIA del documento del Drive `VAEL/Docs/16_requerimientos_admin.md`, versión 1.3 — **APROBADO** (2026-10-18); estado actualizado el 2026-10-28, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/16_requerimientos_admin.md`, versión 1.4 — **APROBADO** (2026-10-18); estado actualizado el 2026-11-03, copiada el 2026-11-03.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 16 — Requerimientos funcionales del perfil Admin RRHH
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.3 — **APROBADO** (2026-10-18); estado actualizado el 2026-10-28 |
+| Versión | 1.4 — **APROBADO** (2026-10-18); estado actualizado el 2026-11-03 |
 | Tarea de origen | PLN-A-03 |
 | Fuentes | Monografía, sección 1.3; doc 15 (matriz); DEC-007 a DEC-019 |
 | Backlog | Cada requerimiento corresponde a una historia de usuario del Product Backlog (`VAEL/Docs/Scrum`) |
-| Se ejecutan en | HU-25, tarea TST-A-01 (resultado y observaciones de cada RF) |
+| Se ejecutan en | HU-25, tarea TST-A-01 (resultado y observaciones de cada RF). Registro: `docs/validacion/rf_admin.md` en el repositorio |
 
 Cada requerimiento tiene un criterio de aceptación (CA) verificable con los datos semilla del doc 13.
 
@@ -75,9 +75,28 @@ El Product Owner empezó la prueba en el navegador con el entorno local. **El re
 
 **Esqueleto en AWS (HU-22):** desplegado y verificado el 2026-10-28 (PR #24); RF-A-01 comprobado en AWS (200 / 401 / 403 con usuario inactivo).
 
+### Resultado de TST-A-01 (2026-11-01, PR #33)
+
+El resultado formal por requerimiento está registrado en `docs/validacion/rf_admin.md` (commit base `113ac72`): **RF-A-01 a RF-A-20 en verde**, cada uno con las pruebas automáticas que lo cubren. Para cerrarlo se agregaron las pruebas que faltaban (RF-A-10, RF-A-12, RF-A-16 y RF-A-18), y RF-A-12 se reforzó en la base de datos: `vael_app` y `vael_system` ya no pueden editar ni borrar filas de `decisiones_candidato` (migración `c8d9e0f1a2b3`).
+
+Las dos partes de un criterio que solo se podían ver en el navegador, la redirección al dashboard (RF-A-01) y la renovación transparente de la sesión (RF-A-02), las cubre la prueba E2E con Playwright contra el backend y el frontend reales con los datos semilla (TST-A-03 · PR #34, DEC-020), que corre en el CI. Según el registro, **no quedan verificaciones manuales pendientes.**
+
+| RF | Implementado en (Sprint 2) |
+|---|---|
+| RF-A-14, RF-A-15 | DEV-A-06 · PR #27 (ranking y recomendación de finalistas, DEC-022) |
+| RF-A-16 | DEV-A-07 · PR #28 |
+| RF-A-17 | DEV-A-08 · PR #31 |
+| RF-A-18 | DEV-A-09 · PR #30 |
+| RF-A-19 | DEV-A-10 · PR #29 |
+| RF-A-20 | TST-C-01 · PR #32 (77 de 77 endpoints autenticados cubiertos; 0 accesos cruzados) |
+
+**H-50:** según el registro de TST-A-01, sus dos condiciones se cumplen desde el 2026-11-01: HU-21 completa y RF-A-01 a RF-A-13 en verde (pruebas automáticas sobre PostgreSQL, más la E2E contra el backend y el frontend reales con los datos semilla). **Queda pendiente que el Product Owner lo declare.** Nota honesta: se cumplió después del cierre del Sprint 1 (2026-10-23), no al cierre como pedía el criterio.
+
 ## Criterio del perfil Admin al 100% (E3)
 
 RF-A-01 a RF-A-20 en verde, la suite de aislamiento (TST-C-01) en verde y el perfil desplegado en AWS con el smoke test aprobado.
+
+**Estado (2026-11-03):** las dos primeras condiciones se cumplen. Falta la tercera: el último despliegue en AWS (2026-10-29) tenía el código del Sprint 1, sin el trabajo del Sprint 2 (PR #27 a #34). Hay que volver a desplegar y repetir el smoke test.
 
 ## Historial
 
@@ -87,3 +106,4 @@ RF-A-01 a RF-A-20 en verde, la suite de aislamiento (TST-C-01) en verde y el per
 | 1.1 | 2026-10-18 | Aprobado; correspondencia con las historias de usuario y sus sprints; criterios ampliados con la retrospectiva (eliminar en borrador, eliminar áreas sin vacantes, guardar textos, editar y eliminar notas, enviar al banco) |
 | 1.2 | 2026-10-27 | Estado al cierre del Sprint 1: RF-A-01 a RF-A-13 implementados con pruebas automáticas; falta la verificación con datos semilla en el navegador para declarar H-50 |
 | 1.3 | 2026-10-28 | Avance de la prueba manual (TST-A-01) y observaciones corregidas en el PR #23; esqueleto en AWS desplegado (PR #24); H-50 aún sin declarar |
+| 1.4 | 2026-11-03 | Resultado de TST-A-01: RF-A-01 a RF-A-20 en verde (PR #33) y E2E con Playwright (PR #34); RF-A-14 a RF-A-20 implementados en el Sprint 2; condiciones de H-50 cumplidas, pendiente su declaración; falta desplegar el Sprint 2 en AWS para el criterio de E3 |

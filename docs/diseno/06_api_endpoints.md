@@ -1,20 +1,20 @@
-> COPIA del documento del Drive `VAEL/Docs/06_api_endpoints.md`, versión 2.3, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/06_api_endpoints.md`, versión 2.4, copiada el 2026-11-03.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 06 — API: Endpoints
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.3 |
-| Actualizado | 2026-10-28 |
-| Fuente de verdad | Código en `backend/app/routers/` (83 rutas en 9 routers, contadas en `frontend/openapi.json` al cierre del Sprint 1) + DEC-001, DEC-008 a DEC-015, DEC-018, DEC-021 + doc 15 |
+| Versión | 2.4 |
+| Actualizado | 2026-11-03 |
+| Fuente de verdad | Código en `backend/app/routers/` (85 rutas en 10 routers, contadas en `frontend/openapi.json` el 2026-11-03, tras el Sprint 2) + DEC-001, DEC-008 a DEC-015, DEC-018, DEC-021, DEC-022 + doc 15 |
 | Copia en el repositorio | `docs/diseno/06_api_endpoints.md` (DEC-019). La fuente es este documento |
 
 ## Alcance de este documento
 
 Describe **qué endpoints existen o se planifican, quién puede usarlos y qué cambia por las decisiones**. El contrato detallado (campos de cada request y response) es el OpenAPI de FastAPI. Se exporta a `frontend/openapi.json` con `python -m app.scripts.exportar_openapi` y de ahí se genera el cliente tipado del frontend (`npm run api:generar`, DEC-008). El CI falla si el contrato commiteado no coincide con el backend (DEV-C-09 · PR #16).
 
-Estados: **Implementado** · **Ajustado (tarea · PR)**, cambio ya aplicado a una ruta existente · **Cambia (tarea · historia)**, cambio planificado · **Planificado (tarea · historia)**. Lo integrado en el Sprint 1 indica la tarea y el PR.
+Estados: **Implementado** · **Ajustado (tarea · PR)**, cambio ya aplicado a una ruta existente · **Cambia (tarea · historia)**, cambio planificado · **Planificado (tarea · historia)**. Lo integrado en los Sprints 1 y 2 indica la tarea y el PR.
 
 Prefijo `/api`, sin barra final. Base en desarrollo: `http://localhost:8000`. En producción, CloudFront enruta `/api/*` al balanceador (DEC-018).
 
@@ -111,9 +111,9 @@ Regla: la suma de los pesos de una plantilla debe ser 100. Se valida en **toda**
 | DELETE | `/candidatos/{id}/notas/{nota_id}` | Autor o admin | Implementado (DEV-A-01 · PR #17) |
 | POST | `/candidatos/{id}/tags` | Reclutador+ | Implementado (DEV-A-01 · PR #17): `{ "tag_id" }`, idempotente |
 | DELETE | `/candidatos/{id}/tags/{tag_id}` | Reclutador+ | Implementado (DEV-A-01 · PR #17) |
-| POST | `/candidatos/{id}/banco-talento` | Reclutador+ | **Planificado (DEV-A-08 · HU-14)** |
-| GET | `/candidatos/ranking` | Autenticado | Implementado. Fórmula de DEC-007 (DEV-C-01 · PR #4). **Cambia (DEV-A-06 · HU-17):** proceso incompleto aparte |
-| GET | `/candidatos/banco-talento` | Autenticado | Implementado. **Cambia (DEV-A-08 · HU-14):** filtro por área |
+| POST | `/candidatos/{id}/banco-talento` | Reclutador+ | Implementado (DEV-A-08 · PR #31). Marca `en_banco_talento`; idempotente |
+| GET | `/candidatos/ranking` | Autenticado | Implementado. Fórmula de DEC-007 (DEV-C-01 · PR #4). **Ajustado (DEV-A-06 · PR #27):** 404 si la vacante no es de la empresa; los procesos incompletos van aparte, al final y sin recomendación (`proceso_completo`); cada candidato trae `recomendacion_finalista` (DEC-022) |
+| GET | `/candidatos/banco-talento` | Autenticado | Implementado. **Ajustado (DEV-A-08 · PR #31):** solo candidatos marcados con `en_banco_talento` (antes se deducía de la clasificación de la IA y del estado); filtro opcional `area_id` |
 
 ### Decisiones — Implementado (DEV-C-10 · PR #13; HU-15, HU-16; DEC-009 y DEC-013)
 
@@ -132,7 +132,7 @@ Request ilustrativo de decisión individual:
 
 Reglas: justificación obligatoria si la decisión no coincide con la IA (422 si falta); repetir la decisión vigente es idempotente; cambiarla = decisión nueva enlazada con `reemplaza_a`; avance → estado, token y correo de la etapa siguiente; descarte → estado, invalidación de los tokens del candidato y un único correo de cierre. El lote es todo o nada. `revision_inicio` con zona horaria se normaliza a UTC.
 
-**Decidido por el Product Owner el 2026-10-28 (HU-18, DEV-A-06):** en la etapa `entrevista` no hay umbral, así que el lote usa `top_candidatos_finalistas` de la vacante como recomendación: los N primeros del ranking por `score_final` coinciden con la IA; cualquier otra decisión exige justificación (DEC-009). El ADR DEC-022 se registra en el PR de DEV-A-06. **Cambia (DEV-A-06 · HU-18).**
+**Recomendación de finalistas (DEC-022, HU-18) — Implementado (DEV-A-06 · PR #27):** en la etapa `entrevista` no hay umbral, así que la recomendación usa `top_candidatos_finalistas` de la vacante: avanzan los N primeros del ranking por `score_final`, y los empates con el puesto N también avanzan; el resto recibe `descartar`. Sin `score_final` no hay recomendación. Se recalcula en cada consulta. En el lote, coinciden con la IA solo esas recomendaciones; cualquier otra decisión exige justificación (DEC-009).
 
 ## /api/tags — Implementado (DEV-A-01 · PR #17 · HU-13)
 
@@ -143,11 +143,11 @@ Reglas: justificación obligatoria si la decisión no coincide con la IA (422 si
 | PUT | `/tags/{id}` | Reclutador+ | Edita nombre o color |
 | DELETE | `/tags/{id}` | Admin o gerente | Elimina la etiqueta y sus asignaciones |
 
-## /api/metricas — Planificado (DEV-A-10 · HU-20)
+## /api/metricas — Implementado (DEV-A-10 · PR #29 · HU-20)
 
 | Método | Ruta | Permiso | Función |
 |---|---|---|---|
-| GET | `/metricas/dashboard?desde=&hasta=` | Autenticado | Vacantes y candidatos por estado, recomendaciones pendientes, postulaciones por día, minutos promedio de revisión (OE1) y tasa de concordancia (M-02) |
+| GET | `/metricas/dashboard?desde=&hasta=` | Autenticado | Vacantes y candidatos por estado, recomendaciones pendientes por etapa (estado actual, sin filtro de fechas); postulaciones por día, minutos promedio de revisión (OE1) y tasa de concordancia (M-02), acotados al rango. Todo se calcula en el backend |
 
 ## /api/evaluaciones
 
@@ -159,7 +159,7 @@ Candidato: `POST /evaluaciones/candidato/resolver-codigo` (público), `acceso`, 
 
 | Método | Ruta | Permiso | Estado |
 |---|---|---|---|
-| GET | `/entrevista` | Autenticado | Implementado (listado). La pantalla aún en JavaScript lo llama como `/entrevista/lista`, ruta inexistente: se corrige al migrarla (DEV-A-07 · HU-19). El cliente tipado ya impide ese error (DEC-008) |
+| GET | `/entrevista` | Autenticado | Implementado (listado). La pantalla migrada a TypeScript ya usa esta ruta (DEV-A-07 · PR #28); el cliente tipado impide volver a llamar a la ruta inexistente `/entrevista/lista` (DEC-008) |
 | GET | `/entrevista/detalle/{id}` | Autenticado | Implementado |
 | POST | `/entrevista/acceso`, `/iniciar`, `/finalizar`, `/captura`, `/evento` | Candidato | Implementados. Sin análisis de sentimiento ni de emociones (DEC-001); revisión completa en el ciclo siguiente |
 
@@ -199,3 +199,4 @@ No es un endpoint: `python -m app.scripts.crear_empresa` (DEC-015).
 | 2.1 | 2026-10-18 | 16 endpoints nuevos de la retrospectiva (doc 15): eliminar vacante en borrador, textos de publicación, editar y eliminar notas, etiquetas, banco de talento, activar, desactivar y eliminar áreas, métricas; endpoints internos de las Lambdas (DEC-018); feed XML en la lista cerrada (DEC-014); alta de empresa por script (DEC-015); referencias a historias de usuario |
 | 2.2 | 2026-10-27 | Cierre del Sprint 1 (83 rutas): pasan a implementados auth con sesiones, áreas, tags, notas, decisiones, textos y eliminación de vacantes. `marcar-finalista` eliminado. Ampliación de `PUT /plantillas/{id}` con `dimensiones`. Códigos 401/403/409/422/502 documentados. Resolución del código del candidato en la lista cerrada (DEC-021). Pendiente: lote de la etapa entrevista (DEC-022) |
 | 2.3 | 2026-10-28 | Postulación pública con 422 y 502 (PR #23); criterio del lote de finalistas decidido (DEC-022, por registrar en DEV-A-06) |
+| 2.4 | 2026-11-03 | Sprint 2 (85 rutas, 10 routers): `/metricas/dashboard` y `POST /candidatos/{id}/banco-talento` implementados; ranking con procesos incompletos aparte y recomendación de finalistas (DEC-022, PR #27); banco de talento por marcado explícito con filtro por área (PR #31); ruta de la lista de entrevistas corregida en el frontend (PR #28) |

@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.2 — **APROBADO** (2026-10-18); estado de la instrumentación actualizado el 2026-10-27, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.3 — **APROBADO** (2026-10-18); estado de la instrumentación actualizado el 2026-11-03, copiada el 2026-11-03.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 14 — Plan de métricas
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.2 — **APROBADO** (2026-10-18); estado de la instrumentación actualizado el 2026-10-27 |
+| Versión | 1.3 — **APROBADO** (2026-10-18); estado de la instrumentación actualizado el 2026-11-03 |
 | Tarea de origen | PLN-C-06 |
 | Fuente de los objetivos | Monografía, sección 1.2 y Tabla 1.1 |
 | Datos de prueba | Doc 13 |
@@ -68,6 +68,10 @@ Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) c
 | Indicador 2 | Despliegues ejecutados por `deploy.yml` / despliegues totales = 100% |
 | Historias | HU-04 (TST-C-01), HU-22 (DEP-C-05) |
 
+**Medición del indicador 1 (TST-C-01 · PR #32, 2026-11-01, commit `a972d83`):** **0 accesos cruzados** en las dos capas. Cobertura del **100%**: 66 de 66 endpoints autenticados de RRHH y 11 de 11 del candidato (DEC-021). Las 5 operaciones de la lista cerrada (6 funciones; DEC-010, DEC-014, DEC-021) quedan fuera del conteo porque usan la sesión del sistema y no llevan `Authorization`. Datos crudos: `docs/metricas/oe4_aislamiento.json`. La suite (`test_aislamiento_multiempresa.py` y `test_rls.py`) corre en cada PR.
+
+**Indicador 2, sin medir todavía:** los 2 despliegues hechos hasta hoy fueron manuales: el del 2026-10-28, ejecutando los pasos por separado, y el del 2026-10-29, con `scripts/aws-encender.ps1`. `deploy.yml` sigue pendiente (DEP-C-05), así que hoy el indicador sería 0 de 2.
+
 ## Métricas de apoyo
 
 | ID | Métrica | Fuente | Uso |
@@ -88,8 +92,10 @@ Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) c
 | Logs JSON con `operation` y `duration_ms` | DEV-C-08 | 1 | **Hecho** (PR #6) |
 | Registro del ID del modelo y los parámetros | DEV-C-04 | 1 | **Hecho** (PR #7) |
 | Consulta del indicador OE3 | TST-C-04 | 1 | **Hecho** (PR #14); verificación continua en el CI |
-| Conteo automático de endpoints autenticados | TST-C-01 | 2 | Pendiente |
+| Conteo automático de endpoints autenticados | TST-C-01 | 2 | **Hecho** (PR #32); medición en `docs/metricas/oe4_aislamiento.json` |
 | Script de OE2 | TST-A-05 | 2 | Pendiente |
+| Minutos promedio de revisión (OE1) y tasa de concordancia (M-02) en el dashboard | DEV-A-10 | 2 | **Hecho** (PR #29); se calculan en el backend (`GET /metricas/dashboard`) |
+| Despliegue por `deploy.yml` (indicador 2 del OE4) | DEP-C-05 | 1 | Pendiente |
 
 ## Registro de datos crudos
 
@@ -102,3 +108,4 @@ Cada medición guarda sus datos en `docs/metricas/` del repositorio (CSV o JSON)
 | 1.0 | 2026-10-14 | Borrador |
 | 1.1 | 2026-10-18 | Aprobado: R1 (minutos-persona), R2 (cada integrante en una condición), R3 (tres CVs para OE2); historias y sprints asociados; métrica M-07 de la metodología; destino en el Capítulo IV según el índice oficial |
 | 1.2 | 2026-10-27 | Estado de la instrumentación al cierre del Sprint 1: los cuatro requisitos del Sprint 1 están hechos; consulta del OE3 en `docs/metricas/` |
+| 1.3 | 2026-11-03 | Medición del indicador 1 del OE4: 0 accesos cruzados y 100% de cobertura (TST-C-01 · PR #32); indicador 2 sin medir, con 2 despliegues manuales; OE1 y M-02 en el dashboard (PR #29); pendientes TST-A-04, TST-A-05 y DEP-C-05 |
