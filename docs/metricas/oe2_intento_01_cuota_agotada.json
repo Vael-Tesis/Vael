@@ -1,0 +1,559 @@
+{
+  "_comentario": "Indicador OE2 (doc 14): consistencia del análisis de CV. Meta: desviación estándar <= 5 puntos sobre 100 en 10 ejecuciones del mismo CV contra la misma vacante, con la misma función, prompt y configuración de generación que usa el sistema en producción (sin bajar la temperatura ni cambiar ningún otro parámetro para la medición).",
+  "indicador": "OE2 - consistencia de la calificación automatizada",
+  "tarea": "TST-A-05",
+  "historia": "HU-25",
+  "fecha_utc": "2026-11-03T16:34:17.245653+00:00",
+  "sha_commit": "759dd61ca4631827e481a765eb5dae94b31f7c71",
+  "modelo": "gemini-3.8-flash",
+  "vacante": "TI-2026-001",
+  "ejecuciones_por_cv": 10,
+  "meta_desviacion_estandar": 5.0,
+  "resumen_por_cv": {
+    "CV-TI-01": {
+      "ejecuciones_totales": 10,
+      "ejecuciones_exitosas": 0,
+      "ejecuciones_fallidas": 10,
+      "scores": [],
+      "media": null,
+      "desviacion_estandar": null,
+      "cumple_meta_oe2": null,
+      "la_recomendacion_cambio_entre_ejecuciones": false,
+      "recomendaciones_vistas": []
+    },
+    "CV-TI-04": {
+      "ejecuciones_totales": 10,
+      "ejecuciones_exitosas": 0,
+      "ejecuciones_fallidas": 10,
+      "scores": [],
+      "media": null,
+      "desviacion_estandar": null,
+      "cumple_meta_oe2": null,
+      "la_recomendacion_cambio_entre_ejecuciones": false,
+      "recomendaciones_vistas": []
+    },
+    "CV-TI-07": {
+      "ejecuciones_totales": 10,
+      "ejecuciones_exitosas": 0,
+      "ejecuciones_fallidas": 10,
+      "scores": [],
+      "media": null,
+      "desviacion_estandar": null,
+      "cumple_meta_oe2": null,
+      "la_recomendacion_cambio_entre_ejecuciones": false,
+      "recomendaciones_vistas": []
+    }
+  },
+  "ejecuciones": [
+    {
+      "cv": "CV-TI-01",
+      "numero": 1,
+      "fecha_hora_utc": "2026-11-03T16:20:07.754309+00:00",
+      "duracion_ms": 222306.3,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 2,
+      "fecha_hora_utc": "2026-11-03T16:21:47.979205+00:00",
+      "duracion_ms": 97210.7,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 3,
+      "fecha_hora_utc": "2026-11-03T16:24:09.721672+00:00",
+      "duracion_ms": 138732.4,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 4,
+      "fecha_hora_utc": "2026-11-03T16:24:40.932900+00:00",
+      "duracion_ms": 28197.0,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 5,
+      "fecha_hora_utc": "2026-11-03T16:25:25.784090+00:00",
+      "duracion_ms": 41840.2,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 6,
+      "fecha_hora_utc": "2026-11-03T16:26:10.533262+00:00",
+      "duracion_ms": 41739.6,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h33m49.246098201s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '56029s'}]}}"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 7,
+      "fecha_hora_utc": "2026-11-03T16:26:30.811983+00:00",
+      "duracion_ms": 17272.8,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h33m28.932313297s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.8-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '56008s'}]}}"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 8,
+      "fecha_hora_utc": "2026-11-03T16:26:51.197290+00:00",
+      "duracion_ms": 17371.6,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h33m8.549205958s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.8-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55988s'}]}}"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 9,
+      "fecha_hora_utc": "2026-11-03T16:27:11.034169+00:00",
+      "duracion_ms": 16824.7,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h32m48.735039196s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.8-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55968s'}]}}"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 10,
+      "fecha_hora_utc": "2026-11-03T16:27:32.045503+00:00",
+      "duracion_ms": 18010.9,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h32m27.716181782s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55947s'}]}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 1,
+      "fecha_hora_utc": "2026-11-03T16:27:51.910799+00:00",
+      "duracion_ms": 16825.5,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h32m7.84581309s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55927s'}]}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 2,
+      "fecha_hora_utc": "2026-11-03T16:28:12.505292+00:00",
+      "duracion_ms": 17579.8,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h31m47.303178514s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55907s'}]}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 3,
+      "fecha_hora_utc": "2026-11-03T16:28:33.589042+00:00",
+      "duracion_ms": 18069.8,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h31m26.249615493s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55886s'}]}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 4,
+      "fecha_hora_utc": "2026-11-03T16:28:54.478810+00:00",
+      "duracion_ms": 17879.5,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h31m5.342443117s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55865s'}]}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 5,
+      "fecha_hora_utc": "2026-11-03T16:29:14.650088+00:00",
+      "duracion_ms": 17156.5,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h30m45.194197068s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55845s'}]}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 6,
+      "fecha_hora_utc": "2026-11-03T16:29:34.822418+00:00",
+      "duracion_ms": 17167.2,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h30m24.931594967s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55824s'}]}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 7,
+      "fecha_hora_utc": "2026-11-03T16:29:55.110825+00:00",
+      "duracion_ms": 17273.6,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h30m4.625110604s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55804s'}]}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 8,
+      "fecha_hora_utc": "2026-11-03T16:30:17.728985+00:00",
+      "duracion_ms": 19604.1,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 9,
+      "fecha_hora_utc": "2026-11-03T16:30:37.594869+00:00",
+      "duracion_ms": 16863.9,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h29m22.182557367s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55762s'}]}}"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 10,
+      "fecha_hora_utc": "2026-11-03T16:30:57.054594+00:00",
+      "duracion_ms": 16446.4,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h29m2.719873369s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.8-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55742s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 1,
+      "fecha_hora_utc": "2026-11-03T16:31:16.109989+00:00",
+      "duracion_ms": 16021.6,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h28m43.634806018s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.8-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55723s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 2,
+      "fecha_hora_utc": "2026-11-03T16:31:36.041138+00:00",
+      "duracion_ms": 16915.5,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h28m23.721025408s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55703s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 3,
+      "fecha_hora_utc": "2026-11-03T16:31:55.626045+00:00",
+      "duracion_ms": 16573.4,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h28m4.143638646s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.8-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55684s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 4,
+      "fecha_hora_utc": "2026-11-03T16:32:16.308244+00:00",
+      "duracion_ms": 17680.7,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h27m43.452394304s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55663s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 5,
+      "fecha_hora_utc": "2026-11-03T16:32:36.864106+00:00",
+      "duracion_ms": 17547.3,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h27m22.880637029s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55642s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 6,
+      "fecha_hora_utc": "2026-11-03T16:32:57.373872+00:00",
+      "duracion_ms": 17496.8,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h27m2.403939818s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55622s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 7,
+      "fecha_hora_utc": "2026-11-03T16:33:17.648468+00:00",
+      "duracion_ms": 17262.1,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h26m42.153357725s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.8-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55602s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 8,
+      "fecha_hora_utc": "2026-11-03T16:33:37.105982+00:00",
+      "duracion_ms": 16452.6,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h26m22.702343188s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.8-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55582s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 9,
+      "fecha_hora_utc": "2026-11-03T16:33:57.379804+00:00",
+      "duracion_ms": 17259.8,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h26m2.44673959s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55562s'}]}}"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 10,
+      "fecha_hora_utc": "2026-11-03T16:34:17.245653+00:00",
+      "duracion_ms": 16862.0,
+      "modelo": "gemini-3.8-flash",
+      "parametros_generacion": {
+        "response_mime_type": "application/json",
+        "automatic_function_calling_disabled": true,
+        "temperature": "valor por defecto de Gemini (no se fija, igual que en producción)"
+      },
+      "score_cv": null,
+      "clasificacion_ia": null,
+      "recomendacion": "error",
+      "umbral_score_cv_minimo": 60.0,
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash, description: Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.\\nPlease retry in 15h25m42.579149016s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'description': 'Generate content requests per day limit exceeded on Free Tier. See https://ai.google.dev/gemini-api/docs/rate-limits.', 'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '55542s'}]}}"
+    }
+  ]
+}
