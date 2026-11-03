@@ -42,10 +42,10 @@ Plataforma SaaS multiempresa de apoyo a la preselección de personal para empres
 ## 5. Stack
 
 - **Backend:** Python 3.12, FastAPI, SQLModel, Alembic, asyncpg, PostgreSQL 16. Gunicorn + UvicornWorker en producción.
-- **IA:** Gemini (texto) y Gemini Live (voz) con **`google-genai`**. `google-generativeai` está deprecado y se elimina (DEV-C-04).
+- **IA:** Gemini (texto) y Gemini Live (voz) con **`google-genai`**, el único SDK (`google-generativeai` se eliminó en DEV-C-04). El plan gratuito permite 20 solicitudes por día por modelo (doc 04): una corrida del OE2 (30 llamadas) lo supera.
 - **Auth:** JWT propio HS256 con **PyJWT** (reemplaza a `python-jose`, DEC-011). Access token de 15 min; refresh tokens con rotación en la tabla `sesiones`; `token_version` en `Usuario`. Sin Cognito.
 - **Sin Redis ni ElastiCache** (DEC-012).
-- **Frontend:** React 19 + Vite 8 + Tailwind 4 + TanStack Query + React Router 7, en migración a **TypeScript estricto** (DEC-008).
+- **Frontend:** React 19 + Vite 8 + Tailwind 4 + TanStack Query + React Router 7, en **TypeScript estricto** (DEC-008): el perfil Admin está migrado completo; las páginas del candidato siguen en JavaScript hasta la Ruta B (DEV-B-12).
 - **AWS (DEC-016 y DEC-018):** CloudFront como entrada única (`/*` → S3 con el frontend; `/api/*` → ALB), ECS Fargate en subred pública sin entrada directa, RDS PostgreSQL en subred privada (una zona), SQS + Lambda (fuera de la VPC) para tareas asíncronas, SES, Secrets Manager, CloudWatch. **Sin NAT Gateway, sin Cognito, sin ElastiCache.** Dominio: `vael.work` (DNS en GoDaddy: `app.vael.work` panel, `www.vael.work` landing). Infraestructura como código en `infra/aws/`; el entorno se enciende y se apaga con `scripts/aws-encender.ps1` y `scripts/aws-apagar.ps1` (solo con autorización, doc 09).
 
 ## 6. Reglas del frontend (DEC-008)
