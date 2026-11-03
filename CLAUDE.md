@@ -1,6 +1,6 @@
 # CLAUDE.md — VAEL
 
-Instrucciones para Claude Code en este repositorio. Este archivo **se deriva** de la documentación del proyecto (Drive `VAEL/Docs`, la fuente de verdad) y de los ADRs de `docs/decisiones/`. Para el detalle de diseño, lee las copias en `docs/diseno/` (DEC-019): **no las edites**; si encuentras una contradicción, detente y avisa. Si este archivo contradice a un ADR, manda el ADR. Versión 2.2 — 2026-10-18.
+Instrucciones para Claude Code en este repositorio. Este archivo **se deriva** de la documentación del proyecto (Drive `VAEL/Docs`, la fuente de verdad) y de los ADRs de `docs/decisiones/`. Para el detalle de diseño, lee las copias en `docs/diseno/` (DEC-019): **no las edites**; si encuentras una contradicción, detente y avisa. Si este archivo contradice a un ADR, manda el ADR. Versión 2.3 — 2026-11-03.
 
 ## 1. Qué es VAEL
 
@@ -42,10 +42,10 @@ Plataforma SaaS multiempresa de apoyo a la preselección de personal para empres
 ## 5. Stack
 
 - **Backend:** Python 3.12, FastAPI, SQLModel, Alembic, asyncpg, PostgreSQL 16. Gunicorn + UvicornWorker en producción.
-- **IA:** Gemini (texto) y Gemini Live (voz) con **`google-genai`**. `google-generativeai` está deprecado y se elimina (DEV-C-04).
+- **IA:** Gemini (texto) y Gemini Live (voz) con **`google-genai`**, el único SDK (`google-generativeai` se eliminó en DEV-C-04). El plan gratuito permite 20 solicitudes por día por modelo (doc 04): una corrida del OE2 (30 llamadas) lo supera.
 - **Auth:** JWT propio HS256 con **PyJWT** (reemplaza a `python-jose`, DEC-011). Access token de 15 min; refresh tokens con rotación en la tabla `sesiones`; `token_version` en `Usuario`. Sin Cognito.
 - **Sin Redis ni ElastiCache** (DEC-012).
-- **Frontend:** React 19 + Vite 8 + Tailwind 4 + TanStack Query + React Router 7, en migración a **TypeScript estricto** (DEC-008).
+- **Frontend:** React 19 + Vite 8 + Tailwind 4 + TanStack Query + React Router 7, en **TypeScript estricto** (DEC-008): el perfil Admin está migrado completo; las páginas del candidato siguen en JavaScript hasta la Ruta B (DEV-B-12).
 - **AWS (DEC-016 y DEC-018):** CloudFront como entrada única (`/*` → S3 con el frontend; `/api/*` → ALB), ECS Fargate en subred pública sin entrada directa, RDS PostgreSQL en subred privada (una zona), SQS + Lambda (fuera de la VPC) para tareas asíncronas, SES, Secrets Manager, CloudWatch. **Sin NAT Gateway, sin Cognito, sin ElastiCache.** Dominio: `vael.work` (DNS en GoDaddy: `app.vael.work` panel, `www.vael.work` landing). Infraestructura como código en `infra/aws/`; el entorno se enciende y se apaga con `scripts/aws-encender.ps1` y `scripts/aws-apagar.ps1` (solo con autorización, doc 09).
 
 ## 6. Reglas del frontend (DEC-008)
@@ -77,7 +77,8 @@ backend/app/
   core/       config, database (RLS), dependencies, despacho, gemini, logs, proctoring,
               scoring, security
   models/     un archivo por dominio (`docs/diseno/05_modelos_bd.md`)
-  routers/    auth, areas, plantillas, vacantes, candidatos, evaluaciones, entrevista, publico
+  routers/    auth, areas, plantillas, vacantes, candidatos, tags, metricas, evaluaciones,
+              entrevista, publico
   schemas/
   scripts/    crear_roles (DEC-010), crear_empresa (DEC-015), semillas y generar_cvs (doc 13),
               exportar_openapi (DEC-008)
@@ -88,8 +89,11 @@ backend/alembic/versions/
 backend/seeds/cvs_texto/   textos de los CV ficticios (los PDF se generan)
 backend/tests/
 frontend/src/
+frontend/e2e/      pruebas E2E con Playwright (TST-A-03, DEC-020); cómo correrlas: su README
 docs/decisiones/   ADRs
 docs/diseno/       copias de los docs de diseño del Drive, incluidas las convenciones (doc 17; no editar)
+docs/metricas/     consultas y datos crudos de las métricas (doc 14)
+docs/validacion/   resultado de RF-A-01 a RF-A-20 (TST-A-01, doc 16)
 drive_pendiente/   borradores de documentos del Drive (ignorada por Git)
 scripts/           sincronizar-diseno.ps1
 ```
@@ -128,9 +132,13 @@ cd frontend && npm run api:generar      # commitea openapi.json y src/api/esquem
 cd frontend
 npx tsc --noEmit
 npx vite build
+
+# E2E (DEC-020): si cambió una pantalla del flujo principal; necesita backend, frontend y
+# semillas levantados (frontend/e2e/README.md). La primera vez: npx playwright install chromium
+SEED_PASSWORD=<la de las semillas> npm run e2e
 ```
 
-El CI ejecuta lo mismo y bloquea el merge si falla.
+El CI ejecuta lo mismo, incluida la E2E en un job aparte, y bloquea el merge si falla.
 
 ## 13. Commits y ramas
 

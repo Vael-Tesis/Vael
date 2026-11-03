@@ -22,7 +22,6 @@ Cada decisión de implementación se registra como `DEC-NNN` en formato ADR (*Ar
 | DEC-016 | Procesamiento asíncrono con SQS + Lambda (punto 6 modificado por DEC-018) | [DEC-016](DEC-016-asincronia-sqs-lambda.md) |
 | DEC-017 | Metodología: plan por fases con sprints semanales basados en Scrum | [DEC-017](DEC-017-metodologia-hibrida.md) |
 | DEC-018 | Topología mínima en AWS sin NAT Gateway; dominio `vael.work` | [DEC-018](DEC-018-topologia-aws.md) |
-
 | DEC-019 | Copia de los documentos de diseño en `docs/diseno/` | [DEC-019](DEC-019-copia-diseno-repositorio.md) |
 | DEC-020 | Herramientas: GitHub Projects + Excel del curso; Playwright para E2E | [DEC-020](DEC-020-herramientas-tablero-e2e.md) |
 | DEC-021 | Resolución del código del candidato en la lista cerrada de operaciones del sistema | [DEC-021](DEC-021-codigo-candidato-lista-cerrada.md) |

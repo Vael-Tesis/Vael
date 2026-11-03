@@ -1,17 +1,17 @@
-> COPIA del documento del Drive `VAEL/Docs/05_modelos_bd.md`, versión 2.2, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/05_modelos_bd.md`, versión 2.3, copiada el 2026-11-03.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 05 — Modelos de Base de Datos
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.2 |
-| Actualizado | 2026-10-27 |
-| Fuente de verdad | Código en `backend/app/models/` (migraciones hasta `a6b7c8d9e0f1`, Sprint 1) + DEC-007, DEC-009, DEC-010, DEC-011, DEC-014, DEC-015, DEC-018 + doc 15 |
+| Versión | 2.3 |
+| Actualizado | 2026-11-03 |
+| Fuente de verdad | Código en `backend/app/models/` (migraciones hasta `c8d9e0f1a2b3`, Sprint 2) + DEC-007, DEC-009, DEC-010, DEC-011, DEC-014, DEC-015, DEC-018, DEC-022 + doc 15 |
 | Copia en el repositorio | `docs/diseno/05_modelos_bd.md` (DEC-019). La fuente es este documento |
 
 Todos los modelos usan SQLModel y residen en `backend/app/models/`, un archivo por dominio. Cada tabla y campo indica su estado:
-- **Implementado:** existe en el código y en su migración. Lo integrado en el Sprint 1 indica la tarea y el PR.
+- **Implementado:** existe en el código y en su migración. Lo integrado en los Sprints 1 y 2 indica la tarea y el PR.
 - **Planificado (tarea · historia):** definido por una decisión o por el doc 15; se implementa en esa tarea.
 
 ## Convenciones generales
@@ -128,7 +128,7 @@ Parámetros de IA:
 |---|---|---|
 | score_cv_minimo | 60 | Umbral de la **recomendación** de la etapa de CV; no ejecuta el descarte (DEC-009) |
 | nota_minima_examen | 13 | Umbral de la recomendación de la etapa de examen |
-| top_candidatos_finalistas | 5 | Cantidad sugerida de finalistas |
+| top_candidatos_finalistas | 5 | Cantidad sugerida de finalistas. Define la recomendación de la etapa `entrevista` (DEC-022) |
 | instruccion_ia_extra | null | Instrucción adicional de la vacante |
 
 Campo nuevo:
@@ -137,11 +137,11 @@ Campo nuevo:
 |---|---|---|
 | textos_publicacion | JSON (objeto)? | **Implementado (DEV-A-04 · PR #20).** Textos de difusión generados por la IA y editados por RRHH, por canal |
 
-Reglas (doc 15, implementadas en DEV-A-04): una vacante solo se elimina en estado `borrador` y sin candidatos (409). Transiciones válidas: `borrador` → `abierta`; `abierta` ↔ `pausada`; `abierta` o `pausada` → `cerrada`. **`cerrada` es final** (pendiente de confirmar por el Product Owner).
+Reglas (doc 15, implementadas en DEV-A-04): una vacante solo se elimina en estado `borrador` y sin candidatos (409). Transiciones válidas: `borrador` → `abierta`; `abierta` ↔ `pausada`; `abierta` o `pausada` → `cerrada`. **`cerrada` es final** (confirmado por el Product Owner el 2026-10-28).
 
 ## models/candidato.py
 
-### Candidato — `candidatos` — Implementado (+ campo planificado)
+### Candidato — `candidatos` — Implementado
 
 Datos personales: `id`, `tenant_id`, `vacante_id` (FK), `nombre`, `apellidos`, `email` (indexado), `telefono?`, `linkedin?`, `github?`, `portfolio?`, `cv_url?` (key en S3), `pretension_salarial?`, `fecha_postulacion`.
 
@@ -152,7 +152,7 @@ Resultados de IA: `score_cv?` (0-100), `match_porcentaje?`, `clasificacion_ia?` 
 | Campo | Tipo | Notas |
 |---|---|---|
 | score_final | float? | **DEC-007:** `(score_cv/5) × 0.20 + nota_examen × 0.40 + nota_entrevista × 0.40`, redondeado a 2 decimales; nulo mientras falte una nota. Es una recomendación para el ranking |
-| en_banco_talento | bool | **Planificado (DEV-A-08 · HU-14).** Default false. Marca al candidato como disponible para procesos futuros |
+| en_banco_talento | bool | Implementado (DEV-A-08 · PR #31, migración `b7c8d9e0f1a2`). Default false. RRHH lo marca explícitamente desde el detalle del candidato (`POST /candidatos/{id}/banco-talento`); ni la clasificación de la IA ni el estado lo marcan por sí solos |
 
 #### Máquina de estados (DEC-009)
 
@@ -202,7 +202,7 @@ Solo el autor edita su nota; el autor o un admin la eliminan. Nunca visibles par
 
 ### DecisionCandidato — `decisiones_candidato` — Implementado (DEV-C-10 · PR #13, DEC-009)
 
-Registro de **solo inserción**. Fuente del indicador del OE3 (consulta en `docs/metricas/oe3_registro_decisiones.sql`, TST-C-04).
+Registro de **solo inserción**, que también hace cumplir la base de datos: `vael_app` y `vael_system` no tienen `UPDATE` ni `DELETE` sobre la tabla (migración `c8d9e0f1a2b3` y `crear_roles`, TST-A-01 · PR #33). Fuente del indicador del OE3 (consulta en `docs/metricas/oe3_registro_decisiones.sql`, TST-C-04).
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -210,8 +210,8 @@ Registro de **solo inserción**. Fuente del indicador del OE3 (consulta en `docs
 | tenant_id | str(36) | |
 | candidato_id | str | FK, indexado |
 | etapa | enum | `cv` / `examen` / `entrevista` |
-| recomendacion_ia | enum? | `avanzar` / `descartar`; nulo en la entrevista si no hay umbral |
-| puntaje, umbral | float? | Puntaje de la etapa y criterio aplicado |
+| recomendacion_ia | enum? | `avanzar` / `descartar`. En la entrevista, `avanzar` si el candidato queda entre los primeros `top_candidatos_finalistas` del ranking por `score_final`, empates incluidos (DEC-022); nulo si aún no tiene `score_final` |
+| puntaje, umbral | float? | Puntaje de la etapa y criterio aplicado. En la entrevista: `score_final` y `top_candidatos_finalistas` |
 | justificacion_ia | str? | |
 | decision | enum | `avanzar` / `descartar` |
 | coincide_con_ia | bool? | |
@@ -253,7 +253,7 @@ EntrevistaIA N—1 PlantillaEvaluacion · PlantillaEvaluacion 1—N DimensionEva
 Candidato N—N Tag (candidato_tags) · Candidato 1—N NotaCandidato
 ```
 
-Total: 18 tablas implementadas (las 15 iniciales más `sesiones`, `candidato_tags` y `decisiones_candidato`). Queda planificado un campo: `Candidato.en_banco_talento`.
+Total: 18 tablas implementadas (las 15 iniciales más `sesiones`, `candidato_tags` y `decisiones_candidato`). No quedan campos planificados para el perfil Admin.
 
 ## Aislamiento en la base de datos (DEC-010, DEC-014, DEC-018, DEC-021) — Implementado (DEV-C-11 · PR #10)
 
@@ -283,3 +283,4 @@ Toda tabla nueva con datos de una empresa incluye `tenant_id` y su política de 
 | 2.0 | 2026-10-13 | Alineado con el código real; estados y decisiones (DEC-009); score (DEC-007); RLS (DEC-010); sesiones (DEC-011) |
 | 2.1 | 2026-10-18 | Campos planificados de la retrospectiva: `Vacante.textos_publicacion`, `Candidato.en_banco_talento`, `NotaCandidato.updated_at`; reglas de eliminación de áreas y vacantes; alta de empresa por script (DEC-015); lista cerrada con el feed XML (DEC-014); Lambdas sin acceso a la base de datos (DEC-018); referencias a historias de usuario |
 | 2.2 | 2026-10-27 | Cierre del Sprint 1: pasan a implementados `sesiones`, `candidato_tags`, `decisiones_candidato`, los estados `*_por_confirmar`, `token_version`, `textos_publicacion`, `NotaCandidato.updated_at` y la RLS. Campo nuevo `Empresa.email_contacto`. Reglas de áreas (código único) y vacantes (sin candidatos, `cerrada` final). DEC-021 en la lista cerrada |
+| 2.3 | 2026-11-03 | Sprint 2: `Candidato.en_banco_talento` implementado (PR #31); `decisiones_candidato` con `UPDATE`/`DELETE` revocados en la base (PR #33); recomendación de finalistas por `top_candidatos_finalistas` (DEC-022, PR #27); `cerrada` final confirmado |

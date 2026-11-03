@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.2 — **APROBADO** (2026-10-18); estado de la instrumentación actualizado el 2026-10-27, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.5 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-03, copiada el 2026-11-03.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 14 — Plan de métricas
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.2 — **APROBADO** (2026-10-18); estado de la instrumentación actualizado el 2026-10-27 |
+| Versión | 1.5 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-03 |
 | Tarea de origen | PLN-C-06 |
 | Fuente de los objetivos | Monografía, sección 1.2 y Tabla 1.1 |
 | Datos de prueba | Doc 13 |
@@ -34,6 +34,8 @@ El tiempo de procesamiento de la IA no consume tiempo del reclutador; se reporta
 - **Aprendizaje de los CVs:** la evaluación manual se hace antes de usar VAEL y **cada integrante evalúa en una sola condición** (aprobado en la revisión: R2).
 - **Muestra pequeña y ficticia** (10 CVs), ya declarada como limitación en la sección 1.3.
 
+**Estado (2026-11-03): sin medir.** Los materiales están integrados en `docs/metricas/oe1/` (TST-A-04 · PR #36): rúbrica con los 5 criterios ponderados del doc 08, planilla, procedimiento con R2 y consulta SQL de los minutos con VAEL. Según la rúbrica, la evaluación manual se hace después de DEV-C-14, la tarea que lleva al prompt del análisis el mismo desglose ponderado: DEC-024 (el PR #36 la cita como aprobada por el equipo; todavía no está registrada en `docs/decisiones/`). Falta asignar quién hace cada condición.
+
 ### OE2 — Consistencia de la calificación automatizada
 
 | Aspecto | Definición |
@@ -47,6 +49,8 @@ El tiempo de procesamiento de la IA no consume tiempo del reclutador; se reporta
 | Dependencia | Reintento ante el error 429 de Gemini (HU-21, DEV-C-04) |
 
 Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) cambia entre ejecuciones; para el CV límite es la lectura más relevante.
+
+**Estado (2026-11-03): sin medir.** El script está integrado (TST-A-05 · PR #35) y usa la misma función, el mismo prompt y la misma configuración de generación que producción, sin bajar la temperatura. La primera corrida (2026-11-03, commit `759dd61`, `gemini-3.8-flash`) falló en las 30 ejecuciones: 24 por el límite del plan gratuito de Gemini (429, 20 solicitudes por día por modelo) y 6 por alta demanda (503). Quedó registrada como intento fallido en `docs/metricas/oe2_intento_01_cuota_agotada.json`; el resultado válido solo se escribe en `oe2_consistencia.json` cuando no falla ninguna ejecución. Con ese límite, las 30 llamadas de una corrida no caben en un día del plan gratuito.
 
 ### OE3 — Registro de las decisiones
 
@@ -68,6 +72,10 @@ Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) c
 | Indicador 2 | Despliegues ejecutados por `deploy.yml` / despliegues totales = 100% |
 | Historias | HU-04 (TST-C-01), HU-22 (DEP-C-05) |
 
+**Medición del indicador 1 (TST-C-01 · PR #32, 2026-11-01, commit `a972d83`):** **0 accesos cruzados** en las dos capas. Cobertura del **100%**: 66 de 66 endpoints autenticados de RRHH y 11 de 11 del candidato (DEC-021). Las 5 operaciones de la lista cerrada (6 funciones; DEC-010, DEC-014, DEC-021) quedan fuera del conteo porque usan la sesión del sistema y no llevan `Authorization`. Datos crudos: `docs/metricas/oe4_aislamiento.json`. La suite (`test_aislamiento_multiempresa.py` y `test_rls.py`) corre en cada PR.
+
+**Indicador 2, sin medir todavía:** los 2 despliegues hechos hasta hoy fueron manuales: el del 2026-10-28, ejecutando los pasos por separado, y el del 2026-10-29, con `scripts/aws-encender.ps1`. `deploy.yml` sigue pendiente (DEP-C-05), así que hoy el indicador sería 0 de 2.
+
 ## Métricas de apoyo
 
 | ID | Métrica | Fuente | Uso |
@@ -88,8 +96,12 @@ Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) c
 | Logs JSON con `operation` y `duration_ms` | DEV-C-08 | 1 | **Hecho** (PR #6) |
 | Registro del ID del modelo y los parámetros | DEV-C-04 | 1 | **Hecho** (PR #7) |
 | Consulta del indicador OE3 | TST-C-04 | 1 | **Hecho** (PR #14); verificación continua en el CI |
-| Conteo automático de endpoints autenticados | TST-C-01 | 2 | Pendiente |
-| Script de OE2 | TST-A-05 | 2 | Pendiente |
+| Conteo automático de endpoints autenticados | TST-C-01 | 2 | **Hecho** (PR #32); medición en `docs/metricas/oe4_aislamiento.json` |
+| Materiales de la medición manual del OE1 | TST-A-04 | 2 | **Hecho** (PR #36): `docs/metricas/oe1/` |
+| Criterios ponderados en el prompt del análisis de CV (DEC-024) | DEV-C-14 | Por planificar | Pendiente; condición previa de la medición manual del OE1 |
+| Script de OE2 | TST-A-05 | 2 | **Hecho** (PR #35): `python -m app.scripts.medir_oe2`; primera corrida sin medición válida por la cuota de Gemini |
+| Minutos promedio de revisión (OE1) y tasa de concordancia (M-02) en el dashboard | DEV-A-10 | 2 | **Hecho** (PR #29); se calculan en el backend (`GET /metricas/dashboard`) |
+| Despliegue por `deploy.yml` (indicador 2 del OE4) | DEP-C-05 | 1 | Pendiente |
 
 ## Registro de datos crudos
 
@@ -102,3 +114,6 @@ Cada medición guarda sus datos en `docs/metricas/` del repositorio (CSV o JSON)
 | 1.0 | 2026-10-14 | Borrador |
 | 1.1 | 2026-10-18 | Aprobado: R1 (minutos-persona), R2 (cada integrante en una condición), R3 (tres CVs para OE2); historias y sprints asociados; métrica M-07 de la metodología; destino en el Capítulo IV según el índice oficial |
 | 1.2 | 2026-10-27 | Estado de la instrumentación al cierre del Sprint 1: los cuatro requisitos del Sprint 1 están hechos; consulta del OE3 en `docs/metricas/` |
+| 1.3 | 2026-11-03 | Medición del indicador 1 del OE4: 0 accesos cruzados y 100% de cobertura (TST-C-01 · PR #32); indicador 2 sin medir, con 2 despliegues manuales; OE1 y M-02 en el dashboard (PR #29); pendientes TST-A-04, TST-A-05 y DEP-C-05 |
+| 1.4 | 2026-11-03 | Script del OE2 integrado (TST-A-05 · PR #35); primera corrida con 30 de 30 ejecuciones fallidas por la cuota gratuita de Gemini, registrada como intento; OE2 sin medir |
+| 1.5 | 2026-11-03 | Materiales del OE1 integrados (TST-A-04 · PR #36); OE1 sin medir hasta DEV-C-14 (DEC-024, sin registrar) |

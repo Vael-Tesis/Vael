@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/15_matriz_admin_y_endpoints.md`, versión 1.4 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-28, copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/15_matriz_admin_y_endpoints.md`, versión 1.5 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-11-03, copiada el 2026-11-03.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 15 — Matriz de vistas del perfil Admin y endpoints faltantes
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.4 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-10-28 |
+| Versión | 1.5 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-11-03 |
 | Tareas de origen | PLN-A-01 (matriz) y PLN-A-02 (endpoints faltantes) |
 | Criterio | El Figma no es definitivo. **VAEL deriva de MENTIS: sus vistas se asimilan y se adaptan al formato de VAEL** (decisiones DEC-007 a DEC-019, contrato del backend FastAPI, TypeScript) |
 | Alcance aprobado | **Todo lo de esta matriz se desarrolla en este ciclo** (perfil Admin completo) |
@@ -52,21 +52,23 @@ Todas las vistas cumplen el criterio de DEC-008: `.tsx`, cliente tipado, sin moc
 
 Elementos transversales a asimilar: `ConfirmModal` (confirmación antes de acciones irreversibles) y `ProtectedRoute` (guard de rutas), que en VAEL valida también el rol. **Ambos implementados:** `ConfirmModal` (DEV-A-03) y `ProtectedRoute` + `RutaPorRol`, con el menú filtrado por rol (DEV-A-02).
 
-### Estado de las vistas al cierre del Sprint 1 (2026-10-27)
+### Estado de las vistas tras el Sprint 2 (2026-11-03)
 
 | Estado | Vistas |
 |---|---|
-| **Migradas a `.tsx` con el cliente tipado, sin mocks** | P-01 Login (DEV-A-02 · PR #18) · P-03, P-04 y P-05 Vacantes (DEV-A-04 · PR #20) · P-06 Candidatos, P-07 Registrar y carga masiva, P-08 Detalle, P-09 Bandeja (DEV-A-05 · PR #21) · P-16 Plantillas y P-17 Áreas (DEV-A-03 · PR #19) |
-| Pendientes (Sprint 2) | P-02 Dashboard (DEV-A-10) · P-10 Ranking (DEV-A-06) · P-11 a P-15 Evaluaciones y auditoría (DEV-A-07) · P-18 Banco de talento (DEV-A-08) · P-19 Usuarios (DEV-A-09) |
+| **Migradas a `.tsx` con el cliente tipado, sin mocks** | P-01 Login (DEV-A-02 · PR #18) · P-03, P-04 y P-05 Vacantes (DEV-A-04 · PR #20) · P-06 Candidatos, P-07 Registrar y carga masiva, P-08 Detalle, P-09 Bandeja (DEV-A-05 · PR #21) · P-16 Plantillas y P-17 Áreas (DEV-A-03 · PR #19) · P-10 Ranking (DEV-A-06 · PR #27) · P-11 a P-15 Exámenes, entrevistas y auditoría (DEV-A-07 · PR #28) · P-02 Dashboard (DEV-A-10 · PR #29) · P-19 Usuarios (DEV-A-09 · PR #30) · P-18 Banco de talento (DEV-A-08 · PR #31) |
+| Pendientes | Ninguna del perfil Admin: las 19 vistas están migradas. Siguen en JavaScript las páginas del candidato y la postulación pública, que son del siguiente ciclo (perfil Candidato) |
 
 Observaciones:
 - **V-04, selector de plantilla:** **DECISIÓN del Product Owner (2026-10-28):** no se implementa. `Vacante` no tiene `plantilla_id` (doc 05) y se retiró la referencia también del doc 13.
 - **V-05, enlace de postulación (observación de TST-A-01 · PR #23):** en la pestaña Publicación, encima del feed XML, se muestra `/postular/{codigo}`, copiable con un clic o con el icono. Solo con la vacante abierta; en una confidencial avisa que solo postula quien tenga el enlace.
-- **V-22, cambiar contraseña (observación de TST-A-01 · PR #23):** abre un modal (`ConfirmModal` + `Input`) con confirmación y mínimo de 8 caracteres, en lugar del diálogo del navegador. La pantalla sigue en JavaScript hasta DEV-A-09.
-- **V-16, ruta de la lista de entrevistas:** la pantalla actual llama a `/api/entrevista/lista`, que no existe (la ruta es `GET /api/entrevista`); se corrige al migrarla en DEV-A-07.
-- **V-11, enviar al banco:** depende de DEV-A-08.
+- **V-22, cambiar contraseña (observación de TST-A-01 · PR #23):** abre un modal (`ConfirmModal` + `Input`) con confirmación y mínimo de 8 caracteres, en lugar del diálogo del navegador. Se mantuvo al migrar la pantalla a TypeScript (DEV-A-09 · PR #30), que agregó reenviar credenciales y los permisos por rol en la interfaz.
+- **V-16, ruta de la lista de entrevistas:** corregida al migrar la pantalla (DEV-A-07 · PR #28): usa `GET /api/entrevista`.
+- **V-11, enviar al banco:** implementado en el detalle del candidato (DEV-A-08 · PR #31), con la insignia "En el banco de talento" cuando ya está marcado.
+- **V-02, raíz:** redirige al dashboard (P-02), ya no a vacantes.
+- **V-13, ranking:** muestra aparte los procesos incompletos y la recomendación de finalistas de cada candidato (DEC-022).
 - **P-09, requisitos de diseño:** los seis requisitos de abajo están implementados. El diseño en Figma (P-07 del Sprint 0) sigue pendiente.
-- Las vistas migradas se verificaron con `tsc`, el build y una prueba de humo por HTTP; **falta la revisión visual en el navegador**.
+- Las vistas migradas se verifican con `tsc` y el build en el CI. La prueba E2E con Playwright (TST-A-03 · PR #34) recorre en el navegador el flujo principal: login y dashboard, vacantes, candidato con su análisis, decisión en la bandeja, historial de decisiones, decisión de un finalista en el ranking, cierre de sesión y renovación de la sesión. El resto de las vistas del Sprint 2 (exámenes, entrevistas, auditoría, banco de talento y usuarios) no tiene todavía una revisión visual manual registrada.
 
 ### Requisitos de diseño de la bandeja (P-09)
 
@@ -81,7 +83,7 @@ Observaciones:
 
 **Corrección registrada:** la v1.1 habló de "14 endpoints". El conteo correcto es **16 endpoints nuevos**: 9 de la retrospectiva, 6 de etiquetas y 1 de métricas. A ellos se suman los 4 de decisiones (DEC-009) y el endpoint interno de las Lambdas (DEC-018), especificados en el doc 06.
 
-**Estado al cierre del Sprint 1:** 14 de los 16 endpoints nuevos están implementados (DEV-A-01 · PR #17 y DEV-A-04 · PR #20), además de los 4 de decisiones (DEV-C-10 · PR #13). Faltan `POST /candidatos/{id}/banco-talento` (DEV-A-08), `GET /metricas/dashboard` (DEV-A-10) y los endpoints internos (HU-23).
+**Estado tras el Sprint 2 (2026-11-03):** los 16 endpoints nuevos están implementados: 14 en el Sprint 1 (DEV-A-01 · PR #17 y DEV-A-04 · PR #20), `GET /metricas/dashboard` (DEV-A-10 · PR #29) y `POST /candidatos/{id}/banco-talento` (DEV-A-08 · PR #31). También los 4 de decisiones (DEV-C-10 · PR #13). Faltan solo los endpoints internos de las Lambdas (HU-23, Sprint 3).
 
 ### Derivados de la retrospectiva (9)
 
@@ -127,3 +129,4 @@ Sin endpoint: `python -m app.scripts.crear_empresa`.
 | 1.2 | 2026-10-18 | Aprobado; alcance completo en este ciclo; historias asociadas; corrección del conteo (16 endpoints nuevos, no 14) |
 | 1.3 | 2026-10-27 | Estado al cierre del Sprint 1: 10 vistas migradas y 14 de 16 endpoints nuevos implementados; eliminar vacante exige además que no tenga candidatos; selector de plantilla pendiente de decisión |
 | 1.4 | 2026-10-28 | Sin selector de plantilla (decisión del Product Owner); enlace de postulación en V-05 y modal de contraseña en V-22 (PR #23); ruta rota de la lista de entrevistas registrada |
+| 1.5 | 2026-11-03 | Sprint 2: las 19 vistas del perfil Admin migradas (PR #27 a #31); 16 de 16 endpoints nuevos implementados; ruta de V-16 corregida; enviar al banco en V-11; la raíz redirige al dashboard |
