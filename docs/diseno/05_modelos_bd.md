@@ -1,13 +1,13 @@
-> COPIA del documento del Drive `VAEL/Docs/05_modelos_bd.md`, versión 2.3, copiada el 2026-11-03.
+> COPIA del documento del Drive `VAEL/Docs/05_modelos_bd.md`, versión 2.4, copiada el 2026-11-04.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 05 — Modelos de Base de Datos
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.3 |
+| Versión | 2.4 |
 | Actualizado | 2026-11-03 |
-| Fuente de verdad | Código en `backend/app/models/` (migraciones hasta `c8d9e0f1a2b3`, Sprint 2) + DEC-007, DEC-009, DEC-010, DEC-011, DEC-014, DEC-015, DEC-018, DEC-022 + doc 15 |
+| Fuente de verdad | Código en `backend/app/models/` (migraciones hasta `d4e5f6a7b8c9`) + DEC-007, DEC-009, DEC-010, DEC-011, DEC-014, DEC-015, DEC-018, DEC-022, DEC-024 + doc 15 |
 | Copia en el repositorio | `docs/diseno/05_modelos_bd.md` (DEC-019). La fuente es este documento |
 
 Todos los modelos usan SQLModel y residen en `backend/app/models/`, un archivo por dominio. Cada tabla y campo indica su estado:
@@ -152,6 +152,7 @@ Resultados de IA: `score_cv?` (0-100), `match_porcentaje?`, `clasificacion_ia?` 
 | Campo | Tipo | Notas |
 |---|---|---|
 | score_final | float? | **DEC-007:** `(score_cv/5) × 0.20 + nota_examen × 0.40 + nota_entrevista × 0.40`, redondeado a 2 decimales; nulo mientras falte una nota. Es una recomendación para el ranking |
+| score_desglose | JSON (objeto)? | **Implementado (DEV-C-14 · HU-12, DEC-024).** Puntaje y justificación por cada uno de los cinco criterios ponderados (`match_habilidades`, `experiencia`, `formacion`, `coherencia`, `trayectoria`); `score_cv` es su suma. Nulo en los candidatos analizados antes de esta decisión; la pantalla lo indica como "análisis anterior al desglose" |
 | en_banco_talento | bool | Implementado (DEV-A-08 · PR #31, migración `b7c8d9e0f1a2`). Default false. RRHH lo marca explícitamente desde el detalle del candidato (`POST /candidatos/{id}/banco-talento`); ni la clasificación de la IA ni el estado lo marcan por sí solos |
 
 #### Máquina de estados (DEC-009)
@@ -268,8 +269,17 @@ CREATE POLICY aislamiento_tenant ON <tabla>
 | Rol | Uso |
 |---|---|
 | `vael_owner` | Dueño de las tablas; migraciones |
-| `vael_app` | Peticiones normales; sin superusuario ni `BYPASSRLS` |
-| `vael_system` | Solo la lista cerrada: login, postulación pública por código, listado público de vacantes, feed XML (DEC-014) y resolución del código del candidato (DEC-021) |
+| `vael_app` | Peticiones normales; sin superusuario ni `BYPASSRLS`. Sobre `decisiones_candidato`, solo `SELECT` e `INSERT` (DEC-009, desde la migración `c8d9e0f1a2b3`) |
+| `vael_system` | Solo la lista cerrada: login, postulación pública por código, listado público de vacantes, feed XML (DEC-014) y resolución del código del candidato (DEC-021). Sobre `decisiones_candidato`, igual que `vael_app`: solo `SELECT` e `INSERT` |
+
+### Permisos por tabla más allá de la RLS
+
+La RLS aísla las filas por empresa; algunas tablas, además, restringen qué **operaciones** puede hacer `vael_app`/`vael_system` sobre ellas, cuando una regla de negocio lo exige (DEC-009):
+
+| Tabla | Restricción | Por qué |
+|---|---|---|
+| `decisiones_candidato` | Sin `UPDATE` ni `DELETE` para `vael_app` ni `vael_system` | Es de solo inserción (DEC-009); revertir una decisión es insertar una fila nueva con `reemplaza_a`, nunca editar ni borrar la anterior |
+| `alembic_version` | Sin ningún privilegio para `vael_app` ni `vael_system` | Solo la tocan las migraciones, como `vael_owner` |
 
 El `tenant_id` se fija al inicio de cada transacción (evento `after_begin`). **Las Lambdas no acceden a la base de datos** (DEC-018): entregan sus resultados al backend, que persiste con `vael_app` y el tenant del mensaje.
 
@@ -284,3 +294,4 @@ Toda tabla nueva con datos de una empresa incluye `tenant_id` y su política de 
 | 2.1 | 2026-10-18 | Campos planificados de la retrospectiva: `Vacante.textos_publicacion`, `Candidato.en_banco_talento`, `NotaCandidato.updated_at`; reglas de eliminación de áreas y vacantes; alta de empresa por script (DEC-015); lista cerrada con el feed XML (DEC-014); Lambdas sin acceso a la base de datos (DEC-018); referencias a historias de usuario |
 | 2.2 | 2026-10-27 | Cierre del Sprint 1: pasan a implementados `sesiones`, `candidato_tags`, `decisiones_candidato`, los estados `*_por_confirmar`, `token_version`, `textos_publicacion`, `NotaCandidato.updated_at` y la RLS. Campo nuevo `Empresa.email_contacto`. Reglas de áreas (código único) y vacantes (sin candidatos, `cerrada` final). DEC-021 en la lista cerrada |
 | 2.3 | 2026-11-03 | Sprint 2: `Candidato.en_banco_talento` implementado (PR #31); `decisiones_candidato` con `UPDATE`/`DELETE` revocados en la base (PR #33); recomendación de finalistas por `top_candidatos_finalistas` (DEC-022, PR #27); `cerrada` final confirmado |
+| 2.4 | 2026-11-04 | Campo `Candidato.score_desglose` (DEC-024, DEV-C-14 · PR #38, migración `d4e5f6a7b8c9`): desglose ponderado y auditable de `score_cv` por los cinco criterios, con su justificación. Sección "Permisos por tabla más allá de la RLS" y permisos de `vael_app` y `vael_system` sobre `decisiones_candidato` en la tabla de roles |

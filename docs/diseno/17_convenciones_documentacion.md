@@ -1,4 +1,4 @@
-> COPIA del documento del Drive `VAEL/Docs/17_convenciones_documentacion.md`, versión 1.2 — **APROBADO** (2026-10-28), copiada el 2026-10-28.
+> COPIA del documento del Drive `VAEL/Docs/17_convenciones_documentacion.md`, versión 1.2 — **APROBADO** (2026-10-28), copiada el 2026-11-04.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 17 — Convenciones de documentación

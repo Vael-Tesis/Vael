@@ -1,13 +1,13 @@
-> COPIA del documento del Drive `VAEL/Docs/08_servicios_negocio.md`, versión 2.3, copiada el 2026-11-03.
+> COPIA del documento del Drive `VAEL/Docs/08_servicios_negocio.md`, versión 3.0, copiada el 2026-11-04.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 08 — Servicios de Negocio
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.3 |
+| Versión | 3.0 |
 | Actualizado | 2026-11-03 |
-| Fuente de verdad | Código en `backend/app/services/`, `backend/app/core/` y `backend/app/scripts/` (revisado tras el Sprint 2, 2026-11-03) + DEC-001, DEC-002, DEC-007, DEC-009, DEC-010, DEC-013, DEC-015, DEC-016, DEC-018, DEC-022 |
+| Fuente de verdad | Código en `backend/app/services/`, `backend/app/core/` y `backend/app/scripts/` (revisado tras el Sprint 2, 2026-11-03) + DEC-001, DEC-002, DEC-007, DEC-009, DEC-010, DEC-013, DEC-015, DEC-016, DEC-018, DEC-022, DEC-024 |
 | Copia en el repositorio | `docs/diseno/08_servicios_negocio.md` (DEC-019). La fuente es este documento |
 
 Los servicios contienen la lógica de negocio y no dependen de FastAPI. Estados: **Implementado** · **Cambia (tarea · historia)** · **Planificado (tarea · historia)** · **Se elimina (tarea)**. Lo integrado en los Sprints 1 y 2 indica la tarea y el PR.
@@ -77,12 +77,15 @@ Usa `google-genai` (`google-generativeai` se eliminó), con el ID de modelo veri
 | Función | Estado | Descripción |
 |---|---|---|
 | `extraer_texto_pdf(pdf_bytes)` | Implementado | PyPDF2; si falla o queda vacío, pdfminer.six |
-| `construir_prompt_analisis(texto_cv, vacante, area)` | Implementado. **Cambia (HU-23):** recibirá los datos de la vacante como diccionario, no como objeto de la base de datos | Texto del CV, requisitos, habilidades, tecnologías, nivel, instrucciones de IA; exige JSON puro |
+| `construir_prompt_analisis(texto_cv, vacante, area)` | Implementado (DEV-C-14 · HU-12, DEC-024). **Cambia (HU-23):** recibirá los datos de la vacante como diccionario, no como objeto de la base de datos | Texto del CV, requisitos, habilidades, tecnologías, nivel, instrucciones de IA; pide los cinco criterios ponderados (puntaje + justificación por criterio), sin pedir el total; exige JSON puro |
+| `_validar_y_sumar_desglose(criterios)` | Implementado (DEV-C-14 · HU-12, DEC-024) | Valida que estén los cinco criterios y que cada puntaje sea un entero dentro de su rango; `score_cv` es su suma. Si algo no cumple, lanza el error que deja al análisis como fallido (ver más abajo) |
 | `calcular_analisis_cv(mensaje)` | **Planificado (HU-23)** | Parte de cálculo: descarga el PDF, extrae el texto, llama a Gemini y devuelve el resultado. Sin base de datos |
 | `aplicar_resultado_analisis_cv(resultado, tenant_id)` | **Planificado (HU-23)** | Guarda score, clasificación, resumen, habilidades, inconsistencias y enlaces; genera la recomendación según `score_cv_minimo`; deja `cv_por_confirmar`. No emite tokens ni envía correos |
 | `analizar_cv(...)` y `analizar_cv_candidato(...)` | Implementados | Ya cumplen DEC-009 (DEV-C-10 · PR #13): guardan el análisis y dejan `cv_por_confirmar`, sin tokens ni correos. Un CV sin texto extraíble (escaneado) no va a Gemini: queda en `cv_por_confirmar` como `requiere_revision` (DEV-A-05). **Se reemplazan (HU-23)** por las dos funciones anteriores |
 
-Criterios del score (0-100): match de habilidades (0-40), experiencia (0-20), formación (0-15), coherencia (0-15), trayectoria (0-10). Respuesta esperada: doc 07, etapa 3.
+**Corregido (DEV-C-14 · PR #38, DEC-024):** desde su versión 1, este documento describía un desglose ponderado del score (match de habilidades 0-40, experiencia 0-20, formación 0-15, coherencia 0-15, trayectoria 0-10) que el código nunca implementó: el prompt pedía a Gemini un único puntaje global. DEC-024 corrigió el código: `construir_prompt_analisis` pide los cinco criterios por separado, cada uno con una justificación breve, y `_validar_y_sumar_desglose` calcula `score_cv` como su suma, sin depender de que el modelo sume bien. El desglose se guarda en `Candidato.score_desglose` (doc 05) y se muestra en el detalle del candidato (doc 06; RF-A-10 del doc 16). Los pesos son fijos para todo el sistema en esta versión; hacerlos configurables por empresa queda como trabajo futuro.
+
+Respuesta esperada: doc 07, etapa 3.
 
 ## services/examen.py
 
@@ -202,3 +205,4 @@ Las métricas del dashboard (DEV-A-10 · PR #29) se calculan en `routers/metrica
 | 2.1 | 2026-10-18 | División cálculo/aplicación para las Lambdas (DEC-016, DEC-018); despachador; firma HMAC; reintento ante 429 asignado a DEV-C-04; servicios de vacantes y candidatos de la retrospectiva; script de alta de empresa (DEC-015); remitente `vael.work`; referencias a historias de usuario |
 | 2.2 | 2026-10-27 | Cierre del Sprint 1: implementados despachador en proceso, `google-genai` con reintento, score, logs JSON, servicio de decisiones, correo de cierre, sesiones, vacantes, candidatos y scripts. Emociones eliminadas. La división cálculo/aplicación y la firma HMAC quedan para HU-23. Pendiente: lote de la etapa entrevista (DEC-022) |
 | 2.3 | 2026-11-03 | Sprint 2: recomendación de finalistas por `top_candidatos_finalistas` con `ranking_vacante` y `recomendaciones_finalistas` (DEC-022, PR #27); `enviar_correos=False` para las semillas (PR #28); banco de talento y métricas implementados en sus routers (PR #29, #31); reintento ante 504 y tiempo límite de Gemini (PR #23) |
+| 3.0 | 2026-11-04 | **Corrección (versión mayor):** la sección de `services/analisis_cv.py` describía desde la v1 un desglose ponderado que el código no implementaba; DEC-024 lo implementó (DEV-C-14 · PR #38): `construir_prompt_analisis` pide los cinco criterios con su justificación y `_validar_y_sumar_desglose` valida y suma `score_cv` |

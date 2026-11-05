@@ -1,13 +1,13 @@
-> COPIA del documento del Drive `VAEL/Docs/06_api_endpoints.md`, versión 2.4, copiada el 2026-11-03.
+> COPIA del documento del Drive `VAEL/Docs/06_api_endpoints.md`, versión 2.5, copiada el 2026-11-04.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 06 — API: Endpoints
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.4 |
+| Versión | 2.5 |
 | Actualizado | 2026-11-03 |
-| Fuente de verdad | Código en `backend/app/routers/` (85 rutas en 10 routers, contadas en `frontend/openapi.json` el 2026-11-03, tras el Sprint 2) + DEC-001, DEC-008 a DEC-015, DEC-018, DEC-021, DEC-022 + doc 15 |
+| Fuente de verdad | Código en `backend/app/routers/` (85 rutas en 10 routers, contadas en `frontend/openapi.json` el 2026-11-03, tras el Sprint 2) + DEC-001, DEC-008 a DEC-015, DEC-018, DEC-021, DEC-022, DEC-024 + doc 15 |
 | Copia en el repositorio | `docs/diseno/06_api_endpoints.md` (DEC-019). La fuente es este documento |
 
 ## Alcance de este documento
@@ -98,7 +98,7 @@ Regla: la suma de los pesos de una plantilla debe ser 100. Se valida en **toda**
 |---|---|---|---|
 | GET | `/candidatos` | Autenticado | Implementado. Filtro `tag_id` con `candidato_tags` (DEV-C-05 · PR #12) |
 | POST | `/candidatos` | Reclutador+ | Implementado. **Ajustado (DEV-A-05 · PR #21):** 422 si el archivo no es un PDF válido; 502 si falla el almacenamiento |
-| GET | `/candidatos/{id}` | Autenticado | Implementado. Incluye el historial de decisiones (DEV-C-10) y las etiquetas (DEV-A-01) |
+| GET | `/candidatos/{id}` | Autenticado | Implementado. Incluye el historial de decisiones (DEV-C-10) y las etiquetas (DEV-A-01). La respuesta expone `score_desglose` (DEV-C-14, DEC-024): puntaje y justificación por criterio; nulo en un análisis anterior a esta decisión |
 | PUT | `/candidatos/{id}` | Reclutador+ | Implementado |
 | POST | `/candidatos/{id}/analizar` | Reclutador+ | Implementado. Deja `cv_por_confirmar` con una recomendación (DEC-009, DEV-C-10); se ejecuta con `despachar_tarea` (DEC-016) |
 | POST | `/candidatos/carga-masiva` | Reclutador+ | Implementado. Mismo comportamiento; la respuesta incluye `fallidos` con el archivo y el motivo (DEV-A-05 · HU-11) |
@@ -111,7 +111,7 @@ Regla: la suma de los pesos de una plantilla debe ser 100. Se valida en **toda**
 | DELETE | `/candidatos/{id}/notas/{nota_id}` | Autor o admin | Implementado (DEV-A-01 · PR #17) |
 | POST | `/candidatos/{id}/tags` | Reclutador+ | Implementado (DEV-A-01 · PR #17): `{ "tag_id" }`, idempotente |
 | DELETE | `/candidatos/{id}/tags/{tag_id}` | Reclutador+ | Implementado (DEV-A-01 · PR #17) |
-| POST | `/candidatos/{id}/banco-talento` | Reclutador+ | Implementado (DEV-A-08 · PR #31). Marca `en_banco_talento`; idempotente |
+| POST | `/candidatos/{id}/banco-talento` | Reclutador+ | Implementado (DEV-A-08 · PR #31). Marca `en_banco_talento = true`; idempotente (repetirlo no falla ni cambia nada). 404 si el candidato no existe en el tenant |
 | GET | `/candidatos/ranking` | Autenticado | Implementado. Fórmula de DEC-007 (DEV-C-01 · PR #4). **Ajustado (DEV-A-06 · PR #27):** 404 si la vacante no es de la empresa; los procesos incompletos van aparte, al final y sin recomendación (`proceso_completo`); cada candidato trae `recomendacion_finalista` (DEC-022) |
 | GET | `/candidatos/banco-talento` | Autenticado | Implementado. **Ajustado (DEV-A-08 · PR #31):** solo candidatos marcados con `en_banco_talento` (antes se deducía de la clasificación de la IA y del estado); filtro opcional `area_id` |
 
@@ -147,7 +147,7 @@ Reglas: justificación obligatoria si la decisión no coincide con la IA (422 si
 
 | Método | Ruta | Permiso | Función |
 |---|---|---|---|
-| GET | `/metricas/dashboard?desde=&hasta=` | Autenticado | Vacantes y candidatos por estado, recomendaciones pendientes por etapa (estado actual, sin filtro de fechas); postulaciones por día, minutos promedio de revisión (OE1) y tasa de concordancia (M-02), acotados al rango. Todo se calcula en el backend |
+| GET | `/metricas/dashboard?desde=&hasta=` | Autenticado | `vacantes_por_estado`, `candidatos_por_estado` y `recomendaciones_pendientes_por_etapa` (los mismos estados de la bandeja y del ranking de finalistas, DEC-022) son la fotografía actual del tenant, sin filtrar por fecha. `postulaciones_por_dia`, `minutos_promedio_revision` (OE1, `decidido_en − revision_inicio` de `decisiones_candidato`) y `tasa_concordancia` (M-02, `coincide_con_ia`) sí se acotan a `desde`/`hasta`; sin ellos, cubren todo el histórico. Ambas quedan `null` sin datos en el rango, en vez de 0 o un error de división |
 
 ## /api/evaluaciones
 
@@ -200,3 +200,4 @@ No es un endpoint: `python -m app.scripts.crear_empresa` (DEC-015).
 | 2.2 | 2026-10-27 | Cierre del Sprint 1 (83 rutas): pasan a implementados auth con sesiones, áreas, tags, notas, decisiones, textos y eliminación de vacantes. `marcar-finalista` eliminado. Ampliación de `PUT /plantillas/{id}` con `dimensiones`. Códigos 401/403/409/422/502 documentados. Resolución del código del candidato en la lista cerrada (DEC-021). Pendiente: lote de la etapa entrevista (DEC-022) |
 | 2.3 | 2026-10-28 | Postulación pública con 422 y 502 (PR #23); criterio del lote de finalistas decidido (DEC-022, por registrar en DEV-A-06) |
 | 2.4 | 2026-11-03 | Sprint 2 (85 rutas, 10 routers): `/metricas/dashboard` y `POST /candidatos/{id}/banco-talento` implementados; ranking con procesos incompletos aparte y recomendación de finalistas (DEC-022, PR #27); banco de talento por marcado explícito con filtro por área (PR #31); ruta de la lista de entrevistas corregida en el frontend (PR #28) |
+| 2.5 | 2026-11-04 | DEC-024 (DEV-C-14 · PR #38): `GET /candidatos/{id}` expone `score_desglose`. Detalle del comportamiento de `/metricas/dashboard` (fotografía de estados sin filtro de fechas; métricas acotadas por `desde`/`hasta` y nulas sin datos) y del 404 de `POST /candidatos/{id}/banco-talento` |

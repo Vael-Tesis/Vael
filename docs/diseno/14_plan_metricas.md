@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.5 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-03, copiada el 2026-11-03.
+> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.6 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-04, copiada el 2026-11-04.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 14 — Plan de métricas
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.5 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-03 |
+| Versión | 1.6 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-04 |
 | Tarea de origen | PLN-C-06 |
 | Fuente de los objetivos | Monografía, sección 1.2 y Tabla 1.1 |
 | Datos de prueba | Doc 13 |
@@ -34,7 +34,7 @@ El tiempo de procesamiento de la IA no consume tiempo del reclutador; se reporta
 - **Aprendizaje de los CVs:** la evaluación manual se hace antes de usar VAEL y **cada integrante evalúa en una sola condición** (aprobado en la revisión: R2).
 - **Muestra pequeña y ficticia** (10 CVs), ya declarada como limitación en la sección 1.3.
 
-**Estado (2026-11-03): sin medir.** Los materiales están integrados en `docs/metricas/oe1/` (TST-A-04 · PR #36): rúbrica con los 5 criterios ponderados del doc 08, planilla, procedimiento con R2 y consulta SQL de los minutos con VAEL. Según la rúbrica, la evaluación manual se hace después de DEV-C-14, la tarea que lleva al prompt del análisis el mismo desglose ponderado: DEC-024 (el PR #36 la cita como aprobada por el equipo; todavía no está registrada en `docs/decisiones/`). Falta asignar quién hace cada condición.
+**Estado (2026-11-04): sin medir.** Los materiales están integrados en `docs/metricas/oe1/` (TST-A-04 · PR #36): rúbrica con los 5 criterios ponderados, planilla, procedimiento con R2 y consulta SQL de los minutos con VAEL. Los criterios de la rúbrica son los mismos que ahora usa el análisis de VAEL: DEC-024, registrada e implementada en DEV-C-14 (PR #38). La evaluación manual ya puede hacerse. Falta asignar quién hace cada condición.
 
 ### OE2 — Consistencia de la calificación automatizada
 
@@ -50,7 +50,7 @@ El tiempo de procesamiento de la IA no consume tiempo del reclutador; se reporta
 
 Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) cambia entre ejecuciones; para el CV límite es la lectura más relevante.
 
-**Estado (2026-11-03): sin medir.** El script está integrado (TST-A-05 · PR #35) y usa la misma función, el mismo prompt y la misma configuración de generación que producción, sin bajar la temperatura. La primera corrida (2026-11-03, commit `759dd61`, `gemini-3.8-flash`) falló en las 30 ejecuciones: 24 por el límite del plan gratuito de Gemini (429, 20 solicitudes por día por modelo) y 6 por alta demanda (503). Quedó registrada como intento fallido en `docs/metricas/oe2_intento_01_cuota_agotada.json`; el resultado válido solo se escribe en `oe2_consistencia.json` cuando no falla ninguna ejecución. Con ese límite, las 30 llamadas de una corrida no caben en un día del plan gratuito.
+**Estado (2026-11-03): sin medir.** El script está integrado (TST-A-05 · PR #35) y usa la misma función, el mismo prompt y la misma configuración de generación que producción, sin bajar la temperatura. La primera corrida (2026-11-03, commit `759dd61`, `gemini-3.8-flash`) falló en las 30 ejecuciones: 24 por el límite del plan gratuito de Gemini (429, 20 solicitudes por día por modelo) y 6 por alta demanda (503). Quedó registrada como intento fallido en `docs/metricas/oe2_intento_01_cuota_agotada.json`; el resultado válido solo se escribe en `oe2_consistencia.json` cuando no falla ninguna ejecución. Con ese límite, las 30 llamadas de una corrida no caben en un día del plan gratuito. **Desde DEV-C-14 (PR #38), el script mide el sistema con el desglose de DEC-024:** valida y suma los cinco criterios igual que producción. Por eso la medición válida del OE2 debe hacerse sobre ese código, no sobre el de la primera corrida.
 
 ### OE3 — Registro de las decisiones
 
@@ -98,7 +98,7 @@ Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) c
 | Consulta del indicador OE3 | TST-C-04 | 1 | **Hecho** (PR #14); verificación continua en el CI |
 | Conteo automático de endpoints autenticados | TST-C-01 | 2 | **Hecho** (PR #32); medición en `docs/metricas/oe4_aislamiento.json` |
 | Materiales de la medición manual del OE1 | TST-A-04 | 2 | **Hecho** (PR #36): `docs/metricas/oe1/` |
-| Criterios ponderados en el prompt del análisis de CV (DEC-024) | DEV-C-14 | Por planificar | Pendiente; condición previa de la medición manual del OE1 |
+| Criterios ponderados en el prompt del análisis de CV (DEC-024) | DEV-C-14 | 3 | **Hecho** (PR #38); condición previa de la medición manual del OE1 y de la medición válida del OE2 |
 | Script de OE2 | TST-A-05 | 2 | **Hecho** (PR #35): `python -m app.scripts.medir_oe2`; primera corrida sin medición válida por la cuota de Gemini |
 | Minutos promedio de revisión (OE1) y tasa de concordancia (M-02) en el dashboard | DEV-A-10 | 2 | **Hecho** (PR #29); se calculan en el backend (`GET /metricas/dashboard`) |
 | Despliegue por `deploy.yml` (indicador 2 del OE4) | DEP-C-05 | 1 | Pendiente |
@@ -117,3 +117,4 @@ Cada medición guarda sus datos en `docs/metricas/` del repositorio (CSV o JSON)
 | 1.3 | 2026-11-03 | Medición del indicador 1 del OE4: 0 accesos cruzados y 100% de cobertura (TST-C-01 · PR #32); indicador 2 sin medir, con 2 despliegues manuales; OE1 y M-02 en el dashboard (PR #29); pendientes TST-A-04, TST-A-05 y DEP-C-05 |
 | 1.4 | 2026-11-03 | Script del OE2 integrado (TST-A-05 · PR #35); primera corrida con 30 de 30 ejecuciones fallidas por la cuota gratuita de Gemini, registrada como intento; OE2 sin medir |
 | 1.5 | 2026-11-03 | Materiales del OE1 integrados (TST-A-04 · PR #36); OE1 sin medir hasta DEV-C-14 (DEC-024, sin registrar) |
+| 1.6 | 2026-11-04 | DEC-024 registrada e implementada (DEV-C-14 · PR #38): el OE1 ya puede medirse con la rúbrica de criterios ponderados, y la medición válida del OE2 se hará sobre el análisis con desglose |

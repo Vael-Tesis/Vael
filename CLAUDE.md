@@ -140,6 +140,8 @@ SEED_PASSWORD=<la de las semillas> npm run e2e
 
 El CI ejecuta lo mismo, incluida la E2E en un job aparte, y bloquea el merge si falla.
 
+- Antes de correr la suite completa, verifica que no haya otro proceso de pytest activo contra la misma base (un solo proceso por vez; tres incidentes de este tipo en el Sprint 2).
+
 ## 13. Commits y ramas
 
 - Commits convencionales con el ID de la tarea: `feat(DEV-A-04): ...`, `fix(DEV-C-01): ...`, `docs(PLN-C-02): ...`, `test(TST-C-01): ...`, `chore(PLN-C-04): ...`.
