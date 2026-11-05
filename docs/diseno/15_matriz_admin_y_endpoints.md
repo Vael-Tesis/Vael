@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/15_matriz_admin_y_endpoints.md`, versión 1.5 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-11-03, copiada el 2026-11-03.
+> COPIA del documento del Drive `VAEL/Docs/15_matriz_admin_y_endpoints.md`, versión 1.6 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-11-04, copiada el 2026-11-04.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 15 — Matriz de vistas del perfil Admin y endpoints faltantes
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.5 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-11-03 |
+| Versión | 1.6 — **APROBADO** (2026-10-18); estado de implementación actualizado el 2026-11-04 |
 | Tareas de origen | PLN-A-01 (matriz) y PLN-A-02 (endpoints faltantes) |
 | Criterio | El Figma no es definitivo. **VAEL deriva de MENTIS: sus vistas se asimilan y se adaptan al formato de VAEL** (decisiones DEC-007 a DEC-019, contrato del backend FastAPI, TypeScript) |
 | Alcance aprobado | **Todo lo de esta matriz se desarrolla en este ciclo** (perfil Admin completo) |
@@ -39,7 +39,7 @@ Todas las vistas cumplen el criterio de DEC-008: `.tsx`, cliente tipado, sin moc
 | V-10 | EntrevistaPanel | Dentro de P-08 | Asimilar | Resumen y capturas de la entrevista | Sin emociones (DEC-001) | HU-12 |
 | V-11 | AccionesTalento | Dentro de P-08 | **Adaptar** | Descartar con motivo obligatorio; enviar al banco | Descartar = decisión con justificación (DEC-009) y correo de cierre (DEC-013) | HU-14, HU-15 |
 | V-12 | *(no existe)* | **P-09 Bandeja de recomendaciones** | **Nueva** | — | Requisitos de diseño abajo | HU-15 |
-| V-13 | Ranking | P-10 Ranking | **Adaptar** | Finalistas en lote; filtro por vacante | Decisiones en lote de la etapa `entrevista`; proceso incompleto aparte (DEC-007) | HU-17, HU-18 |
+| V-13 | Ranking | P-10 Ranking | **Adaptar** | Finalistas en lote; filtro por vacante | Decisiones en lote de la etapa `entrevista` (DEC-022); proceso incompleto aparte (DEC-007) | HU-17, HU-18 |
 | V-14 | Evaluaciones | P-11 Exámenes | Asimilar | Filtro por vacante | — | HU-19 |
 | V-15 | ExamenDetalle | P-12 Detalle de examen | Asimilar | Auditoría en la misma vista | — | HU-19 |
 | V-16 | EntrevistasIA | P-13 Entrevistas | Asimilar | — | **Corregir la ruta** (`GET /entrevista`) | HU-19 |
@@ -67,6 +67,7 @@ Observaciones:
 - **V-11, enviar al banco:** implementado en el detalle del candidato (DEV-A-08 · PR #31), con la insignia "En el banco de talento" cuando ya está marcado.
 - **V-02, raíz:** redirige al dashboard (P-02), ya no a vacantes.
 - **V-13, ranking:** muestra aparte los procesos incompletos y la recomendación de finalistas de cada candidato (DEC-022).
+- **V-09, P-08 Detalle de candidato (DEV-C-14 · PR #38, DEC-024):** muestra el desglose del puntaje del CV en sus cinco criterios ponderados, con el puntaje sobre el máximo y la justificación de cada uno; si el análisis es anterior a DEC-024, indica "análisis anterior al desglose".
 - **P-09, requisitos de diseño:** los seis requisitos de abajo están implementados. El diseño en Figma (P-07 del Sprint 0) sigue pendiente.
 - Las vistas migradas se verifican con `tsc` y el build en el CI. La prueba E2E con Playwright (TST-A-03 · PR #34) recorre en el navegador el flujo principal: login y dashboard, vacantes, candidato con su análisis, decisión en la bandeja, historial de decisiones, decisión de un finalista en el ranking, cierre de sesión y renovación de la sesión. El resto de las vistas del Sprint 2 (exámenes, entrevistas, auditoría, banco de talento y usuarios) no tiene todavía una revisión visual manual registrada.
 
@@ -130,3 +131,4 @@ Sin endpoint: `python -m app.scripts.crear_empresa`.
 | 1.3 | 2026-10-27 | Estado al cierre del Sprint 1: 10 vistas migradas y 14 de 16 endpoints nuevos implementados; eliminar vacante exige además que no tenga candidatos; selector de plantilla pendiente de decisión |
 | 1.4 | 2026-10-28 | Sin selector de plantilla (decisión del Product Owner); enlace de postulación en V-05 y modal de contraseña en V-22 (PR #23); ruta rota de la lista de entrevistas registrada |
 | 1.5 | 2026-11-03 | Sprint 2: las 19 vistas del perfil Admin migradas (PR #27 a #31); 16 de 16 endpoints nuevos implementados; ruta de V-16 corregida; enviar al banco en V-11; la raíz redirige al dashboard |
+| 1.6 | 2026-11-04 | P-08 muestra el desglose del puntaje por criterio (DEC-024, DEV-C-14 · PR #38); V-13 con la referencia a DEC-022 |

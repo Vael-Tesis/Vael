@@ -1,4 +1,4 @@
-> COPIA del documento del Drive `VAEL/Docs/13_datos_semilla.md`, versión 1.4 — **APROBADO** (2026-10-18); ampliación aprobada por el Product Owner el 2026-10-28 e implementada el 2026-10-30, copiada el 2026-11-03.
+> COPIA del documento del Drive `VAEL/Docs/13_datos_semilla.md`, versión 1.4 — **APROBADO** (2026-10-18); ampliación aprobada por el Product Owner el 2026-10-28 e implementada el 2026-10-30, copiada el 2026-11-04.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 13 — Datos semilla
