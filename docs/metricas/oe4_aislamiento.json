@@ -1,0 +1,61 @@
+{
+  "_comentario": "Indicador OE4 (doc 14): aislamiento multiempresa. Lo verifica continuamente backend/tests/test_aislamiento_multiempresa.py (capa de aplicación, CA 1 y 3 — RRHH y candidato, DEC-021) y backend/tests/test_rls.py (capa de base de datos / RLS, CA 2) en el CI; este archivo registra la medición al cierre de TST-C-01, igual que docs/metricas/oe3_registro_decisiones.sql para el OE3.",
+  "indicador": "OE4 - accesos cruzados y cobertura de endpoints autenticados",
+  "tarea": "TST-C-01",
+  "historia": "HU-04",
+  "fecha": "2026-11-01",
+  "sha_commit_base": "a972d83258e1ff6e3b5038d594f0748a333a50ac",
+  "version_modelo": null,
+  "capa_aplicacion": {
+    "suite": "backend/tests/test_aislamiento_multiempresa.py",
+    "endpoints_autenticados_rrhh": {
+      "total": 66,
+      "cubiertos": 66,
+      "perfil": "RRHH (get_current_user, directo o a traves de require_rol)"
+    },
+    "endpoints_autenticados_candidato": {
+      "total": 11,
+      "cubiertos": 11,
+      "perfil": "Candidato (get_current_candidate, directo o a traves de get_current_candidato; DEC-021)",
+      "con_caso_de_ataque": ["POST /api/evaluaciones/candidato/examen/respuesta (pregunta_id)"],
+      "sin_vector_cruzado_por_diseno": [
+        "POST /api/entrevista/acceso", "POST /api/entrevista/iniciar", "POST /api/entrevista/finalizar",
+        "POST /api/entrevista/captura", "POST /api/entrevista/evento", "POST /api/evaluaciones/candidato/acceso",
+        "POST /api/evaluaciones/candidato/examen/iniciar", "POST /api/evaluaciones/candidato/examen/finalizar",
+        "POST /api/evaluaciones/candidato/examen/evento", "GET /api/evaluaciones/candidato/progreso"
+      ],
+      "justificacion_sin_vector": "la identidad (candidato, examen o entrevista) siempre se resuelve desde claims.sub/tenant_id del propio token, nunca de un id que el cliente pueda cambiar; verificado por test_candidato_sin_vector_cruzado_no_acepta_ids_ajenos (ningun campo de sus request bodies termina en '_id')"
+    },
+    "endpoints_autenticados_total": 77,
+    "endpoints_cubiertos_total": 77,
+    "cobertura_pct": 100.0,
+    "metodo_de_conteo": "introspeccion del arbol de dependencias de FastAPI (app.routes) buscando get_current_user o get_current_candidate; se compara contra la tabla de casos de la suite en cada corrida (test_la_cobertura_es_total)",
+    "accesos_cruzados_detectados": 0,
+    "confusion_de_tipo_de_token_detectada": 0,
+    "resultado_ultima_corrida": "73 passed"
+  },
+  "capa_base_de_datos": {
+    "suite": "backend/tests/test_rls.py",
+    "descripcion": "consulta sin filtro con el tenant A fijado solo devuelve filas de A; sin tenant fijado no se ve ninguna fila; WITH CHECK rechaza inserciones de otro tenant; vael_app no tiene BYPASSRLS; toda tabla con tenant_id tiene RLS forzada y su politica",
+    "accesos_cruzados_detectados": 0
+  },
+  "lista_cerrada_excluida": {
+    "operaciones": 5,
+    "funciones": 6,
+    "aclaracion": "5 operaciones, no 6: 'postulacion publica por codigo' (DEC-010) es una sola operacion implementada con 2 funciones (ver pasos a y b abajo); las otras 4 operaciones tienen 1 funcion cada una",
+    "detalle": [
+      {"operacion": "login", "funciones": [{"archivo": "routers/auth.py", "funcion": "login"}]},
+      {
+        "operacion": "postulacion publica por codigo",
+        "funciones": [
+          {"archivo": "routers/publico.py", "funcion": "obtener_vacante_publica", "paso": "a - ver la vacante por codigo"},
+          {"archivo": "routers/publico.py", "funcion": "enviar_postulacion", "paso": "b - enviar la postulacion"}
+        ]
+      },
+      {"operacion": "listado publico de vacantes", "funciones": [{"archivo": "routers/publico.py", "funcion": "listar_vacantes_publicas"}]},
+      {"operacion": "feed XML de una vacante", "funciones": [{"archivo": "routers/vacantes.py", "funcion": "feed_xml_vacante"}]},
+      {"operacion": "resolucion del codigo corto del candidato", "funciones": [{"archivo": "routers/evaluaciones.py", "funcion": "resolver_codigo_candidato"}]}
+    ]
+  },
+  "justificacion_exclusion": "las 5 operaciones (6 funciones) de la lista cerrada (DEC-010, DEC-014, DEC-021) no pasan por get_current_user/require_rol/get_current_candidate/get_current_candidato: usan la sesion del sistema (vael_system, BYPASSRLS) y no tienen Authorization. No son 'endpoints autenticados' segun el OpenAPI (no tienen 'security' en su operation object) y por eso no entran en el denominador del 100%; test_rls.py::test_solo_la_lista_cerrada_usa_la_sesion_del_sistema verifica que esta lista es exhaustiva y no crece sin un ADR."
+}

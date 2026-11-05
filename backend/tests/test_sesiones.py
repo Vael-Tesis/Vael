@@ -1,7 +1,9 @@
 """Pruebas de la sesión de RRHH (DEC-011, DEV-A-02): login, rotación del refresh token,
 detección de reutilización, logout efectivo, token_version y algoritmos aceptados."""
 import base64
+import html
 import json
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -17,6 +19,7 @@ from app.core.config import Settings, settings
 from app.core.security import hash_password
 from app.models.usuario import RolUsuario, Sesion, Usuario
 from tests.conftest import TENANT_ID
+from tests.test_decisiones import enviados  # noqa: F401
 
 PASSWORD = "Clave-Segura-2026"
 
@@ -161,6 +164,47 @@ async def test_desactivar_o_cambiar_la_contrasena_invalida_los_tokens_al_instant
     assert respuesta.status_code == 200, respuesta.text
     assert client.get("/api/auth/perfil", headers=_auth(tokens["access_token"])).status_code == 401
     assert _refresh(client, tokens["refresh_token"]).status_code == 401
+
+
+async def test_crear_usuario_envia_credenciales_y_el_usuario_puede_iniciar_sesion(
+    client: TestClient, admin_headers: dict[str, str], enviados: list[dict[str, str]]  # noqa: F811
+) -> None:
+    """RF-A-18: el admin crea un usuario con contraseña temporal autogenerada, enviada por correo."""
+    respuesta = client.post(
+        "/api/auth/usuarios/crear",
+        json={"nombre": "Nueva", "apellidos": "Persona", "email": "nueva@test.vael", "rol": "reclutador"},
+        headers=admin_headers,
+    )
+    assert respuesta.status_code == 201, respuesta.text
+    assert respuesta.json()["activo"] is True
+
+    assert len(enviados) == 1
+    assert enviados[0]["para"] == "nueva@test.vael"
+    assert enviados[0]["asunto"] == "Bienvenido a VAEL — Tus credenciales de acceso"
+    password_temporal = re.search(r"Contraseña temporal.*?<strong>([^<]+)</strong>", enviados[0]["html"])
+    assert password_temporal is not None, "la plantilla no expone la contraseña temporal"
+
+    login = _login(client, "nueva@test.vael", html.unescape(password_temporal.group(1)))
+    assert login.status_code == 200, login.text
+
+
+async def test_reenviar_credenciales_invalida_la_sesion_anterior_y_la_nueva_contrasena_sirve(
+    client: TestClient, admin_headers: dict[str, str], db_session: AsyncSession, enviados: list[dict[str, str]]  # noqa: F811
+) -> None:
+    """RF-A-18: reenviar credenciales es un cambio de contraseña — invalida tokens y sesiones (DEC-011)."""
+    usuario = await _usuario(db_session, "rocio-reenvio@test.vael")
+    tokens = _login(client, "rocio-reenvio@test.vael").json()
+
+    respuesta = client.post(f"/api/auth/usuarios/{usuario.id}/reenviar-credenciales", headers=admin_headers)
+    assert respuesta.status_code == 200, respuesta.text
+
+    assert client.get("/api/auth/perfil", headers=_auth(tokens["access_token"])).status_code == 401
+    assert _refresh(client, tokens["refresh_token"]).status_code == 401
+
+    assert len(enviados) == 1
+    password_temporal = re.search(r"Contraseña temporal.*?<strong>([^<]+)</strong>", enviados[0]["html"])
+    assert password_temporal is not None
+    assert _login(client, "rocio-reenvio@test.vael", html.unescape(password_temporal.group(1))).status_code == 200
 
 
 # --- Algoritmos ---------------------------------------------------------------------------

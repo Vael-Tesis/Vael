@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Aprobada por el Product Owner; pendiente de revisión del equipo en el PR de DEV-C-11 |
+| Estado | Aprobada (Product Owner; revisión del equipo en el PR #10 de DEV-C-11, 2026-10-25) |
 | Fecha | 2026-10-25 |
 | Tarea de origen | DEV-C-11 (hallazgo al aplicar la RLS) |
 | Decidido por | Gabriel Llanos (Product Owner) |

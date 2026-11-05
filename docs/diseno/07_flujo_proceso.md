@@ -1,13 +1,13 @@
-> COPIA del documento del Drive `VAEL/Docs/07_flujo_proceso.md`, versión 2.0, copiada el 2026-10-18.
+> COPIA del documento del Drive `VAEL/Docs/07_flujo_proceso.md`, versión 2.1, copiada el 2026-11-04.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 07 — Flujo del Proceso de Selección
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.0 |
-| Actualizado | 2026-10-13 |
-| Decisiones aplicadas | DEC-001, DEC-002, DEC-007, DEC-009, DEC-013 |
+| Versión | 2.1 |
+| Actualizado | 2026-11-03 |
+| Decisiones aplicadas | DEC-001, DEC-002, DEC-007, DEC-009, DEC-013, DEC-022 |
 | Reemplaza | Versión 1 (2026-09-15): 20 etapas con filtros automáticos, política de silencio y análisis emocional |
 
 ## Principio rector
@@ -192,9 +192,13 @@ Justificación de los pesos: la entrevista estructurada y las pruebas de conocim
 
 ### 19. Ranking y decisión humana final
 
-RRHH consulta el ranking de la vacante, ordenado por `score_final` descendente, con el desglose de CV, examen y entrevista. Los candidatos con proceso incompleto aparecen aparte. `top_candidatos_finalistas` sugiere cuántos finalistas marcar.
+RRHH consulta el ranking de la vacante, ordenado por `score_final` descendente, con el desglose de CV, examen y entrevista. Los candidatos con proceso incompleto aparecen aparte.
 
-La decisión de la etapa `entrevista` se registra en `decisiones_candidato` como en las etapas 5 y 12:
+**Recomendación de finalistas (DEC-022):** el sistema recomienda `avanzar` a los candidatos que están entre los primeros `top_candidatos_finalistas` del ranking de su vacante (default 5) y `descartar` al resto. Los empatados con el puntaje del último puesto también reciben `avanzar`, para no excluir a nadie por un orden arbitrario. Los candidatos con proceso incompleto (`score_final` nulo) no reciben recomendación. La recomendación se recalcula en cada consulta, porque depende de cuántos candidatos completaron el proceso, y no genera correos.
+
+La decisión de la etapa `entrevista` se registra en `decisiones_candidato` como en las etapas 5 y 12: si coincide con la recomendación, puede confirmarse de forma individual o en lote; si no, es individual y requiere justificación. La fila guarda el `score_final`, el valor de `top_candidatos_finalistas` como umbral y la posición en el ranking.
+
+Efecto:
 - **Avanzar** → `finalista`. SES envía el correo de finalista con los próximos pasos.
 - **Descartar** → `descartado`. Correo de cierre.
 
@@ -258,3 +262,4 @@ RRHH puede reenviar el correo de la etapa actual con `/api/candidatos/{id}/reenv
 |---|---|---|
 | 1 | 2026-09-15 | Versión inicial: 20 etapas, filtros automáticos, política de silencio, análisis emocional y de sentimiento |
 | 2.0 | 2026-10-13 | 19 etapas: los filtros automáticos pasan a recomendación más decisión humana (DEC-009), se eliminan el análisis emocional y el de sentimiento (DEC-001), consentimiento y verificación de presencia (DEC-002), fórmula 20/40/40 (DEC-007), política de notificaciones con correo de cierre (DEC-013), trigger de 5 minutos desde el frontend, indicadores por objetivo |
+| 2.1 | 2026-11-03 | Etapa 19: recomendación de finalistas por `top_candidatos_finalistas`, con empates en el último puesto y lote solo para las decisiones que coinciden (DEC-022) |

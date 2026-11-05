@@ -14,7 +14,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal'
 import EmptyState from '../../components/ui/EmptyState'
 import { AreaTexto, Pestanas, Selector, Volver, estiloControl, type Opcion } from '../../components/ui/Formulario'
 import Spinner from '../../components/ui/Spinner'
-import { CLASIFICACIONES, ESTADOS_CANDIDATO, type EstadoCandidato } from './candidatosComun'
+import { CLASIFICACIONES, CRITERIOS_SCORE_CV, ESTADOS_CANDIDATO, type EstadoCandidato } from './candidatosComun'
 import PanelDecision, { AvisoSupervision, ETAPAS, type Etapa, type Recomendacion } from './PanelDecision'
 
 /**
@@ -65,6 +65,38 @@ function Enlace({ etiqueta, url }: { etiqueta: string; url: string | null }) {
   )
 }
 
+function Desglose({ desglose }: { desglose: Detalle['score_desglose'] }) {
+  if (!desglose) {
+    return (
+      <div style={{ marginBottom: 18 }}>
+        <Titulo>Desglose del puntaje</Titulo>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Análisis anterior al desglose</p>
+      </div>
+    )
+  }
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <Titulo>Desglose del puntaje (DEC-024)</Titulo>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {CRITERIOS_SCORE_CV.map(({ clave, etiqueta, maximo }) => {
+          const item = desglose[clave] as { puntaje?: number; justificacion?: string } | undefined
+          return (
+            <div key={clave}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: 'var(--text-secondary)' }}>{etiqueta}</span>
+                <span style={{ fontWeight: 600 }}>{item?.puntaje ?? '—'} / {maximo}</span>
+              </div>
+              {item?.justificacion && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{item.justificacion}</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function Analisis({ c }: { c: Detalle }) {
   return (
     <Card>
@@ -77,6 +109,7 @@ function Analisis({ c }: { c: Detalle }) {
             <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Puntaje de CV:</span> <PuntajeCv valor={c.score_cv} />
             {c.analizado_en && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Analizado el {fecha(c.analizado_en)}</span>}
           </div>
+          <Desglose desglose={c.score_desglose} />
           {c.resumen_ia && (
             <div style={{ marginBottom: 18 }}>
               <Titulo>Resumen y justificación</Titulo>
@@ -367,6 +400,11 @@ export default function CandidatoDetalle() {
     onSuccess: () => { toast.success('Candidato marcado como contratado'); queryClient.invalidateQueries({ queryKey: ['candidato', id] }) },
     onError: (e) => toast.error(mensajeDe(e, 'No se pudo actualizar el estado')),
   })
+  const enviarBanco = useMutation({
+    mutationFn: async () => datos(await api.POST('/api/candidatos/{candidato_id}/banco-talento', ruta)),
+    onSuccess: () => { toast.success('Candidato enviado al banco de talento'); queryClient.invalidateQueries({ queryKey: ['candidato', id] }) },
+    onError: (e) => toast.error(mensajeDe(e, 'No se pudo enviar al banco de talento')),
+  })
 
   if (candidato.isLoading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
   if (!candidato.data) {
@@ -410,6 +448,11 @@ export default function CandidatoDetalle() {
             )}
             {c.estado === 'finalista' && (
               <Button onClick={() => contratar.mutate()} disabled={contratar.isPending}>Marcar como contratado</Button>
+            )}
+            {c.en_banco_talento ? (
+              <Badge variant="info">En el banco de talento</Badge>
+            ) : (
+              <Button variant="secondary" onClick={() => enviarBanco.mutate()} disabled={enviarBanco.isPending}>Enviar al banco de talento</Button>
             )}
           </div>
         )}

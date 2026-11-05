@@ -22,10 +22,11 @@ Cada decisión de implementación se registra como `DEC-NNN` en formato ADR (*Ar
 | DEC-016 | Procesamiento asíncrono con SQS + Lambda (punto 6 modificado por DEC-018) | [DEC-016](DEC-016-asincronia-sqs-lambda.md) |
 | DEC-017 | Metodología: plan por fases con sprints semanales basados en Scrum | [DEC-017](DEC-017-metodologia-hibrida.md) |
 | DEC-018 | Topología mínima en AWS sin NAT Gateway; dominio `vael.work` | [DEC-018](DEC-018-topologia-aws.md) |
-
 | DEC-019 | Copia de los documentos de diseño en `docs/diseno/` | [DEC-019](DEC-019-copia-diseno-repositorio.md) |
 | DEC-020 | Herramientas: GitHub Projects + Excel del curso; Playwright para E2E | [DEC-020](DEC-020-herramientas-tablero-e2e.md) |
 | DEC-021 | Resolución del código del candidato en la lista cerrada de operaciones del sistema | [DEC-021](DEC-021-codigo-candidato-lista-cerrada.md) |
+| DEC-022 | Recomendación de finalistas con `top_candidatos_finalistas` (modifica DEC-009, punto 2) | [DEC-022](DEC-022-lote-finalistas.md) |
 | DEC-023 | S3 y correo locales para desarrollo: Adobe S3Mock y Mailpit | [DEC-023](DEC-023-s3-y-correo-locales.md) |
+| DEC-024 | Desglose ponderado y auditable del `score_cv` (corrige el doc 08; se implementa en DEV-C-14) | [DEC-024](DEC-024-desglose-score-cv.md) |
 
-DEC-022 queda reservada para el criterio del lote de finalistas (`top_candidatos_finalistas`, aprobado por el Product Owner), que se registra en el PR de DEV-A-06. La siguiente decisión nueva usa el número DEC-024.
+La siguiente decisión nueva usa el número DEC-025.

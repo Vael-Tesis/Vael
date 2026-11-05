@@ -53,8 +53,6 @@ router = APIRouter(prefix="/api/candidatos", tags=["candidatos"])
 logger = logging.getLogger(__name__)
 
 _RECLUTADOR_O_SUPERIOR = (RolUsuario.ADMIN, RolUsuario.GERENTE, RolUsuario.RECLUTADOR)
-_ESTADOS_BANCO_TALENTO = (EstadoCandidato.CV_RECHAZADO, EstadoCandidato.EXAMEN_RECHAZADO, EstadoCandidato.DESCARTADO)
-_CLASIFICACIONES_BUEN_SCORE = (ClasificacionIA.ALTAMENTE_RECOMENDADO, ClasificacionIA.RECOMENDADO)
 
 
 async def _obtener_candidato_del_tenant(candidato_id: str, tenant_id: str, db: AsyncSession) -> Candidato:
@@ -184,23 +182,28 @@ async def ranking_candidatos(
     db: Annotated[AsyncSession, Depends(get_db)],
     vacante_id: str,
 ) -> list[RankingCandidatoResponse]:
-    """Ranking de candidatos de una vacante, ordenado por score_final descendente.
+    """Ranking de candidatos de una vacante, ordenado por score_final descendente (RF-A-14).
 
-    Incluye la nota de examen y de entrevista de cada candidato (si ya las rindió),
-    para que RRHH vea el desglose de las tres componentes del score ponderado.
+    Los procesos incompletos (sin score_final) aparecen aparte, al final y sin recomendación.
+    Incluye la nota de examen y de entrevista de cada candidato (si ya las rindió), para el
+    desglose de las tres componentes del score, y la recomendación de finalistas de la etapa
+    entrevista (DEC-022), según `top_candidatos_finalistas` de la vacante.
     """
-    statement = (
-        select(Candidato)
-        .where(
-            Candidato.tenant_id == actor.tenant_id,
-            Candidato.vacante_id == vacante_id,
-            Candidato.score_final.is_not(None),
-        )
-        .order_by(Candidato.score_final.desc())
-    )
-    result = await db.exec(statement)
-    candidatos = list(result.all())
+    vacante = await db.get(Vacante, vacante_id)
+    if vacante is None or vacante.tenant_id != actor.tenant_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vacante no encontrada")
 
+    completos = await servicio_decisiones.ranking_vacante(vacante_id, actor.tenant_id, db)
+    recomendaciones = servicio_decisiones.recomendaciones_finalistas(completos, vacante.top_candidatos_finalistas)
+
+    incompletos_statement = select(Candidato).where(
+        Candidato.tenant_id == actor.tenant_id,
+        Candidato.vacante_id == vacante_id,
+        Candidato.score_final.is_(None),
+    )
+    incompletos = list((await db.exec(incompletos_statement.order_by(Candidato.fecha_postulacion))).all())
+
+    candidatos = completos + incompletos
     candidato_ids = [c.id for c in candidatos]
     notas_examen: dict[str, float] = {}
     notas_entrevista: dict[str, float] = {}
@@ -219,6 +222,8 @@ async def ranking_candidatos(
             **CandidatoResponse.model_validate(c).model_dump(),
             nota_examen=notas_examen.get(c.id),
             nota_entrevista=notas_entrevista.get(c.id),
+            proceso_completo=c.score_final is not None,
+            recomendacion_finalista=recomendaciones.get(c.id),
         )
         for c in candidatos
     ]
@@ -228,15 +233,37 @@ async def ranking_candidatos(
 async def banco_talento(
     actor: Annotated[Usuario, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    area_id: str | None = None,
 ) -> list[Candidato]:
-    """Candidatos con buena clasificación IA que no avanzaron en su proceso (banco de talento)."""
+    """Candidatos disponibles para procesos futuros (RF-A-17): los que RRHH marcó explícitamente
+    desde su detalle (`en_banco_talento`), nunca por una clasificación o un estado por sí solos.
+    Filtro opcional por el área de la vacante a la que postularon.
+    """
     statement = select(Candidato).where(
         Candidato.tenant_id == actor.tenant_id,
-        Candidato.clasificacion_ia.in_(_CLASIFICACIONES_BUEN_SCORE),
-        Candidato.estado.in_(_ESTADOS_BANCO_TALENTO),
+        Candidato.en_banco_talento.is_(True),
     )
+    if area_id is not None:
+        statement = statement.join(Vacante, Vacante.id == Candidato.vacante_id).where(Vacante.area_id == area_id)
     result = await db.exec(statement)
     return list(result.all())
+
+
+@router.post("/{candidato_id}/banco-talento", response_model=CandidatoResponse)
+async def enviar_a_banco_talento(
+    candidato_id: str,
+    actor: Annotated[Usuario, Depends(require_rol(*_RECLUTADOR_O_SUPERIOR))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Candidato:
+    """Marca al candidato como disponible en el banco de talento (HU-14, RF-A-17). Idempotente."""
+    candidato = await _obtener_candidato_del_tenant(candidato_id, actor.tenant_id, db)
+    if not candidato.en_banco_talento:
+        candidato.en_banco_talento = True
+        candidato.updated_at = utcnow()
+        db.add(candidato)
+        await db.commit()
+        await db.refresh(candidato)
+    return candidato
 
 
 @router.post("/carga-masiva", response_model=CargaMasivaResponse, status_code=status.HTTP_202_ACCEPTED)

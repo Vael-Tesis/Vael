@@ -1,0 +1,446 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  VAEL - entorno temporal (DEP-C-01 a DEP-C-04, DEC-018). Red sin NAT Gateway, ALB que solo acepta
+  tráfico de CloudFront, backend en ECS Fargate, PostgreSQL en RDS (subred privada, una zona) y el
+  bucket de los CV. Se crea para usarlo y se destruye después (decisión de operación del 2026-10-25).
+
+Parameters:
+  ImagenUri:
+    Type: String
+    Description: Imagen del backend en ECR (target production del Dockerfile)
+  PrefixListCloudFront:
+    Type: String
+    Description: Lista de prefijos administrada com.amazonaws.global.cloudfront.origin-facing
+  OrigenSecreto:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+  ClaveJwt:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+  ClaveInterna:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+  GeminiApiKey:
+    Type: String
+    NoEcho: true
+  SeedPassword:
+    Type: String
+    NoEcho: true
+  PassMaestra:
+    Type: String
+    NoEcho: true
+    AllowedPattern: "[A-Za-z0-9]{24,}"
+  PassOwner:
+    Type: String
+    NoEcho: true
+    AllowedPattern: "[A-Za-z0-9]{24,}"
+  PassApp:
+    Type: String
+    NoEcho: true
+    AllowedPattern: "[A-Za-z0-9]{24,}"
+  PassSystem:
+    Type: String
+    NoEcho: true
+    AllowedPattern: "[A-Za-z0-9]{24,}"
+  DominioApp:
+    Type: String
+    Default: app.vael.work
+
+Resources:
+  # --- Red: dos subredes públicas (ALB y ECS) y dos privadas (RDS), sin NAT Gateway ---
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.20.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags: [{Key: Name, Value: vael}]
+
+  PuertaInternet:
+    Type: AWS::EC2::InternetGateway
+
+  UnionPuerta:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref PuertaInternet
+
+  SubredPublicaA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.20.0.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags: [{Key: Name, Value: vael-publica-a}]
+
+  SubredPublicaB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.20.1.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags: [{Key: Name, Value: vael-publica-b}]
+
+  SubredPrivadaA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.20.10.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags: [{Key: Name, Value: vael-privada-a}]
+
+  SubredPrivadaB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.20.11.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags: [{Key: Name, Value: vael-privada-b}]
+
+  TablaPublica:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  RutaInternet:
+    Type: AWS::EC2::Route
+    DependsOn: UnionPuerta
+    Properties:
+      RouteTableId: !Ref TablaPublica
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref PuertaInternet
+
+  AsociacionPublicaA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SubredPublicaA
+      RouteTableId: !Ref TablaPublica
+
+  AsociacionPublicaB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SubredPublicaB
+      RouteTableId: !Ref TablaPublica
+
+  # Las subredes privadas usan la tabla principal de la VPC: sin ruta a internet.
+
+  GrupoAlb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB - solo desde CloudFront
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourcePrefixListId: !Ref PrefixListCloudFront
+
+  GrupoApp:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Backend - solo desde el ALB
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          SourceSecurityGroupId: !Ref GrupoAlb
+
+  GrupoDb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL - solo desde el backend
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref GrupoApp
+
+  # --- Base de datos ---
+  SubredesDb:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subredes privadas de VAEL
+      SubnetIds: [!Ref SubredPrivadaA, !Ref SubredPrivadaB]
+
+  BaseDatos:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Engine: postgres
+      EngineVersion: "16.15"
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: "20"
+      StorageType: gp3
+      StorageEncrypted: true
+      DBName: vael_db
+      MasterUsername: vaeladmin
+      MasterUserPassword: !Ref PassMaestra
+      DBSubnetGroupName: !Ref SubredesDb
+      VPCSecurityGroups: [!Ref GrupoDb]
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MultiAZ: false
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 0
+      DeletionProtection: false
+
+  # --- Archivos (CV) ---
+  BucketArchivos:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # --- Secretos: las URL de cada rol (DEC-010) y las claves de la aplicación ---
+  Secretos:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      # Sin nombre fijo: un secreto borrado se conserva 30 días y bloquearía el siguiente encendido
+      Description: VAEL - URL de cada rol de la base de datos (DEC-010) y claves de la aplicación
+      SecretString: !Sub
+        - >-
+          {"DATABASE_URL":"postgresql+asyncpg://vael_app:${PassApp}@${Host}:5432/vael_db",
+          "DATABASE_SYSTEM_URL":"postgresql+asyncpg://vael_system:${PassSystem}@${Host}:5432/vael_db",
+          "DATABASE_OWNER_URL":"postgresql+asyncpg://vael_owner:${PassOwner}@${Host}:5432/vael_db",
+          "DATABASE_ADMIN_URL":"postgresql+asyncpg://vaeladmin:${PassMaestra}@${Host}:5432/vael_db",
+          "SECRET_KEY":"${ClaveJwt}","INTERNAL_SERVICE_KEY":"${ClaveInterna}",
+          "GEMINI_API_KEY":"${GeminiApiKey}","SEED_PASSWORD":"${SeedPassword}"}
+        - Host: !GetAtt BaseDatos.Endpoint.Address
+
+  # --- Balanceador: solo reenvía si la petición trae la cabecera secreta de CloudFront ---
+  Balanceador:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Type: application
+      Subnets: [!Ref SubredPublicaA, !Ref SubredPublicaB]
+      SecurityGroups: [!Ref GrupoAlb]
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "60"
+
+  GrupoDestino:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref Vpc
+      TargetType: ip
+      Protocol: HTTP
+      Port: 8000
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 15
+      HealthyThresholdCount: 2
+      Matcher: {HttpCode: "200"}
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "10"
+
+  Escucha:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref Balanceador
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: "403"
+            ContentType: text/plain
+            MessageBody: Acceso solo por CloudFront
+
+  ReglaCloudFront:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref Escucha
+      Priority: 1
+      Conditions:
+        - Field: http-header
+          HttpHeaderConfig:
+            HttpHeaderName: X-Origen-Vael
+            Values: [!Ref OrigenSecreto]
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref GrupoDestino
+
+  # --- ECS Fargate ---
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: vael
+
+  Registros:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: /ecs/vael
+      RetentionInDays: 7
+
+  RolEjecucion:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: leer-secretos
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref Secretos
+
+  RolTarea:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: archivos-y-correo
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: [s3:GetObject, s3:PutObject]
+                Resource: !Sub "${BucketArchivos.Arn}/*"
+              - Effect: Allow
+                Action: [ses:SendEmail, ses:SendRawEmail]
+                Resource: "*"
+
+  TareaBackend:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: vael-backend
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "512"
+      Memory: "1024"
+      ExecutionRoleArn: !GetAtt RolEjecucion.Arn
+      TaskRoleArn: !GetAtt RolTarea.Arn
+      ContainerDefinitions:
+        - Name: backend
+          Image: !Ref ImagenUri
+          Essential: true
+          PortMappings: [{ContainerPort: 8000}]
+          Environment:
+            - {Name: ENVIRONMENT, Value: production}
+            - {Name: DEBUG, Value: "false"}
+            - {Name: AWS_REGION, Value: !Ref "AWS::Region"}
+            - {Name: SES_REGION, Value: !Ref "AWS::Region"}
+            - {Name: S3_BUCKET_NAME, Value: !Ref BucketArchivos}
+            - {Name: EMAIL_FROM, Value: noreply@vael.work}
+            - {Name: EMAIL_FROM_NAME, Value: VAEL}
+            - {Name: FRONTEND_URL, Value: !Sub "https://${DominioApp}"}
+            - {Name: ALLOWED_ORIGINS, Value: !Sub "https://${DominioApp}"}
+          Secrets:
+            - {Name: DATABASE_URL, ValueFrom: !Sub "${Secretos}:DATABASE_URL::"}
+            - {Name: DATABASE_SYSTEM_URL, ValueFrom: !Sub "${Secretos}:DATABASE_SYSTEM_URL::"}
+            - {Name: DATABASE_OWNER_URL, ValueFrom: !Sub "${Secretos}:DATABASE_OWNER_URL::"}
+            - {Name: SECRET_KEY, ValueFrom: !Sub "${Secretos}:SECRET_KEY::"}
+            - {Name: INTERNAL_SERVICE_KEY, ValueFrom: !Sub "${Secretos}:INTERNAL_SERVICE_KEY::"}
+            - {Name: GEMINI_API_KEY, ValueFrom: !Sub "${Secretos}:GEMINI_API_KEY::"}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref Registros
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: backend
+
+  # Tarea de una sola ejecución: roles (DEC-010), migraciones y datos semilla (doc 13).
+  # Es la única que recibe la URL del administrador y la contraseña de las semillas.
+  TareaPreparar:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: vael-preparar
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "512"
+      Memory: "1024"
+      ExecutionRoleArn: !GetAtt RolEjecucion.Arn
+      TaskRoleArn: !GetAtt RolTarea.Arn
+      ContainerDefinitions:
+        - Name: preparar
+          Image: !Ref ImagenUri
+          Essential: true
+          Command:
+            - sh
+            - -c
+            - python -m app.scripts.crear_roles && alembic upgrade head && python -m app.scripts.semillas
+          Environment:
+            - {Name: ENVIRONMENT, Value: production}
+            - {Name: DEBUG, Value: "false"}
+            - {Name: AWS_REGION, Value: !Ref "AWS::Region"}
+            - {Name: SES_REGION, Value: !Ref "AWS::Region"}
+            - {Name: S3_BUCKET_NAME, Value: !Ref BucketArchivos}
+            - {Name: EMAIL_FROM, Value: noreply@vael.work}
+            - {Name: EMAIL_FROM_NAME, Value: VAEL}
+            - {Name: FRONTEND_URL, Value: !Sub "https://${DominioApp}"}
+            - {Name: ALLOWED_ORIGINS, Value: !Sub "https://${DominioApp}"}
+          Secrets:
+            - {Name: DATABASE_URL, ValueFrom: !Sub "${Secretos}:DATABASE_URL::"}
+            - {Name: DATABASE_SYSTEM_URL, ValueFrom: !Sub "${Secretos}:DATABASE_SYSTEM_URL::"}
+            - {Name: DATABASE_OWNER_URL, ValueFrom: !Sub "${Secretos}:DATABASE_OWNER_URL::"}
+            - {Name: DATABASE_ADMIN_URL, ValueFrom: !Sub "${Secretos}:DATABASE_ADMIN_URL::"}
+            - {Name: SECRET_KEY, ValueFrom: !Sub "${Secretos}:SECRET_KEY::"}
+            - {Name: INTERNAL_SERVICE_KEY, ValueFrom: !Sub "${Secretos}:INTERNAL_SERVICE_KEY::"}
+            - {Name: SEED_PASSWORD, ValueFrom: !Sub "${Secretos}:SEED_PASSWORD::"}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref Registros
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: preparar
+
+  Servicio:
+    Type: AWS::ECS::Service
+    DependsOn: ReglaCloudFront
+    Properties:
+      ServiceName: vael-backend
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TareaBackend
+      LaunchType: FARGATE
+      DesiredCount: 1
+      HealthCheckGracePeriodSeconds: 60
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker: {Enable: true, Rollback: true}
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: [!Ref SubredPublicaA, !Ref SubredPublicaB]
+          SecurityGroups: [!Ref GrupoApp]
+      LoadBalancers:
+        - ContainerName: backend
+          ContainerPort: 8000
+          TargetGroupArn: !Ref GrupoDestino
+
+Outputs:
+  BalanceadorDns:
+    Value: !GetAtt Balanceador.DNSName
+  BucketArchivos:
+    Value: !Ref BucketArchivos
+  Cluster:
+    Value: !Ref Cluster
+  TareaPreparar:
+    Value: !Ref TareaPreparar
+  SubredPublicaA:
+    Value: !Ref SubredPublicaA
+  GrupoApp:
+    Value: !Ref GrupoApp

@@ -12,12 +12,18 @@ import ast
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.candidato import Candidato, EstadoCandidato
+from app.models.decision import DecisionCandidato, EtapaDecision, TipoDecision
+from app.models.usuario import RolUsuario, Usuario
 from app.services.decisiones import ESTADOS_DE_DECISION_HUMANA
+from tests.conftest import TENANT_ID
 from tests.test_decisiones import _candidato, _decidir, _examen, _vacante, enviados  # noqa: F401
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -49,6 +55,59 @@ def test_ningun_modulo_asigna_a_mano_un_estado_de_decision() -> None:
             if isinstance(nodo, ast.keyword) and nodo.arg == "estado" and _es_estado_de_decision(nodo.value):
                 hallazgos.append(f"{archivo.relative_to(DIRECTORIO_APP)}:{nodo.value.lineno}")
     assert hallazgos == [], f"Estados de decisión asignados fuera del servicio de decisiones: {hallazgos}"
+
+
+def test_ninguna_decision_se_edita_ni_se_borra() -> None:
+    """DEC-009 punto 2 (RF-A-12): decisiones_candidato es de solo inserción. Ningún
+    `await db.delete(...)` de la app apunta a una variable de decisión; revertir es insertar
+    una fila nueva con `reemplaza_a` (ver `registrar_decision`), nunca editar la anterior."""
+    hallazgos: list[str] = []
+    for archivo in sorted(DIRECTORIO_APP.rglob("*.py")):
+        arbol = ast.parse(archivo.read_text(encoding="utf-8"))
+        for nodo in ast.walk(arbol):
+            if not (isinstance(nodo, ast.Call) and isinstance(nodo.func, ast.Attribute) and nodo.func.attr == "delete"):
+                continue
+            for arg in nodo.args:
+                if isinstance(arg, ast.Name) and "decision" in arg.id.lower():
+                    hallazgos.append(f"{archivo.relative_to(DIRECTORIO_APP)}:{nodo.lineno}")
+    assert hallazgos == [], f"Posibles eliminaciones de decisiones_candidato: {hallazgos}"
+
+
+async def test_vael_app_no_puede_editar_ni_borrar_decisiones(db_session: AsyncSession) -> None:
+    """RF-A-12/DEC-009, reforzado en la base de datos (no solo por convención del código):
+    `vael_app` conserva SELECT e INSERT sobre decisiones_candidato, pero no UPDATE ni DELETE
+    (migración `c8d9e0f1a2b3`; `crear_roles.py` reafirma la revocación en cada ejecución)."""
+    vacante = await _vacante(db_session)
+    candidato = await _candidato(db_session, vacante, EstadoCandidato.CV_POR_CONFIRMAR, sufijo="permiso-bd")
+    usuario = Usuario(
+        tenant_id=TENANT_ID, nombre="Test", apellidos="Permisos", email="permisos-bd@test.vael",
+        password_hash="no-usado", rol=RolUsuario.ADMIN,
+    )
+    db_session.add(usuario)
+    await db_session.flush()
+
+    decision = DecisionCandidato(
+        tenant_id=TENANT_ID, candidato_id=candidato.id, etapa=EtapaDecision.CV, decision=TipoDecision.AVANZAR,
+        decidido_por=usuario.id,
+    )
+    db_session.add(decision)
+    await db_session.commit()  # INSERT: funciona
+    decision_id = decision.id  # capturado antes de cualquier rollback (evita un refresh expirado)
+
+    leida = (await db_session.exec(select(DecisionCandidato).where(DecisionCandidato.id == decision_id))).one()
+    assert leida.decision == TipoDecision.AVANZAR  # SELECT: funciona
+
+    with pytest.raises(DBAPIError, match="permission denied"):
+        await db_session.execute(
+            text("UPDATE decisiones_candidato SET decision = 'DESCARTAR' WHERE id = :id"), {"id": decision_id}
+        )
+        await db_session.commit()
+    await db_session.rollback()
+
+    with pytest.raises(DBAPIError, match="permission denied"):
+        await db_session.execute(text("DELETE FROM decisiones_candidato WHERE id = :id"), {"id": decision_id})
+        await db_session.commit()
+    await db_session.rollback()
 
 
 async def _indicador_oe3(db: AsyncSession) -> tuple[dict[str, tuple[int, int]], int]:

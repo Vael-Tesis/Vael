@@ -8,7 +8,7 @@ import asyncio
 import json
 import logging
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
 import aioboto3
@@ -164,6 +164,13 @@ async def subir_archivo(archivo_bytes: bytes, key: str, content_type: str) -> st
     if settings.s3_endpoint_url:
         return f"{settings.s3_endpoint_url.rstrip('/')}/{settings.s3_bucket_name}/{quote(key)}"
     return f"https://{settings.s3_bucket_name}.s3.{settings.aws_region}.amazonaws.com/{key}"
+
+
+def clave_desde_url(url: str) -> str:
+    """Clave del objeto a partir de la URL que devolvió `subir_archivo` (S3 de AWS o S3 local)."""
+    ruta = unquote(urlparse(url).path).lstrip("/")
+    prefijo_bucket = f"{settings.s3_bucket_name}/"
+    return ruta.removeprefix(prefijo_bucket)
 
 
 async def descargar_archivo(key: str) -> bytes:

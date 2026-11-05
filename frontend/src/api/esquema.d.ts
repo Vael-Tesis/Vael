@@ -343,7 +343,9 @@ export interface paths {
         };
         /**
          * Banco Talento
-         * @description Candidatos con buena clasificación IA que no avanzaron en su proceso (banco de talento).
+         * @description Candidatos disponibles para procesos futuros (RF-A-17): los que RRHH marcó explícitamente
+         *     desde su detalle (`en_banco_talento`), nunca por una clasificación o un estado por sí solos.
+         *     Filtro opcional por el área de la vacante a la que postularon.
          */
         get: operations["banco_talento_api_candidatos_banco_talento_get"];
         put?: never;
@@ -430,10 +432,12 @@ export interface paths {
         };
         /**
          * Ranking Candidatos
-         * @description Ranking de candidatos de una vacante, ordenado por score_final descendente.
+         * @description Ranking de candidatos de una vacante, ordenado por score_final descendente (RF-A-14).
          *
-         *     Incluye la nota de examen y de entrevista de cada candidato (si ya las rindió),
-         *     para que RRHH vea el desglose de las tres componentes del score ponderado.
+         *     Los procesos incompletos (sin score_final) aparecen aparte, al final y sin recomendación.
+         *     Incluye la nota de examen y de entrevista de cada candidato (si ya las rindió), para el
+         *     desglose de las tres componentes del score, y la recomendación de finalistas de la etapa
+         *     entrevista (DEC-022), según `top_candidatos_finalistas` de la vacante.
          */
         get: operations["ranking_candidatos_api_candidatos_ranking_get"];
         put?: never;
@@ -482,6 +486,26 @@ export interface paths {
          * @description Dispara el análisis IA del CV de un candidato en background y responde de inmediato.
          */
         post: operations["analizar_candidato_api_candidatos__candidato_id__analizar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/candidatos/{candidato_id}/banco-talento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enviar A Banco Talento
+         * @description Marca al candidato como disponible en el banco de talento (HU-14, RF-A-17). Idempotente.
+         */
+        post: operations["enviar_a_banco_talento_api_candidatos__candidato_id__banco_talento_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1027,6 +1051,29 @@ export interface paths {
          * @description Lista los eventos de proctoring registrados durante un examen.
          */
         get: operations["auditoria_examen_api_evaluaciones_examenes__examen_id__auditoria_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/metricas/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dashboard
+         * @description Resumen del tenant para el dashboard (RF-A-19): vacantes y candidatos por estado,
+         *     recomendaciones pendientes por etapa, postulaciones por día, minutos promedio de revisión
+         *     (OE1) y tasa de concordancia (M-02). `desde`/`hasta` acotan las dos últimas y las
+         *     postulaciones por día; sin ellos, cubren todo el histórico del tenant.
+         */
+        get: operations["dashboard_api_metricas_dashboard_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1677,6 +1724,8 @@ export interface components {
              * Format: email
              */
             email: string;
+            /** En Banco Talento */
+            en_banco_talento: boolean;
             /** Es Finalista */
             es_finalista: boolean;
             estado: components["schemas"]["EstadoCandidato"];
@@ -1707,6 +1756,13 @@ export interface components {
             resumen_ia: string | null;
             /** Score Cv */
             score_cv: number | null;
+            /**
+             * Score Desglose
+             * @description Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior
+             */
+            score_desglose?: {
+                [key: string]: unknown;
+            } | null;
             /** Score Final */
             score_final: number | null;
             /**
@@ -1748,6 +1804,8 @@ export interface components {
              * Format: email
              */
             email: string;
+            /** En Banco Talento */
+            en_banco_talento: boolean;
             /** Es Finalista */
             es_finalista: boolean;
             estado: components["schemas"]["EstadoCandidato"];
@@ -1778,6 +1836,13 @@ export interface components {
             resumen_ia: string | null;
             /** Score Cv */
             score_cv: number | null;
+            /**
+             * Score Desglose
+             * @description Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior
+             */
+            score_desglose?: {
+                [key: string]: unknown;
+            } | null;
             /** Score Final */
             score_final: number | null;
             /** Telefono */
@@ -2311,6 +2376,35 @@ export interface components {
             refresh_token: string;
         };
         /**
+         * MetricasDashboardResponse
+         * @description Resumen del dashboard (RF-A-19): fotografía del estado actual más las métricas del
+         *     periodo `desde`/`hasta`.
+         *
+         *     `vacantes_por_estado`, `candidatos_por_estado` y `recomendaciones_pendientes_por_etapa`
+         *     son el estado actual del tenant, sin filtrar por fecha. `postulaciones_por_dia`,
+         *     `minutos_promedio_revision` (OE1) y `tasa_concordancia` (M-02) sí se acotan al rango.
+         */
+        MetricasDashboardResponse: {
+            /** Candidatos Por Estado */
+            candidatos_por_estado: {
+                [key: string]: number;
+            };
+            /** Minutos Promedio Revision */
+            minutos_promedio_revision: number | null;
+            /** Postulaciones Por Dia */
+            postulaciones_por_dia: components["schemas"]["PostulacionPorDia"][];
+            /** Recomendaciones Pendientes Por Etapa */
+            recomendaciones_pendientes_por_etapa: {
+                [key: string]: number;
+            };
+            /** Tasa Concordancia */
+            tasa_concordancia: number | null;
+            /** Vacantes Por Estado */
+            vacantes_por_estado: {
+                [key: string]: number;
+            };
+        };
+        /**
          * Modalidad
          * @description Modalidad de trabajo de una vacante.
          * @enum {string}
@@ -2437,6 +2531,19 @@ export interface components {
             nombre?: string | null;
         };
         /**
+         * PostulacionPorDia
+         * @description Candidatos postulados en un día (`Candidato.fecha_postulacion`), dentro del rango pedido.
+         */
+        PostulacionPorDia: {
+            /** Cantidad */
+            cantidad: number;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+        };
+        /**
          * PostulacionResponse
          * @description Confirmación de una postulación recibida.
          */
@@ -2523,6 +2630,11 @@ export interface components {
         /**
          * RankingCandidatoResponse
          * @description Candidato en el ranking de una vacante, con la nota de cada etapa que ya rindió.
+         *
+         *     `proceso_completo` distingue a quienes aún no tienen `score_final` (RF-A-14): el ranking
+         *     los muestra aparte, sin puesto. `recomendacion_finalista` es la recomendación de la etapa
+         *     `entrevista` (DEC-022): `avanzar` para los primeros `top_candidatos_finalistas` del ranking
+         *     (empates incluidos), `descartar` para el resto; nula si el proceso está incompleto.
          */
         RankingCandidatoResponse: {
             /** Analizado En */
@@ -2542,6 +2654,8 @@ export interface components {
              * Format: email
              */
             email: string;
+            /** En Banco Talento */
+            en_banco_talento: boolean;
             /** Es Finalista */
             es_finalista: boolean;
             estado: components["schemas"]["EstadoCandidato"];
@@ -2572,10 +2686,20 @@ export interface components {
             portfolio: string | null;
             /** Pretension Salarial */
             pretension_salarial: number | null;
+            /** Proceso Completo */
+            proceso_completo: boolean;
+            recomendacion_finalista?: components["schemas"]["TipoDecision"] | null;
             /** Resumen Ia */
             resumen_ia: string | null;
             /** Score Cv */
             score_cv: number | null;
+            /**
+             * Score Desglose
+             * @description Puntaje y justificación por criterio (DEC-024); nulo si es un análisis anterior
+             */
+            score_desglose?: {
+                [key: string]: unknown;
+            } | null;
             /** Score Final */
             score_final: number | null;
             /** Telefono */
@@ -3699,7 +3823,9 @@ export interface operations {
     };
     banco_talento_api_candidatos_banco_talento_get: {
         parameters: {
-            query?: never;
+            query?: {
+                area_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3713,6 +3839,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CandidatoResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3930,6 +4065,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["app__schemas__candidato__MensajeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enviar_a_banco_talento_api_candidatos__candidato_id__banco_talento_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidato_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4775,6 +4941,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventoAuditoriaResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dashboard_api_metricas_dashboard_get: {
+        parameters: {
+            query?: {
+                desde?: string | null;
+                hasta?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricasDashboardResponse"];
                 };
             };
             /** @description Validation Error */
