@@ -12,8 +12,9 @@
 
 - **HECHO:** la cuenta de Gemini del proyecto usa el plan gratuito. Ese plan permite 20 solicitudes por día y por modelo (doc 04). La primera corrida del OE2 falló en las 30 ejecuciones por la cuota y por la alta demanda (PR #35), y el primer despliegue en AWS no completó un análisis porque Google respondía 503 (doc 09).
 - **HECHO:** el Product Owner decidió no pagar una clave de nivel pagado.
-- **HECHO:** el instituto ofrece a sus estudiantes un modelo Qwen propio, con cuenta y clave de API. **SUPUESTO por verificar:** expone una API compatible con la de OpenAI (`/chat/completions`, `/models`), el formato habitual de los despliegues locales de Qwen. El modelo exacto se descubre con `python -m app.scripts.probar_qwen`.
-- En una exposición, un 429 o un 503 de Gemini deja a un candidato sin análisis delante del jurado.
+- **HECHO:** el instituto ofrece a sus estudiantes un modelo Qwen propio en un Open WebUI, con cuenta y clave de API compatible con la de OpenAI (`/api/chat/completions`, `/api/models`). El modelo es `Qwen/Qwen3.6-35B-A3B-FP8` (código de un proyecto anterior del Product Owner).
+- **HECHO:** el servidor está en una **IP privada de la red de Tecsup**. Solo es alcanzable desde el campus; desde fuera, o desde AWS, no responde.
+- En una exposición, un 429 o un 503 de Gemini deja a un candidato sin análisis delante del jurado. Las exposiciones son en Tecsup, con VAEL corriendo en local.
 
 ## Decisión
 
@@ -22,7 +23,7 @@
 3. **La voz no tiene respaldo:** la entrevista con EVA (Gemini Live) sigue dependiendo de Gemini.
 4. **La medición del OE2 mide solo a Gemini:** el script la ejecuta con el respaldo desactivado.
 5. Cada llamada registra el proveedor y el modelo que respondió.
-6. En AWS, la clave de Qwen se guarda en Secrets Manager, en el secreto del backend y en el de la Lambda. La URL, el modelo e `IA_RESPALDO` son parámetros de la pila.
+6. **Uso previsto: local, en la red de Tecsup.** La configuración vive en `backend/.env`, fuera de Git. En AWS el respaldo queda desactivado salvo que se encienda con `aws-encender.ps1 -ConQwen`. Así, cada falla de Gemini no espera a un servidor que la nube no alcanza. Si en algún momento el servidor fuera público, la pila ya acepta su URL, su modelo y su clave (esta última, en Secrets Manager).
 
 ## Alternativas descartadas
 
@@ -36,7 +37,8 @@
 
 - **Resultados distintos según el modelo:** un análisis hecho por Qwen puede puntuar distinto que uno de Gemini. Los registros muestran qué proveedor respondió. Los resultados del OE2 siguen siendo solo de Gemini.
 - **Datos personales en otro servidor:** los CV enviados al respaldo salen hacia el servidor del instituto. En las exposiciones se usan los datos semilla ficticios (doc 13). Para usarlo con datos reales, habría que revisarlo frente a la Ley 29733 de protección de datos personales.
-- **SUPUESTO por verificar: alcance de red.** Si el servidor del instituto solo es accesible desde la red del campus, el backend y la Lambda en AWS no llegan a él. En ese caso, el respaldo solo sirve con el sistema en local.
+- **Solo en el campus:** fuera de la red de Tecsup, y en AWS, no hay respaldo. Las demos en `app.vael.work` siguen dependiendo de la cuota de Gemini.
+- **Modelo de razonamiento:** Qwen3 puede anteponer su razonamiento entre `<think>` y `</think>`. El cliente lo quita antes de leer el JSON.
 
 ## Consecuencias
 
@@ -54,5 +56,5 @@
 - Test: con `IA_RESPALDO=qwen`, un 429 de Gemini produce la respuesta de Qwen.
 - Test: sin respaldo configurado, o con un error que no es de disponibilidad, el error de Gemini se propaga.
 - Test: con `permitir_respaldo=False` (OE2), no se usa Qwen.
-- Prueba manual: `python -m app.scripts.probar_qwen` lista los modelos y obtiene un JSON válido.
-- Prueba en AWS, si el servidor es accesible desde internet: con `IA_PROVEEDOR=qwen`, un CV cargado obtiene su recomendación.
+- Test: la respuesta se lee aunque traiga razonamiento, un bloque de markdown o texto alrededor del JSON.
+- Prueba manual en la red de Tecsup: `python -m app.scripts.probar_qwen` lista los modelos y obtiene un JSON válido. Luego, con `IA_PROVEEDOR=qwen`, un CV cargado en local obtiene su recomendación.

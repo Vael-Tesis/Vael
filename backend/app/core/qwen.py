@@ -1,8 +1,9 @@
 """Cliente del modelo Qwen del instituto, respaldo de Gemini (DEC-025, propuesta; DEV-C-15).
 
-El servidor de IA del instituto expone una API compatible con la de OpenAI
-(`POST {QWEN_BASE_URL}/chat/completions`), el formato habitual de los despliegues locales de
-Qwen (vLLM, Ollama, LM Studio). Solo se usa para las llamadas de texto con salida JSON
+El servidor de IA del instituto es un Open WebUI con una API compatible con la de OpenAI
+(`POST {QWEN_BASE_URL}/chat/completions`, con `QWEN_BASE_URL=http://<servidor>:3000/api`). Está
+en una IP privada: **solo es alcanzable desde la red de Tecsup**, así que el respaldo sirve con
+VAEL corriendo en local dentro del campus, no en AWS. Solo se usa para las llamadas de texto con salida JSON
 (`consultar_gemini_json`); la entrevista por voz con Gemini Live no tiene respaldo.
 
 Los prompts de VAEL ya exigen "ÚNICAMENTE un JSON"; aun así, si el modelo envuelve la respuesta
@@ -26,6 +27,8 @@ MAX_INTENTOS = 3
 TIEMPO_LIMITE_SEGUNDOS = 90.0  # un modelo local puede tardar más que Gemini en respuestas largas
 ESPERA_BASE_SEGUNDOS = 2.0
 _BLOQUE_MARKDOWN = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.DOTALL)
+# Qwen3 es un modelo de razonamiento: puede anteponer su razonamiento entre <think> y </think>
+_RAZONAMIENTO = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 INSTRUCCION_SISTEMA = "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown."
 
@@ -47,13 +50,21 @@ def _cabeceras() -> dict[str, str]:
 
 
 def extraer_json(texto: str) -> dict[str, Any]:
-    """Parsea la respuesta del modelo como JSON, quitando un bloque ```json ... ``` si lo hay."""
-    coincidencia = _BLOQUE_MARKDOWN.match(texto or "")
-    limpio = coincidencia.group(1) if coincidencia else (texto or "")
+    """Parsea la respuesta como JSON: quita el razonamiento (<think>) y un bloque ```json si los hay."""
+    sin_razonamiento = _RAZONAMIENTO.sub("", texto or "").strip()
+    coincidencia = _BLOQUE_MARKDOWN.match(sin_razonamiento)
+    limpio = coincidencia.group(1) if coincidencia else sin_razonamiento
     try:
         valor = json.loads(limpio)
-    except (json.JSONDecodeError, TypeError) as exc:
-        raise ValueError(f"Qwen no devolvió un JSON válido: {texto!r}") from exc
+    except (json.JSONDecodeError, TypeError):
+        # Último recurso: el objeto JSON entre la primera "{" y la última "}"
+        inicio, fin = limpio.find("{"), limpio.rfind("}")
+        try:
+            valor = json.loads(limpio[inicio : fin + 1]) if 0 <= inicio < fin else None
+        except json.JSONDecodeError:
+            valor = None
+        if valor is None:
+            raise ValueError(f"Qwen no devolvió un JSON válido: {texto!r}") from None
     if not isinstance(valor, dict):
         raise ValueError(f"Qwen devolvió JSON que no es un objeto: {texto!r}")
     return valor
@@ -69,6 +80,7 @@ async def consultar_qwen_json(prompt: str) -> dict[str, Any]:
 
     cuerpo = {
         "model": settings.qwen_model,
+        "max_tokens": 4096,  # el razonamiento de Qwen3 consume tokens antes de la respuesta
         "messages": [
             {"role": "system", "content": INSTRUCCION_SISTEMA},
             {"role": "user", "content": prompt},

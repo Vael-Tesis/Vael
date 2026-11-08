@@ -80,6 +80,19 @@ async def test_con_proveedor_qwen_no_se_llama_a_gemini(monkeypatch: pytest.Monke
     assert await gemini.consultar_gemini_json("prompt") == {"ok": True}
 
 
+@pytest.mark.parametrize(
+    ("texto", "esperado"),
+    [
+        ('<think>Analizo el CV...</think>\n{"score": 70}', {"score": 70}),
+        ('```json\n{"a": 1}\n```', {"a": 1}),
+        ('Aquí está el resultado: {"a": 2} Espero que sirva.', {"a": 2}),
+    ],
+    ids=["con-razonamiento", "bloque-markdown", "texto-alrededor"],
+)
+def test_extrae_el_json_de_la_respuesta(texto: str, esperado: dict[str, int]) -> None:
+    assert qwen.extraer_json(texto) == esperado
+
+
 @pytest.mark.parametrize("texto", ["no es json", "[1, 2]", ""])
 def test_una_respuesta_que_no_es_un_objeto_json_falla(texto: str) -> None:
     with pytest.raises(ValueError):

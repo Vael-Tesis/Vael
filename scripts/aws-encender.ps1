@@ -12,7 +12,7 @@
 .EXAMPLE
   .\scripts\aws-encender.ps1 -CorreoAlarmas equipo@ejemplo.com   # ese correo recibe las alarmas (HU-22)
 #>
-param([string]$Perfil = "vael", [string]$Region = "us-east-1", [string]$CorreoAlarmas = "")
+param([string]$Perfil = "vael", [string]$Region = "us-east-1", [string]$CorreoAlarmas = "", [switch]$ConQwen)
 
 $ErrorActionPreference = "Stop"
 $env:AWS_PAGER = ""  # sin paginador: el script no debe quedarse esperando una tecla
@@ -104,10 +104,14 @@ $plantilla = Join-Path $raiz "infra\aws\entorno.yaml"
 $existe = AwsOpcional cloudformation describe-stacks --stack-name vael-entorno --query "Stacks[0].StackStatus" --output text
 # Sin -CorreoAlarmas, las alarmas existen igual y se ven en CloudWatch, pero no notifican a nadie
 $correo = @(); if ($CorreoAlarmas) { $correo = @("CorreoAlarmas=$CorreoAlarmas") }
-# IA de respaldo (DEC-025): si backend/.env tiene IA_RESPALDO=qwen y los datos de Qwen, se pasan a la
-# pila; la clave va a Secrets Manager. Sin ellos, el entorno usa solo Gemini.
-$ia = @("IaRespaldo=$(LeerEnvOpcional 'IA_RESPALDO')", "QwenBaseUrl=$(LeerEnvOpcional 'QWEN_BASE_URL')",
-  "QwenModelo=$(LeerEnvOpcional 'QWEN_MODEL')", "QwenApiKey=$(LeerEnvOpcional 'QWEN_API_KEY')")
+# IA de respaldo (DEC-025): solo con -ConQwen se pasan a la pila los datos de Qwen de backend/.env
+# (la clave va a Secrets Manager). El Qwen de Tecsup está en una IP privada que AWS no alcanza: sin
+# -ConQwen, el entorno usa solo Gemini y no espera a un servidor inalcanzable.
+$ia = @("IaRespaldo=", "QwenBaseUrl=", "QwenModelo=", "QwenApiKey=")
+if ($ConQwen) {
+  $ia = @("IaRespaldo=qwen", "QwenBaseUrl=$(LeerEnvOpcional 'QWEN_BASE_URL')",
+    "QwenModelo=$(LeerEnvOpcional 'QWEN_MODEL')", "QwenApiKey=$(LeerEnvOpcional 'QWEN_API_KEY')")
+}
 if ($existe) {
   # Entorno ya encendido: solo cambia la imagen; el resto conserva sus valores
   Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM `
