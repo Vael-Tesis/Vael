@@ -22,6 +22,7 @@ _EXCLUIDAS = [
     r"^/api/entrevista/(acceso|iniciar|finalizar|captura|evento)$",
     r"^/api/auth/(login|refresh|logout)$",
     r"^/api/candidatos/\{candidato_id\}/notas",  # notas: cualquier rol autenticado (doc 06)
+    r"^/api/interno/",  # solo las Lambdas, con firma HMAC y sin JWT (DEC-018); ver test_interno.py
 ]
 
 

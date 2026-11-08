@@ -79,19 +79,27 @@ if ($LASTEXITCODE -ne 0) { throw "Falló docker login en ECR" }
 docker push $imagen
 if ($LASTEXITCODE -ne 0) { throw "Falló docker push" }
 
+Paso "Imagen de la Lambda de análisis (HU-23)"
+# --provenance=false: Lambda no acepta índices de imagen con atestaciones
+$imagenLambda = "$($base.RepositorioLambdaUri):$etiqueta"
+docker build --provenance=false -f (Join-Path $raiz "backend\Dockerfile.lambda") -t $imagenLambda (Join-Path $raiz "backend")
+if ($LASTEXITCODE -ne 0) { throw "Falló docker build de la Lambda" }
+docker push $imagenLambda
+if ($LASTEXITCODE -ne 0) { throw "Falló docker push de la Lambda" }
+
 # --- 3. Entorno temporal ---
-Paso "Entorno temporal (red, RDS, ALB, ECS); la primera vez tarda unos 15 minutos"
+Paso "Entorno temporal (red, RDS, ALB, ECS, SQS y Lambda); la primera vez tarda unos 15 minutos"
 $plantilla = Join-Path $raiz "infra\aws\entorno.yaml"
 $existe = AwsOpcional cloudformation describe-stacks --stack-name vael-entorno --query "Stacks[0].StackStatus" --output text
 if ($existe) {
   # Entorno ya encendido: solo cambia la imagen; el resto conserva sus valores
   Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM `
-    --parameter-overrides "ImagenUri=$imagen" --no-fail-on-empty-changeset
+    --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" --no-fail-on-empty-changeset
 } else {
   $prefijos = Aws ec2 describe-managed-prefix-lists --filters "Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing" `
     --query "PrefixLists[0].PrefixListId" --output text
   Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM `
-    --parameter-overrides "ImagenUri=$imagen" "PrefixListCloudFront=$prefijos" "OrigenSecreto=$origenSecreto" `
+    --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" "PrefixListCloudFront=$prefijos" "OrigenSecreto=$origenSecreto" `
       "ClaveJwt=$(NuevaClave 64)" "ClaveInterna=$(NuevaClave 64)" "PassMaestra=$(NuevaClave 32)" `
       "PassOwner=$(NuevaClave 32)" "PassApp=$(NuevaClave 32)" "PassSystem=$(NuevaClave 32)" `
       "GeminiApiKey=$(LeerEnv 'GEMINI_API_KEY')" "SeedPassword=$(LeerEnv 'SEED_PASSWORD')"

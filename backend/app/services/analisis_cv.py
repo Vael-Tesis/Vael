@@ -67,21 +67,39 @@ def extraer_texto_pdf(pdf_bytes: bytes) -> str:
     return _extraer_con_pdfminer(pdf_bytes)
 
 
-def construir_prompt_analisis(texto_cv: str, vacante: Vacante, area: Area | None) -> str:
-    """Arma el prompt de análisis: texto del CV + requisitos de la vacante + instrucción del área."""
-    instruccion_area = (
-        area.instruccion_ia if area and area.instruccion_ia else "Sin instrucciones adicionales del área."
-    )
-    requisitos = vacante.requisitos or "No se especificaron requisitos obligatorios."
-    requisitos_deseables = vacante.requisitos_deseables or "No se especificaron requisitos deseables."
-    habilidades = ", ".join(vacante.habilidades) if vacante.habilidades else "No especificadas."
-    tecnologias = ", ".join(vacante.tecnologias) if vacante.tecnologias else "No especificadas."
-    nivel = vacante.nivel_experiencia.value if vacante.nivel_experiencia else "no especificado"
+def datos_prompt_vacante(vacante: Vacante, area: Area | None) -> dict[str, Any]:
+    """Datos de la vacante y del área que necesita el prompt, como diccionario serializable.
+
+    Viajan en el mensaje de SQS para que la Lambda no consulte la base de datos (DEC-018).
+    """
+    return {
+        "titulo": vacante.titulo,
+        "nivel_experiencia": vacante.nivel_experiencia.value if vacante.nivel_experiencia else None,
+        "requisitos": vacante.requisitos,
+        "requisitos_deseables": vacante.requisitos_deseables,
+        "habilidades": list(vacante.habilidades or []),
+        "tecnologias": list(vacante.tecnologias or []),
+        "instruccion_area": area.instruccion_ia if area else None,
+    }
+
+
+def construir_prompt_analisis(texto_cv: str, datos: dict[str, Any]) -> str:
+    """Arma el prompt de análisis: texto del CV + requisitos de la vacante + instrucción del área.
+
+    Recibe los datos de `datos_prompt_vacante`. El texto resultante es el mismo que antes de
+    HU-23, para que las mediciones del OE2 sigan siendo comparables.
+    """
+    instruccion_area = datos.get("instruccion_area") or "Sin instrucciones adicionales del área."
+    requisitos = datos.get("requisitos") or "No se especificaron requisitos obligatorios."
+    requisitos_deseables = datos.get("requisitos_deseables") or "No se especificaron requisitos deseables."
+    habilidades = ", ".join(datos["habilidades"]) if datos.get("habilidades") else "No especificadas."
+    tecnologias = ", ".join(datos["tecnologias"]) if datos.get("tecnologias") else "No especificadas."
+    nivel = datos.get("nivel_experiencia") or "no especificado"
 
     return f"""
 Eres un reclutador técnico experto evaluando el CV de un candidato para una vacante.
 
-## Vacante: {vacante.titulo}
+## Vacante: {datos["titulo"]}
 Nivel de experiencia buscado: {nivel}
 Requisitos obligatorios: {requisitos}
 Requisitos deseables: {requisitos_deseables}
@@ -117,11 +135,6 @@ exactamente esta forma:
   "portfolio": "<url de portafolio si aparece en el CV, o null>"
 }}
 """.strip()
-
-
-async def _descargar_pdf(cv_url: str) -> bytes:
-    """Descarga el PDF del CV con el cliente de S3: el bucket es privado (doc 03), una URL sin firma da 403."""
-    return await descargar_archivo(clave_desde_url(cv_url))
 
 
 def _validar_y_sumar_desglose(criterios: Any) -> tuple[int, dict[str, dict[str, Any]]]:
@@ -164,75 +177,139 @@ def _como_clasificacion(valor: Any) -> ClasificacionIA:
         return ClasificacionIA.REQUIERE_REVISION
 
 
-async def analizar_cv(candidato: Candidato, vacante: Vacante, area: Area | None, db: AsyncSession) -> None:
-    """Analiza el CV de un candidato con Gemini y actualiza su registro (sección 10 del CLAUDE.md).
+def preparar_mensaje_analisis_cv(candidato: Candidato, vacante: Vacante, area: Area | None) -> dict[str, Any]:
+    """Parte de preparación (backend): todo lo que el cálculo necesita, sin objetos de la base.
 
-    1. Descarga el PDF desde cv_url
-    2. Extrae su texto (PyPDF2, con fallback a pdfminer)
-    3. Arma el prompt con el texto + los requisitos de la vacante + la instrucción del área
-    4. Llama a Gemini 3 Flash
-    5. Parsea la respuesta JSON
-    6. Actualiza el candidato en BD
-    7. Deja al candidato en cv_por_confirmar: avanzar o descartar lo decide RRHH (DEC-009)
+    Es el cuerpo del mensaje de SQS (DEC-016) y la entrada de `calcular_analisis_cv`.
     """
     if not candidato.cv_url:
         raise ValueError(f"El candidato {candidato.id} no tiene cv_url — no hay CV para analizar")
+    return {
+        "tipo": "analisis_cv",
+        "tenant_id": candidato.tenant_id,
+        "candidato_id": candidato.id,
+        "cv_key": clave_desde_url(candidato.cv_url),
+        "vacante": datos_prompt_vacante(vacante, area),
+    }
 
-    pdf_bytes = await _descargar_pdf(candidato.cv_url)
+
+async def calcular_analisis_cv(mensaje: dict[str, Any]) -> dict[str, Any]:
+    """Parte de cálculo: Lambda en producción, en proceso en desarrollo. No toca la base (DEC-018).
+
+    1. Descarga el PDF del bucket privado con el cliente de S3 (una URL sin firma da 403)
+    2. Extrae su texto (PyPDF2, con fallback a pdfminer)
+    3. Si no hay texto (PDF escaneado), no llama a la IA y devuelve `sin_texto`
+    4. Arma el prompt y llama a Gemini
+    5. Valida el desglose y suma `score_cv` (DEC-024); si no cumple, lanza ValueError
+
+    Devuelve el resultado que se entrega al backend por /api/interno/resultados/analisis-cv.
+    """
+    base = {"tenant_id": mensaje["tenant_id"], "candidato_id": mensaje["candidato_id"]}
+
+    pdf_bytes = await descargar_archivo(mensaje["cv_key"])
     texto_cv = extraer_texto_pdf(pdf_bytes)
     if not texto_cv.strip():
         # PDF escaneado o sin texto: no se envía a la IA; RRHH lo revisa a mano (doc 13, CV-TI-11)
+        return {**base, "sin_texto": True}
+
+    prompt = construir_prompt_analisis(texto_cv, mensaje["vacante"])
+    respuesta = await consultar_gemini_json(prompt)
+
+    # DEC-024: el sistema valida y suma; no se ajusta ningún valor en silencio
+    score_cv, score_desglose = _validar_y_sumar_desglose(respuesta.get("criterios"))
+
+    return {
+        **base,
+        "sin_texto": False,
+        "score_cv": score_cv,
+        "score_desglose": score_desglose,
+        "clasificacion": _como_clasificacion(respuesta.get("clasificacion")).value,
+        "resumen": respuesta.get("resumen"),
+        "habilidades_detectadas": como_lista_str(respuesta.get("habilidades_detectadas")),
+        "inconsistencias": como_lista_str(respuesta.get("inconsistencias")),
+        "linkedin": respuesta.get("linkedin"),
+        "github": respuesta.get("github"),
+        "portfolio": respuesta.get("portfolio"),
+    }
+
+
+# Estados en los que un resultado de análisis todavía puede aplicarse. Si el candidato ya está
+# en otro (el resultado ya se aplicó o RRHH ya decidió), una entrega repetida de SQS no cambia
+# nada (DEC-016, punto 7: idempotencia).
+ESTADOS_QUE_ACEPTAN_ANALISIS_CV = frozenset({EstadoCandidato.POSTULADO, EstadoCandidato.CV_ANALIZANDO})
+
+
+async def aplicar_resultado_analisis_cv(candidato: Candidato, resultado: dict[str, Any], db: AsyncSession) -> bool:
+    """Parte de aplicación (backend): guarda el análisis y deja al candidato en cv_por_confirmar.
+
+    DEC-009: la IA recomienda; RRHH decide. La recomendación (score_cv frente a
+    score_cv_minimo) la calcula el servicio de decisiones; aquí no se emiten tokens ni correos.
+    Devuelve False si el resultado ya se había aplicado (idempotencia).
+    """
+    if candidato.estado not in ESTADOS_QUE_ACEPTAN_ANALISIS_CV:
+        logger.info(
+            "Resultado de análisis de CV ignorado: el candidato %s ya está en %s",
+            candidato.id,
+            candidato.estado,
+            extra={"tenant_id": candidato.tenant_id, "candidato_id": candidato.id},
+        )
+        return False
+
+    if resultado.get("sin_texto"):
         candidato.score_cv = None
         candidato.clasificacion_ia = ClasificacionIA.REQUIERE_REVISION
         candidato.resumen_ia = MENSAJE_CV_SIN_TEXTO
-        candidato.analizado_en = utcnow()
-        candidato.updated_at = utcnow()
-        candidato.estado = EstadoCandidato.CV_POR_CONFIRMAR
-        db.add(candidato)
-        await db.commit()
-        return
+    else:
+        candidato.score_cv = resultado["score_cv"]
+        candidato.score_desglose = resultado["score_desglose"]
+        candidato.clasificacion_ia = _como_clasificacion(resultado.get("clasificacion"))
+        candidato.resumen_ia = resultado.get("resumen")
+        candidato.habilidades_detectadas = como_lista_str(resultado.get("habilidades_detectadas"))
+        candidato.inconsistencias = como_lista_str(resultado.get("inconsistencias"))
+        candidato.linkedin = candidato.linkedin or resultado.get("linkedin")
+        candidato.github = candidato.github or resultado.get("github")
+        candidato.portfolio = candidato.portfolio or resultado.get("portfolio")
 
-    prompt = construir_prompt_analisis(texto_cv, vacante, area)
-    resultado = await consultar_gemini_json(prompt)
-
-    # DEC-024: el backend valida y suma; si no cumple, se propaga y el candidato vuelve a
-    # `postulado` por el camino de error existente (analizar_cv_candidato), sin guardar nada.
-    score_cv, score_desglose = _validar_y_sumar_desglose(resultado.get("criterios"))
-
-    candidato.score_cv = score_cv
-    candidato.score_desglose = score_desglose
-    candidato.clasificacion_ia = _como_clasificacion(resultado.get("clasificacion"))
-    candidato.resumen_ia = resultado.get("resumen")
-    candidato.habilidades_detectadas = como_lista_str(resultado.get("habilidades_detectadas"))
-    candidato.inconsistencias = como_lista_str(resultado.get("inconsistencias"))
-    candidato.linkedin = candidato.linkedin or resultado.get("linkedin")
-    candidato.github = candidato.github or resultado.get("github")
-    candidato.portfolio = candidato.portfolio or resultado.get("portfolio")
     candidato.analizado_en = utcnow()
     candidato.updated_at = utcnow()
-
-    # DEC-009: la IA recomienda; RRHH decide. La recomendación (score_cv frente a
-    # score_cv_minimo) la calcula el servicio de decisiones; aquí no se emiten tokens ni correos.
     candidato.estado = EstadoCandidato.CV_POR_CONFIRMAR
     db.add(candidato)
     await db.commit()
+    return True
+
+
+async def analizar_cv(candidato: Candidato, vacante: Vacante, area: Area | None, db: AsyncSession) -> None:
+    """Análisis completo en el mismo proceso: preparación, cálculo y aplicación (desarrollo y tests).
+
+    En producción el cálculo corre en la Lambda y el resultado llega por el endpoint interno.
+    """
+    mensaje = preparar_mensaje_analisis_cv(candidato, vacante, area)
+    resultado = await calcular_analisis_cv(mensaje)
+    await aplicar_resultado_analisis_cv(candidato, resultado, db)
+
+
+async def cargar_para_analisis_cv(candidato_id: str, db: AsyncSession) -> tuple[Candidato, Vacante, Area | None] | None:
+    """Carga el candidato, su vacante y su área; None si alguno ya no existe."""
+    candidato = await db.get(Candidato, candidato_id)
+    if candidato is None:
+        return None
+    vacante = await db.get(Vacante, candidato.vacante_id)
+    if vacante is None:
+        return None
+    area = await db.get(Area, vacante.area_id)
+    return candidato, vacante, area
 
 
 async def analizar_cv_candidato(candidato_id: str) -> None:
-    """Punto de entrada para background tasks: abre su propia sesión de BD y ejecuta analizar_cv.
+    """Punto de entrada del despachador en modo en proceso: abre su propia sesión de BD.
 
     Corre después de que la sesión del request original ya se cerró, por eso no la reutiliza.
     """
     async with async_session_factory() as db:
-        candidato = await db.get(Candidato, candidato_id)
-        if candidato is None:
+        cargado = await cargar_para_analisis_cv(candidato_id, db)
+        if cargado is None:
             return
-
-        vacante = await db.get(Vacante, candidato.vacante_id)
-        if vacante is None:
-            return
-
-        area = await db.get(Area, vacante.area_id)
+        candidato, vacante, area = cargado
         tenant_actual.set(candidato.tenant_id)
 
         try:

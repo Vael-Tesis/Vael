@@ -37,6 +37,7 @@ from app.services.analisis_cv import (
     _como_clasificacion,
     _validar_y_sumar_desglose,
     construir_prompt_analisis,
+    datos_prompt_vacante,
     extraer_texto_pdf,
 )
 
@@ -196,7 +197,7 @@ async def medir() -> dict[str, Any]:
         texto_cv = extraer_texto_pdf(pdf_bytes)
         if not texto_cv.strip():
             raise SystemExit(f"{cv}.pdf no tiene texto extraíble — regenera los CV con 'python -m app.scripts.generar_cvs'")
-        prompt = construir_prompt_analisis(texto_cv, vacante, area)
+        prompt = construir_prompt_analisis(texto_cv, datos_prompt_vacante(vacante, area))
 
         print(f"\n{cv} — {EJECUCIONES_POR_CV} ejecuciones contra {vacante.titulo} (umbral score_cv_minimo={vacante.score_cv_minimo})")
         for numero in range(1, EJECUCIONES_POR_CV + 1):

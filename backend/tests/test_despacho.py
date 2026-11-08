@@ -1,5 +1,6 @@
 """Pruebas del despachador único de tareas (DEC-016, DEV-C-13, modo en proceso)."""
 import inspect
+import json
 import logging
 from typing import Any
 
@@ -114,3 +115,87 @@ async def test_la_tarea_usa_el_tenant_del_payload(monkeypatch: pytest.MonkeyPatc
     await tarea
 
     assert vistos == ["tenant-del-mensaje"]
+
+
+# --- Modo sqs (HU-23): el backend prepara el mensaje y lo publica; no analiza en proceso ---
+
+
+@pytest.fixture
+def modo_sqs(monkeypatch: pytest.MonkeyPatch, db_engine: Any) -> list[tuple[str, dict[str, Any]]]:
+    """Activa el modo sqs con colas de prueba y registra lo que se publicaría en SQS."""
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from app.core.config import settings
+    from app.core.database import CLAVE_TENANT
+    from app.services import aws_services
+
+    publicados: list[tuple[str, dict[str, Any]]] = []
+
+    async def encolar_falso(cola_url: str, mensaje: dict[str, Any], delay_segundos: int = 0) -> str:
+        json.dumps(mensaje)  # debe poder viajar como cuerpo de SQS
+        publicados.append((cola_url, mensaje))
+        return "mensaje-1"
+
+    def no_en_proceso(_tipo: TipoTarea) -> despacho.Manejador:
+        raise AssertionError("En modo sqs la tarea no debe correr en proceso")
+
+    monkeypatch.setattr(settings, "despacho_modo", "sqs")
+    monkeypatch.setattr(settings, "sqs_url_analisis_cv", "https://sqs.test/vael-analisis-cv")
+    monkeypatch.setattr(settings, "sqs_url_analisis_entrevista", "https://sqs.test/vael-analisis-entrevista")
+    monkeypatch.setattr(aws_services, "encolar_tarea", encolar_falso)
+    monkeypatch.setattr(despacho, "_manejador", no_en_proceso)
+    monkeypatch.setattr(
+        despacho, "sesion_con_tenant", lambda tenant_id: AsyncSession(db_engine, expire_on_commit=False, info={CLAVE_TENANT: tenant_id})
+    )
+    return publicados
+
+
+async def test_en_modo_sqs_publica_el_mensaje_completo_del_cv(modo_sqs: list[Any], db_session: Any) -> None:
+    """El mensaje lleva todo lo que el cálculo necesita, para que la Lambda no consulte la base (DEC-018)."""
+    from app.models.area import Area
+    from app.models.candidato import Candidato
+    from app.models.vacante import EstadoVacante, Vacante
+    from tests.conftest import TENANT_ID
+
+    area = Area(tenant_id=TENANT_ID, nombre="Tecnología", codigo_corto="TI", instruccion_ia="Prioriza APIs")
+    db_session.add(area)
+    await db_session.flush()
+    vacante = Vacante(
+        tenant_id=TENANT_ID, area_id=area.id, codigo="TI-2026-960", titulo="Backend Python",
+        estado=EstadoVacante.ABIERTA, requisitos="Python", habilidades=["FastAPI"],
+    )
+    db_session.add(vacante)
+    await db_session.flush()
+    candidato = Candidato(
+        tenant_id=TENANT_ID, vacante_id=vacante.id, nombre="Kevin", apellidos="Huamán", email="kevin.sqs@example.com",
+        cv_url="https://vael-storage.s3.amazonaws.com/cvs/tenant/c1/cv.pdf",
+    )
+    db_session.add(candidato)
+    await db_session.commit()
+
+    tarea = await despachar_tarea(TipoTarea.ANALISIS_CV, {"tenant_id": TENANT_ID, "candidato_id": candidato.id})
+    await tarea
+
+    assert len(modo_sqs) == 1
+    cola, mensaje = modo_sqs[0]
+    assert cola == "https://sqs.test/vael-analisis-cv"
+    assert mensaje["tipo"] == "analisis_cv"
+    assert mensaje["tenant_id"] == TENANT_ID
+    assert mensaje["candidato_id"] == candidato.id
+    assert mensaje["cv_key"] == "cvs/tenant/c1/cv.pdf"
+    assert mensaje["vacante"]["titulo"] == "Backend Python"
+    assert mensaje["vacante"]["habilidades"] == ["FastAPI"]
+    assert mensaje["vacante"]["instruccion_area"] == "Prioriza APIs"
+
+
+async def test_en_modo_sqs_no_publica_si_el_registro_no_existe(modo_sqs: list[Any]) -> None:
+    tarea = await despachar_tarea(TipoTarea.ANALISIS_ENTREVISTA, {"tenant_id": "tenant-x", "entrevista_id": "no-existe"})
+    await tarea
+    assert modo_sqs == []
+
+
+def test_el_modo_sqs_exige_las_colas() -> None:
+    from app.core.config import Settings
+
+    with pytest.raises(ValueError, match="SQS_URL"):
+        Settings(despacho_modo="sqs", sqs_url_analisis_cv="", sqs_url_analisis_entrevista="")

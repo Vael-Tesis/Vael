@@ -40,6 +40,20 @@ Resources:
           "selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":3},
           "action":{"type":"expire"}}]}
 
+  # Imagen de la Lambda de análisis (DEC-016, HU-23): el mismo código del backend sobre la
+  # imagen base de AWS Lambda (backend/Dockerfile.lambda)
+  RepositorioLambda:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: vael-lambda
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Conserva las 3 últimas imágenes",
+          "selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":3},
+          "action":{"type":"expire"}}]}
+
   BucketApp:
     Type: AWS::S3::Bucket
     Properties:
@@ -196,6 +210,8 @@ Resources:
 Outputs:
   RepositorioUri:
     Value: !GetAtt RepositorioBackend.RepositoryUri
+  RepositorioLambdaUri:
+    Value: !GetAtt RepositorioLambda.RepositoryUri
   BucketApp:
     Value: !Ref BucketApp
   BucketLanding:
