@@ -76,7 +76,9 @@ $imagen = "$($base.RepositorioUri):$etiqueta"
 docker build --target production -t $imagen (Join-Path $raiz "backend")
 if ($LASTEXITCODE -ne 0) { throw "Falló docker build" }
 $registro = $base.RepositorioUri.Split("/")[0]
-Aws ecr get-login-password | docker login --username AWS --password-stdin $registro
+# La tubería va por cmd: Windows PowerShell 5.1 altera el texto que pasa a docker y ECR responde
+# 400 (Bad Request) al login
+cmd /c "aws.exe ecr get-login-password --profile $Perfil --region $Region | docker login --username AWS --password-stdin $registro"
 if ($LASTEXITCODE -ne 0) { throw "Falló docker login en ECR" }
 docker push $imagen
 if ($LASTEXITCODE -ne 0) { throw "Falló docker push" }
