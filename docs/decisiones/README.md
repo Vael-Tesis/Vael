@@ -28,5 +28,6 @@ Cada decisión de implementación se registra como `DEC-NNN` en formato ADR (*Ar
 | DEC-022 | Recomendación de finalistas con `top_candidatos_finalistas` (modifica DEC-009, punto 2) | [DEC-022](DEC-022-lote-finalistas.md) |
 | DEC-023 | S3 y correo locales para desarrollo: Adobe S3Mock y Mailpit | [DEC-023](DEC-023-s3-y-correo-locales.md) |
 | DEC-024 | Desglose ponderado y auditable del `score_cv` (corrige el doc 08; se implementa en DEV-C-14) | [DEC-024](DEC-024-desglose-score-cv.md) |
+| DEC-025 | Qwen del instituto como IA de respaldo de Gemini (**Propuesta**) | [DEC-025](DEC-025-ia-respaldo-qwen.md) |
 
-La siguiente decisión nueva usa el número DEC-025.
+La siguiente decisión nueva usa el número DEC-026.

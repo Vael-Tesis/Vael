@@ -20,7 +20,7 @@ from typing import Any
 
 
 def _cargar_secretos() -> None:
-    """Lee GEMINI_API_KEY e INTERNAL_SERVICE_KEY de Secrets Manager al iniciar el contenedor.
+    """Lee las claves de Gemini, del HMAC y de Qwen (respaldo) de Secrets Manager al iniciar.
 
     Se hace antes de importar la configuración de la aplicación. Así las claves no quedan en
     las variables de entorno de la función, visibles en la consola de AWS.
@@ -31,7 +31,7 @@ def _cargar_secretos() -> None:
     import boto3
 
     valores = json.loads(boto3.client("secretsmanager").get_secret_value(SecretId=arn)["SecretString"])
-    for clave in ("GEMINI_API_KEY", "INTERNAL_SERVICE_KEY"):
+    for clave in ("GEMINI_API_KEY", "INTERNAL_SERVICE_KEY", "QWEN_API_KEY"):
         if valores.get(clave):
             os.environ[clave] = valores[clave]
 

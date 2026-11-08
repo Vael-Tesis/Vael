@@ -8,6 +8,10 @@ de la misma forma. Usa el SDK `google-genai`, el único de Gemini en el proyecto
   (plazo vencido en Google) y llamadas sin respuesta en TIEMPO_LIMITE_SEGUNDOS.
 - Cada llamada registra el modelo exacto, los parámetros, los intentos y la duración: el OE2
   exige saber con qué modelo y configuración se obtuvo cada puntaje (plan de métricas).
+- Respaldo (DEC-025, propuesta; DEV-C-15): con `IA_RESPALDO=qwen`, si Gemini sigue sin
+  responder tras los reintentos (cuota agotada, saturación o tiempo límite), la misma llamada
+  se hace al modelo Qwen del instituto (`core/qwen.py`). Con `IA_PROVEEDOR=qwen`, todas las
+  llamadas van a Qwen. La medición del OE2 desactiva el respaldo: mide solo a Gemini.
 """
 import asyncio
 import json
@@ -21,6 +25,7 @@ from google import genai
 from google.genai import errors, types
 
 from app.core.config import settings
+from app.core.qwen import consultar_qwen_json, qwen_configurado
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +55,29 @@ def _espera_backoff(intento: int) -> float:
     return ESPERA_BASE_SEGUNDOS * 2 ** (intento - 1) + random.uniform(0, 1)
 
 
-async def consultar_gemini_json(prompt: str, model_name: str | None = None) -> dict[str, Any]:
+async def consultar_gemini_json(
+    prompt: str, model_name: str | None = None, permitir_respaldo: bool = True
+) -> dict[str, Any]:
+    """Consulta a la IA de texto con salida JSON: Gemini, con Qwen del instituto como respaldo.
+
+    - `IA_PROVEEDOR=qwen`: la llamada va directo a Qwen.
+    - `IA_RESPALDO=qwen` y `permitir_respaldo`: si Gemini agota sus reintentos por un error de
+      disponibilidad (429, 503, 504 o tiempo límite), se repite la llamada con Qwen. Un error de
+      otro tipo (por ejemplo, una petición inválida) se propaga sin pasar al respaldo.
+    """
+    if settings.ia_proveedor == "qwen":
+        return await consultar_qwen_json(prompt)
+    try:
+        return await _consultar_gemini(prompt, model_name)
+    except (errors.APIError, TimeoutError) as exc:
+        por_disponibilidad = isinstance(exc, TimeoutError) or exc.code in CODIGOS_REINTENTABLES
+        if not (permitir_respaldo and por_disponibilidad and settings.ia_respaldo == "qwen" and qwen_configurado()):
+            raise
+        logger.warning("Gemini no está disponible (%r); la llamada pasa al respaldo Qwen (DEC-025)", exc)
+        return await consultar_qwen_json(prompt)
+
+
+async def _consultar_gemini(prompt: str, model_name: str | None = None) -> dict[str, Any]:
     """Llama a un modelo Gemini pidiendo salida JSON y parsea la respuesta como dict.
 
     Reintenta ante 429, 503, 504 o sin respuesta en TIEMPO_LIMITE_SEGUNDOS, hasta MAX_INTENTOS
