@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # AWS
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
+    # Las credenciales temporales (rol de la Lambda) traen además un token de sesión; sin él, AWS
+    # rechaza la clave (InvalidAccessKeyId). En ECS las credenciales llegan por el rol de la tarea.
+    aws_session_token: str = ""
     aws_region: str = "us-east-1"
     s3_bucket_name: str = "vael-storage"
     # Solo en desarrollo: S3 local (Adobe S3Mock en docker-compose, DEC-023). Vacío = S3 de AWS.

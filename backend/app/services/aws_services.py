@@ -35,6 +35,7 @@ def _cliente(servicio: str, region_name: str | None = None) -> Any:
     sesion = aioboto3.Session(
         aws_access_key_id=settings.aws_access_key_id or relleno,
         aws_secret_access_key=settings.aws_secret_access_key or relleno,
+        aws_session_token=None if s3_local else (settings.aws_session_token or None),
         region_name=region_name or settings.aws_region,
     )
     if s3_local:
