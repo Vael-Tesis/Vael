@@ -9,8 +9,10 @@
   Lee GEMINI_API_KEY y SEED_PASSWORD de backend/.env; nunca los imprime.
 .EXAMPLE
   .\scripts\aws-encender.ps1
+.EXAMPLE
+  .\scripts\aws-encender.ps1 -CorreoAlarmas equipo@ejemplo.com   # ese correo recibe las alarmas (HU-22)
 #>
-param([string]$Perfil = "vael", [string]$Region = "us-east-1")
+param([string]$Perfil = "vael", [string]$Region = "us-east-1", [string]$CorreoAlarmas = "")
 
 $ErrorActionPreference = "Stop"
 $env:AWS_PAGER = ""  # sin paginador: el script no debe quedarse esperando una tecla
@@ -91,10 +93,12 @@ if ($LASTEXITCODE -ne 0) { throw "Falló docker push de la Lambda" }
 Paso "Entorno temporal (red, RDS, ALB, ECS, SQS y Lambda); la primera vez tarda unos 15 minutos"
 $plantilla = Join-Path $raiz "infra\aws\entorno.yaml"
 $existe = AwsOpcional cloudformation describe-stacks --stack-name vael-entorno --query "Stacks[0].StackStatus" --output text
+# Sin -CorreoAlarmas, las alarmas existen igual y se ven en CloudWatch, pero no notifican a nadie
+$correo = @(); if ($CorreoAlarmas) { $correo = @("CorreoAlarmas=$CorreoAlarmas") }
 if ($existe) {
   # Entorno ya encendido: solo cambia la imagen; el resto conserva sus valores
   Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM `
-    --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" --no-fail-on-empty-changeset
+    --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" @correo --no-fail-on-empty-changeset
 } else {
   $prefijos = Aws ec2 describe-managed-prefix-lists --filters "Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing" `
     --query "PrefixLists[0].PrefixListId" --output text
@@ -102,7 +106,7 @@ if ($existe) {
     --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" "PrefixListCloudFront=$prefijos" "OrigenSecreto=$origenSecreto" `
       "ClaveJwt=$(NuevaClave 64)" "ClaveInterna=$(NuevaClave 64)" "PassMaestra=$(NuevaClave 32)" `
       "PassOwner=$(NuevaClave 32)" "PassApp=$(NuevaClave 32)" "PassSystem=$(NuevaClave 32)" `
-      "GeminiApiKey=$(LeerEnv 'GEMINI_API_KEY')" "SeedPassword=$(LeerEnv 'SEED_PASSWORD')"
+      "GeminiApiKey=$(LeerEnv 'GEMINI_API_KEY')" "SeedPassword=$(LeerEnv 'SEED_PASSWORD')" @correo
 }
 $entorno = Salidas "vael-entorno"
 
