@@ -75,7 +75,7 @@ def _preparar_analisis(monkeypatch: pytest.MonkeyPatch, resultado_gemini: dict[s
     async def gemini_falso(_prompt: str, model_name: str | None = None) -> dict[str, Any]:
         return resultado_gemini
 
-    monkeypatch.setattr(analisis_cv, "_descargar_pdf", pdf_falso)
+    monkeypatch.setattr(analisis_cv, "descargar_archivo", pdf_falso)
     monkeypatch.setattr(analisis_cv, "extraer_texto_pdf", lambda _b: "Python FastAPI PostgreSQL")
     monkeypatch.setattr(analisis_cv, "consultar_gemini_json", gemini_falso)
 

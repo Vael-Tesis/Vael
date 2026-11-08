@@ -1,13 +1,16 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
   VAEL - entorno temporal (DEP-C-01 a DEP-C-04, DEC-018). Red sin NAT Gateway, ALB que solo acepta
-  tráfico de CloudFront, backend en ECS Fargate, PostgreSQL en RDS (subred privada, una zona) y el
-  bucket de los CV. Se crea para usarlo y se destruye después (decisión de operación del 2026-10-25).
+  tráfico de CloudFront, backend en ECS Fargate, PostgreSQL en RDS (subred privada, una zona), el
+  bucket de los CV y el procesamiento asíncrono con SQS y Lambda fuera de la VPC (DEC-016, HU-23). Se crea para usarlo y se destruye después (decisión de operación del 2026-10-25).
 
 Parameters:
   ImagenUri:
     Type: String
     Description: Imagen del backend en ECR (target production del Dockerfile)
+  ImagenLambdaUri:
+    Type: String
+    Description: Imagen de la Lambda de análisis en ECR (backend/Dockerfile.lambda, HU-23)
   PrefixListCloudFront:
     Type: String
     Description: Lista de prefijos administrada com.amazonaws.global.cloudfront.origin-facing
@@ -324,6 +327,9 @@ Resources:
               - Effect: Allow
                 Action: [ses:SendEmail, ses:SendRawEmail]
                 Resource: "*"
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: [!GetAtt ColaAnalisisCv.Arn, !GetAtt ColaAnalisisEntrevista.Arn]
 
   TareaBackend:
     Type: AWS::ECS::TaskDefinition
@@ -350,6 +356,9 @@ Resources:
             - {Name: EMAIL_FROM_NAME, Value: VAEL}
             - {Name: FRONTEND_URL, Value: !Sub "https://${DominioApp}"}
             - {Name: ALLOWED_ORIGINS, Value: !Sub "https://${DominioApp}"}
+            - {Name: DESPACHO_MODO, Value: sqs}
+            - {Name: SQS_URL_ANALISIS_CV, Value: !Ref ColaAnalisisCv}
+            - {Name: SQS_URL_ANALISIS_ENTREVISTA, Value: !Ref ColaAnalisisEntrevista}
           Secrets:
             - {Name: DATABASE_URL, ValueFrom: !Sub "${Secretos}:DATABASE_URL::"}
             - {Name: DATABASE_SYSTEM_URL, ValueFrom: !Sub "${Secretos}:DATABASE_SYSTEM_URL::"}
@@ -431,6 +440,159 @@ Resources:
           ContainerPort: 8000
           TargetGroupArn: !Ref GrupoDestino
 
+
+  # --- Procesamiento asíncrono (DEC-016, DEC-018, HU-23): SQS + Lambda fuera de la VPC ---
+  # Cada cola tiene su DLQ: un mensaje que falla 3 veces pasa a la DLQ y dispara su alarma.
+  ColaAnalisisCvDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: vael-analisis-cv-dlq
+      MessageRetentionPeriod: 1209600  # 14 días para revisarlo
+
+  ColaAnalisisCv:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: vael-analisis-cv
+      VisibilityTimeout: 1800  # 6 veces el tiempo límite de la Lambda (recomendación de AWS)
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ColaAnalisisCvDlq.Arn
+        maxReceiveCount: 3
+
+  ColaAnalisisEntrevistaDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: vael-analisis-entrevista-dlq
+      MessageRetentionPeriod: 1209600
+
+  ColaAnalisisEntrevista:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: vael-analisis-entrevista
+      VisibilityTimeout: 1800
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ColaAnalisisEntrevistaDlq.Arn
+        maxReceiveCount: 3
+
+  # Secreto propio de la Lambda: solo la clave de Gemini y la del HMAC. No recibe las URL de
+  # la base de datos (DEC-018: las Lambdas no acceden a la base).
+  SecretosLambda:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: VAEL - claves de la Lambda de análisis (Gemini y firma HMAC de /api/interno)
+      SecretString: !Sub '{"GEMINI_API_KEY":"${GeminiApiKey}","INTERNAL_SERVICE_KEY":"${ClaveInterna}"}'
+
+  RegistrosLambda:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: /aws/lambda/vael-analisis
+      RetentionInDays: 7
+
+  RolLambda:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        # Permisos mínimos (DEP-C-03): colas, lectura de los CV, su secreto y sus registros. Sin RDS.
+        - PolicyName: analisis
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:GetQueueAttributes, sqs:ChangeMessageVisibility]
+                Resource: [!GetAtt ColaAnalisisCv.Arn, !GetAtt ColaAnalisisEntrevista.Arn]
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${BucketArchivos.Arn}/*"
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref SecretosLambda
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt RegistrosLambda.Arn
+
+  FuncionAnalisis:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: vael-analisis
+      Description: VAEL - análisis de CV y de entrevistas con Gemini; entrega el resultado firmado al backend
+      PackageType: Image
+      Code:
+        ImageUri: !Ref ImagenLambdaUri
+      Role: !GetAtt RolLambda.Arn
+      Timeout: 300  # Gemini: hasta 4 intentos de 60 s con espera entre ellos (core/gemini.py)
+      MemorySize: 1024
+      LoggingConfig:
+        LogGroup: !Ref RegistrosLambda
+      Environment:
+        Variables:
+          ENVIRONMENT: production
+          DEBUG: "false"
+          SECRETO_ARN: !Ref SecretosLambda
+          S3_BUCKET_NAME: !Ref BucketArchivos
+          BACKEND_URL_INTERNO: !Sub "https://${DominioApp}"
+          # La configuración de la aplicación exige estos valores, pero la Lambda nunca los usa:
+          # no abre sesiones de base de datos ni firma JWT (DEC-018). Son valores de relleno.
+          DATABASE_URL: postgresql+asyncpg://sin-acceso@lambda.invalid/sin_base
+          DATABASE_SYSTEM_URL: postgresql+asyncpg://sin-acceso@lambda.invalid/sin_base
+          DATABASE_OWNER_URL: postgresql+asyncpg://sin-acceso@lambda.invalid/sin_base
+          SECRET_KEY: la-lambda-no-firma-tokens
+
+  EntradaAnalisisCv:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt ColaAnalisisCv.Arn
+      FunctionName: !Ref FuncionAnalisis
+      BatchSize: 1
+      FunctionResponseTypes: [ReportBatchItemFailures]
+      ScalingConfig:
+        MaximumConcurrency: 2  # pocas llamadas simultáneas a Gemini
+
+  EntradaAnalisisEntrevista:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt ColaAnalisisEntrevista.Arn
+      FunctionName: !Ref FuncionAnalisis
+      BatchSize: 1
+      FunctionResponseTypes: [ReportBatchItemFailures]
+      ScalingConfig:
+        MaximumConcurrency: 2
+
+  # Alarma si una DLQ recibe algún mensaje (DEC-016, punto 3). Las notificaciones (SNS) se
+  # agregan con las alarmas de HU-22 (DEP-C-05/06).
+  AlarmaDlqAnalisisCv:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vael-dlq-analisis-cv
+      AlarmDescription: Un análisis de CV falló 3 veces y quedó en la DLQ
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions: [{Name: QueueName, Value: !GetAtt ColaAnalisisCvDlq.QueueName}]
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  AlarmaDlqAnalisisEntrevista:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vael-dlq-analisis-entrevista
+      AlarmDescription: Un análisis de entrevista falló 3 veces y quedó en la DLQ
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions: [{Name: QueueName, Value: !GetAtt ColaAnalisisEntrevistaDlq.QueueName}]
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
 Outputs:
   BalanceadorDns:
     Value: !GetAtt Balanceador.DNSName
@@ -444,3 +606,9 @@ Outputs:
     Value: !Ref SubredPublicaA
   GrupoApp:
     Value: !Ref GrupoApp
+  FuncionAnalisis:
+    Value: !Ref FuncionAnalisis
+  ColaAnalisisCv:
+    Value: !Ref ColaAnalisisCv
+  ColaAnalisisCvDlq:
+    Value: !Ref ColaAnalisisCvDlq

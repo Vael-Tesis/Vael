@@ -116,7 +116,7 @@ async def test_un_cv_escaneado_va_a_revision_manual_sin_llamar_a_la_ia(
     async def gemini_prohibido(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         raise AssertionError("Un CV sin texto no se envía a la IA")
 
-    monkeypatch.setattr(analisis_cv, "_descargar_pdf", pdf_falso)
+    monkeypatch.setattr(analisis_cv, "descargar_archivo", pdf_falso)
     monkeypatch.setattr(analisis_cv, "consultar_gemini_json", gemini_prohibido)
 
     await analisis_cv.analizar_cv(candidato, vacante, None, db_session)

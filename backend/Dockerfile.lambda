@@ -1,0 +1,16 @@
+# syntax=docker/dockerfile:1
+# Imagen de la Lambda de análisis (DEC-016, DEV-C-13 · HU-23): el mismo código del backend,
+# empaquetado sobre la imagen base oficial de AWS Lambda para Python 3.12.
+# Construir con --provenance=false: Lambda no acepta índices de imagen con atestaciones.
+
+FROM public.ecr.aws/lambda/python:3.12
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt --target "${LAMBDA_TASK_ROOT}"
+
+COPY app/ ${LAMBDA_TASK_ROOT}/app/
+
+CMD ["app.lambda_handler.handler"]

@@ -6,6 +6,7 @@ from typing import Any
 from google import genai
 from google.genai import types
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.database import async_session_factory
@@ -170,10 +171,20 @@ async def generar_pool_preguntas(
     return preguntas
 
 
-def _construir_prompt_analisis_entrevista(transcripcion: str, dimensiones: list[DimensionEvaluacion]) -> str:
+def datos_dimension(dimension: DimensionEvaluacion) -> dict[str, Any]:
+    """Datos de una dimensión de la plantilla, serializables para el mensaje de SQS (DEC-018)."""
+    return {
+        "nombre": dimension.nombre,
+        "descripcion": dimension.descripcion,
+        "puntaje_maximo": dimension.puntaje_maximo,
+        "peso": dimension.peso,
+    }
+
+
+def _construir_prompt_analisis_entrevista(transcripcion: str, dimensiones: list[dict[str, Any]]) -> str:
     """Arma el prompt de análisis multidimensional de la entrevista."""
     dimensiones_texto = "\n".join(
-        f"- {d.nombre} (máximo {d.puntaje_maximo} pts, peso {d.peso}): {d.descripcion or 'sin descripción'}"
+        f"- {d['nombre']} (máximo {d['puntaje_maximo']} pts, peso {d['peso']}): {d.get('descripcion') or 'sin descripción'}"
         for d in dimensiones
     )
 
@@ -211,7 +222,7 @@ def _como_nota_dimension(valor: Any, puntaje_maximo: float) -> float:
 
 async def analizar_entrevista(
     transcripcion: str,
-    dimensiones: list[DimensionEvaluacion],
+    dimensiones: list[dict[str, Any]],
 ) -> tuple[dict[str, Any], float]:
     """Evalúa la transcripción de una entrevista con Gemini contra las dimensiones de la plantilla.
 
@@ -232,76 +243,128 @@ async def analizar_entrevista(
 
     for indice, dimension in enumerate(dimensiones):
         item = calificaciones[indice] if indice < len(calificaciones) else {}
-        nota_dimension = _como_nota_dimension(item.get("nota"), dimension.puntaje_maximo)
+        puntaje_maximo = dimension["puntaje_maximo"]
+        nota_dimension = _como_nota_dimension(item.get("nota"), puntaje_maximo)
 
-        dimensiones_json[dimension.nombre] = {
+        dimensiones_json[dimension["nombre"]] = {
             "nota": nota_dimension,
-            "puntaje_maximo": dimension.puntaje_maximo,
-            "peso": dimension.peso,
+            "puntaje_maximo": puntaje_maximo,
+            "peso": dimension["peso"],
             "comentario": str(item.get("comentario") or ""),
         }
 
-        if dimension.puntaje_maximo > 0:
-            suma_ponderada += (nota_dimension / dimension.puntaje_maximo) * dimension.peso
-            suma_pesos += dimension.peso
+        if puntaje_maximo > 0:
+            suma_ponderada += (nota_dimension / puntaje_maximo) * dimension["peso"]
+            suma_pesos += dimension["peso"]
 
     nota_final = round((suma_ponderada / suma_pesos) * 20, 2) if suma_pesos > 0 else 0.0
 
     return dimensiones_json, nota_final
 
 
+def preparar_mensaje_analisis_entrevista(
+    entrevista: EntrevistaIA, dimensiones: list[DimensionEvaluacion]
+) -> dict[str, Any]:
+    """Parte de preparación (backend): el mensaje de SQS con todo lo que el cálculo necesita."""
+    return {
+        "tipo": "analisis_entrevista",
+        "tenant_id": entrevista.tenant_id,
+        "entrevista_id": entrevista.id,
+        "transcripcion": entrevista.transcripcion,
+        "dimensiones": [datos_dimension(d) for d in dimensiones],
+    }
+
+
+async def calcular_analisis_entrevista(mensaje: dict[str, Any]) -> dict[str, Any]:
+    """Parte de cálculo: Lambda en producción, en proceso en desarrollo. No toca la base (DEC-018)."""
+    dimensiones_json, nota = await analizar_entrevista(mensaje["transcripcion"], mensaje["dimensiones"])
+    return {
+        "tenant_id": mensaje["tenant_id"],
+        "entrevista_id": mensaje["entrevista_id"],
+        "dimensiones_json": dimensiones_json,
+        "nota": nota,
+    }
+
+
+async def aplicar_resultado_analisis_entrevista(
+    entrevista: EntrevistaIA, resultado: dict[str, Any], db: AsyncSession
+) -> bool:
+    """Parte de aplicación (backend): guarda la nota, calcula el score_final (DEC-007) y deja al
+    candidato en entrevista_realizada. Devuelve False si el resultado ya se había aplicado
+    (idempotencia, DEC-016 punto 7)."""
+    if entrevista.nota is not None:
+        logger.info(
+            "Resultado de la entrevista %s ignorado: ya tenía nota",
+            entrevista.id,
+            extra={"tenant_id": entrevista.tenant_id},
+        )
+        return False
+
+    entrevista.nota = resultado["nota"]
+    entrevista.dimensiones_json = resultado["dimensiones_json"]
+    db.add(entrevista)
+    await db.commit()
+
+    candidato = await db.get(Candidato, entrevista.candidato_id)
+    if candidato is None:
+        return True
+
+    examen_statement = select(Examen).where(
+        Examen.candidato_id == candidato.id,
+        Examen.vacante_id == candidato.vacante_id,
+    )
+    examen_result = await db.exec(examen_statement)
+    examen = examen_result.first()
+
+    # DEC-007: escala 0-20; queda en None si falta alguna de las tres notas
+    candidato.score_final = calcular_score_final(
+        candidato.score_cv,
+        examen.nota if examen is not None else None,
+        resultado["nota"],
+    )
+
+    candidato.estado = EstadoCandidato.ENTREVISTA_REALIZADA
+    candidato.updated_at = utcnow()
+    db.add(candidato)
+    await db.commit()
+    return True
+
+
+async def cargar_para_analisis_entrevista(
+    entrevista_id: str, db: AsyncSession
+) -> tuple[EntrevistaIA, list[DimensionEvaluacion]] | None:
+    """Carga la entrevista finalizada y las dimensiones de su plantilla; None si no hay qué analizar."""
+    entrevista = await db.get(EntrevistaIA, entrevista_id)
+    if entrevista is None or not entrevista.transcripcion:
+        return None
+
+    dimensiones: list[DimensionEvaluacion] = []
+    if entrevista.plantilla_id:
+        statement = select(DimensionEvaluacion).where(DimensionEvaluacion.plantilla_id == entrevista.plantilla_id)
+        result = await db.exec(statement)
+        dimensiones = list(result.all())
+    return entrevista, dimensiones
+
+
 async def analizar_entrevista_candidato(entrevista_id: str) -> None:
-    """Punto de entrada para background tasks: analiza la entrevista finalizada, guarda su nota
-    y dimensiones, y calcula el score_final del candidato (DEC-007).
+    """Punto de entrada del despachador en modo en proceso: preparación, cálculo y aplicación.
 
     Abre su propia sesión de BD porque corre después de que la sesión del request original
-    ya se cerró.
+    ya se cerró. En producción el cálculo corre en la Lambda (DEC-016).
     """
     async with async_session_factory() as db:
-        entrevista = await db.get(EntrevistaIA, entrevista_id)
-        if entrevista is None or not entrevista.transcripcion:
+        cargado = await cargar_para_analisis_entrevista(entrevista_id, db)
+        if cargado is None:
             return
-
-        dimensiones: list[DimensionEvaluacion] = []
-        if entrevista.plantilla_id:
-            statement = select(DimensionEvaluacion).where(
-                DimensionEvaluacion.plantilla_id == entrevista.plantilla_id
-            )
-            result = await db.exec(statement)
-            dimensiones = list(result.all())
+        entrevista, dimensiones = cargado
 
         tenant_actual.set(entrevista.tenant_id)
+        mensaje = preparar_mensaje_analisis_entrevista(entrevista, dimensiones)
         try:
             with medir_operacion(logger, "analisis_entrevista", entrevista_id=entrevista_id):
-                dimensiones_json, nota_entrevista = await analizar_entrevista(entrevista.transcripcion, dimensiones)
+                resultado = await calcular_analisis_entrevista(mensaje)
         except Exception:
             logger.exception("Falló el análisis de la entrevista %s", entrevista_id)
             return
 
-        entrevista.nota = nota_entrevista
-        entrevista.dimensiones_json = dimensiones_json
-        db.add(entrevista)
-        await db.commit()
-
-        candidato = await db.get(Candidato, entrevista.candidato_id)
-        if candidato is None:
-            return
-
-        examen_statement = select(Examen).where(
-            Examen.candidato_id == candidato.id,
-            Examen.vacante_id == candidato.vacante_id,
-        )
-        examen_result = await db.exec(examen_statement)
-        examen = examen_result.first()
-
-        # DEC-007: escala 0-20; queda en None si falta alguna de las tres notas
-        candidato.score_final = calcular_score_final(
-            candidato.score_cv,
-            examen.nota if examen is not None else None,
-            nota_entrevista,
-        )
-
-        candidato.estado = EstadoCandidato.ENTREVISTA_REALIZADA
-        candidato.updated_at = utcnow()
-        db.add(candidato)
-        await db.commit()
+        await aplicar_resultado_analisis_entrevista(entrevista, resultado, db)

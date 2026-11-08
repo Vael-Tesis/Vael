@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # AWS
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
+    # Las credenciales temporales (rol de la Lambda) traen además un token de sesión; sin él, AWS
+    # rechaza la clave (InvalidAccessKeyId). En ECS las credenciales llegan por el rol de la tarea.
+    aws_session_token: str = ""
     aws_region: str = "us-east-1"
     s3_bucket_name: str = "vael-storage"
     # Solo en desarrollo: S3 local (Adobe S3Mock en docker-compose, DEC-023). Vacío = S3 de AWS.
@@ -55,8 +58,18 @@ class Settings(BaseSettings):
     smtp_user: str | None = None
     smtp_password: str | None = None
 
-    # Interno
+    # Interno: también es el secreto HMAC con el que las Lambdas firman sus entregas al
+    # backend (/api/interno, DEC-018). Vive en Secrets Manager.
     internal_service_key: str
+
+    # Procesamiento asíncrono (DEC-016, HU-23). "en_proceso": desarrollo y tests, la tarea
+    # corre en el mismo proceso. "sqs": producción, se publica en la cola del tipo y la
+    # procesa la Lambda.
+    despacho_modo: str = "en_proceso"
+    sqs_url_analisis_cv: str = ""
+    sqs_url_analisis_entrevista: str = ""
+    # Solo la Lambda: URL base del backend (https://app.vael.work) para entregar sus resultados
+    backend_url_interno: str = ""
 
     # Contraseñas de los usuarios semilla (app.scripts.semillas, doc 13). Nunca en el repositorio.
     # SEED_PASSWORD es la de respaldo para los roles que no tengan la suya.
@@ -79,6 +92,15 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Indica si el entorno actual es de producción."""
         return self.environment.lower() == "production"
+
+    @model_validator(mode="after")
+    def _colas_en_modo_sqs(self) -> "Settings":
+        """En modo sqs, cada tipo de tarea necesita su cola (DEC-016)."""
+        if self.despacho_modo not in ("en_proceso", "sqs"):
+            raise ValueError("DESPACHO_MODO debe ser 'en_proceso' o 'sqs'")
+        if self.despacho_modo == "sqs" and not (self.sqs_url_analisis_cv and self.sqs_url_analisis_entrevista):
+            raise ValueError("DESPACHO_MODO=sqs exige SQS_URL_ANALISIS_CV y SQS_URL_ANALISIS_ENTREVISTA")
+        return self
 
     @model_validator(mode="after")
     def _sin_debug_en_produccion(self) -> "Settings":

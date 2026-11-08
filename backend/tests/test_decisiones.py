@@ -138,7 +138,7 @@ async def test_el_analisis_de_cv_deja_por_confirmar_sin_token_ni_correo(
             "resumen": "Encaja muy bien",
         }
 
-    monkeypatch.setattr(analisis_cv, "_descargar_pdf", pdf_falso)
+    monkeypatch.setattr(analisis_cv, "descargar_archivo", pdf_falso)
     monkeypatch.setattr(analisis_cv, "extraer_texto_pdf", lambda _b: "Python FastAPI")
     monkeypatch.setattr(analisis_cv, "consultar_gemini_json", gemini_falso)
 
