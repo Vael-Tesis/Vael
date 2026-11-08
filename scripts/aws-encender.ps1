@@ -1,33 +1,51 @@
 ﻿<#
 .SYNOPSIS
-  Enciende VAEL en AWS (DEP-C-01): base permanente, imagen del backend, entorno temporal,
-  roles + migraciones + semillas, y publicación del panel y de la landing.
+  Enciende VAEL en AWS (DEP-C-01): base permanente, imágenes del backend y de la Lambda, entorno
+  temporal, roles + migraciones + semillas, y publicación del panel y de la landing.
 .DESCRIPTION
   El entorno se crea solo para usarlo (demos, E3, sustentación) y se destruye con
   .\scripts\aws-apagar.ps1 (decisión de operación del 2026-10-25). Costo aproximado del entorno
   encendido: 0,09 USD por hora (infra/aws/README.md).
-  Lee GEMINI_API_KEY y SEED_PASSWORD de backend/.env; nunca los imprime.
+
+  Corre en Windows PowerShell 5.1 (laptop) y en PowerShell 7 sobre Linux (GitHub Actions, DEP-C-05).
+  GEMINI_API_KEY y SEED_PASSWORD se leen de las variables de entorno o, si no están, de
+  backend/.env; nunca se imprimen. Con la variable VAEL_ROL_CFN, CloudFormation usa ese rol de
+  servicio (infra/aws/acceso.yaml).
 .EXAMPLE
   .\scripts\aws-encender.ps1
 .EXAMPLE
   .\scripts\aws-encender.ps1 -CorreoAlarmas equipo@ejemplo.com   # ese correo recibe las alarmas (HU-22)
+.EXAMPLE
+  ./scripts/aws-encender.ps1 -Perfil "" -SoloSiEncendido   # deploy.yml al integrar en main
 #>
-param([string]$Perfil = "vael", [string]$Region = "us-east-1", [string]$CorreoAlarmas = "", [switch]$ConQwen)
+param(
+  [string]$Perfil = "vael",
+  [string]$Region = "us-east-1",
+  [string]$CorreoAlarmas = "",
+  [switch]$ConQwen,
+  # Publica las imágenes y la landing; actualiza el entorno solo si ya está encendido (no lo crea)
+  [switch]$SoloSiEncendido
+)
 
 $ErrorActionPreference = "Stop"
 $env:AWS_PAGER = ""  # sin paginador: el script no debe quedarse esperando una tecla
 $raiz = Split-Path $PSScriptRoot -Parent
 $inicio = Get-Date
+# En Windows PowerShell 5.1, $IsWindows no existe (es $null): ahí también es Windows
+$enWindows = ($null -eq $IsWindows) -or $IsWindows
+$awsExe = if ($enWindows) { "aws.exe" } else { "aws" }
+$perfilArgs = if ($Perfil) { @("--profile", $Perfil) } else { @() }
+$rolCfn = if ($env:VAEL_ROL_CFN) { @("--role-arn", $env:VAEL_ROL_CFN) } else { @() }
 
 function Aws {
-  & aws.exe @args --profile $Perfil --region $Region
+  & $awsExe @args @perfilArgs --region $Region
   if ($LASTEXITCODE -ne 0) { throw "Falló: aws $($args[0]) $($args[1])" }
 }
 
 # Devuelve $null en vez de fallar (para consultar si algo existe)
 function AwsOpcional {
   $previa = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-  $salida = & aws.exe @args --profile $Perfil --region $Region 2>$null
+  $salida = & $awsExe @args @perfilArgs --region $Region 2>$null
   $ok = $LASTEXITCODE -eq 0
   $ErrorActionPreference = $previa
   if ($ok) { return ($salida -join "`n").Trim() } else { return $null }
@@ -40,17 +58,21 @@ function NuevaClave([int]$largo = 40) {
   -join ($bytes | ForEach-Object { $letras[$_ % $letras.Length] })
 }
 
-function LeerEnv([string]$nombre) {
-  $linea = Get-Content (Join-Path $raiz "backend\.env") | Where-Object { $_ -match "^$nombre=(.+)$" } | Select-Object -First 1
-  if (-not $linea) { throw "Falta $nombre en backend/.env" }
+# Valor de una variable de entorno o, si no está, de backend/.env ("" si no existe en ninguno)
+function LeerEnvOpcional([string]$nombre) {
+  $valor = [Environment]::GetEnvironmentVariable($nombre)
+  if ($valor) { return $valor.Trim() }
+  $archivo = Join-Path $raiz "backend/.env"
+  if (-not (Test-Path $archivo)) { return "" }
+  $linea = Get-Content $archivo | Where-Object { $_ -match "^$nombre=(.+)$" } | Select-Object -First 1
+  if (-not $linea) { return "" }
   return ($linea -replace "^$nombre=", "").Trim()
 }
 
-# Devuelve "" si la variable no está (para las opcionales, como el respaldo Qwen de DEC-025)
-function LeerEnvOpcional([string]$nombre) {
-  $linea = Get-Content (Join-Path $raiz "backend\.env") | Where-Object { $_ -match "^$nombre=(.+)$" } | Select-Object -First 1
-  if (-not $linea) { return "" }
-  return ($linea -replace "^$nombre=", "").Trim()
+function LeerEnv([string]$nombre) {
+  $valor = LeerEnvOpcional $nombre
+  if (-not $valor) { throw "Falta $nombre (variable de entorno o backend/.env)" }
+  return $valor
 }
 
 function Salidas([string]$pila) {
@@ -62,6 +84,17 @@ function Salidas([string]$pila) {
 
 function Paso([string]$texto) { Write-Host "`n== $texto" -ForegroundColor Cyan }
 
+function PublicarLanding($base) {
+  Paso "Landing (www.vael.work)"
+  $pendientes = Select-String -Path (Join-Path $raiz "landing/*.html") -Pattern "DATO_PENDIENTE" -List
+  if ($pendientes) {
+    Write-Warning "La landing tiene datos pendientes ({{DATO_PENDIENTE}}) en: $($pendientes.Filename -join ', '). No se publica."
+    return
+  }
+  Aws s3 sync (Join-Path $raiz "landing") "s3://$($base.BucketLanding)" --delete --exclude "README.md" --exclude "assets/README.md"
+  Aws cloudfront create-invalidation --distribution-id $base.DistribucionLandingId --paths "/*" | Out-Null
+}
+
 # --- 1. Base permanente ---
 Paso "Base permanente (ECR, sitios y CloudFront)"
 $certificado = Aws acm list-certificates --query "CertificateSummaryList[?DomainName=='vael.work' && Status=='ISSUED'].CertificateArn | [0]" --output text
@@ -72,20 +105,24 @@ if (-not $origenSecreto) {
   $origenSecreto = NuevaClave
   Aws ssm put-parameter --name /vael/origen-secreto --type SecureString --value $origenSecreto | Out-Null
 }
-Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra\aws\base.yaml") `
+Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") @rolCfn `
   --parameter-overrides "CertificadoArn=$certificado" "OrigenSecreto=$origenSecreto" --no-fail-on-empty-changeset
 $base = Salidas "vael-base"
 
-# --- 2. Imagen del backend ---
+# --- 2. Imágenes del backend y de la Lambda ---
 Paso "Imagen del backend"
 $etiqueta = "$(git -C $raiz rev-parse --short HEAD)-$(Get-Date -Format yyyyMMddHHmm)"
 $imagen = "$($base.RepositorioUri):$etiqueta"
 docker build --target production -t $imagen (Join-Path $raiz "backend")
 if ($LASTEXITCODE -ne 0) { throw "Falló docker build" }
 $registro = $base.RepositorioUri.Split("/")[0]
-# La tubería va por cmd: Windows PowerShell 5.1 altera el texto que pasa a docker y ECR responde
-# 400 (Bad Request) al login
-cmd /c "aws.exe ecr get-login-password --profile $Perfil --region $Region | docker login --username AWS --password-stdin $registro"
+if ($enWindows) {
+  # La tubería va por cmd: Windows PowerShell 5.1 altera el texto que pasa a docker y ECR responde
+  # 400 (Bad Request) al login
+  cmd /c "aws.exe ecr get-login-password $($perfilArgs -join ' ') --region $Region | docker login --username AWS --password-stdin $registro"
+} else {
+  & $awsExe ecr get-login-password @perfilArgs --region $Region | docker login --username AWS --password-stdin $registro
+}
 if ($LASTEXITCODE -ne 0) { throw "Falló docker login en ECR" }
 docker push $imagen
 if ($LASTEXITCODE -ne 0) { throw "Falló docker push" }
@@ -93,15 +130,21 @@ if ($LASTEXITCODE -ne 0) { throw "Falló docker push" }
 Paso "Imagen de la Lambda de análisis (HU-23)"
 # --provenance=false: Lambda no acepta índices de imagen con atestaciones
 $imagenLambda = "$($base.RepositorioLambdaUri):$etiqueta"
-docker build --provenance=false -f (Join-Path $raiz "backend\Dockerfile.lambda") -t $imagenLambda (Join-Path $raiz "backend")
+docker build --provenance=false -f (Join-Path $raiz "backend/Dockerfile.lambda") -t $imagenLambda (Join-Path $raiz "backend")
 if ($LASTEXITCODE -ne 0) { throw "Falló docker build de la Lambda" }
 docker push $imagenLambda
 if ($LASTEXITCODE -ne 0) { throw "Falló docker push de la Lambda" }
 
 # --- 3. Entorno temporal ---
-Paso "Entorno temporal (red, RDS, ALB, ECS, SQS y Lambda); la primera vez tarda unos 15 minutos"
-$plantilla = Join-Path $raiz "infra\aws\entorno.yaml"
+$plantilla = Join-Path $raiz "infra/aws/entorno.yaml"
 $existe = AwsOpcional cloudformation describe-stacks --stack-name vael-entorno --query "Stacks[0].StackStatus" --output text
+if ($SoloSiEncendido -and -not $existe) {
+  # Entorno apagado: las imágenes quedan listas en ECR para el próximo encendido; no se crea nada
+  PublicarLanding $base
+  Write-Host "`nEntorno apagado: imágenes $etiqueta publicadas en ECR y landing actualizada. No se encendió nada." -ForegroundColor Green
+  return
+}
+Paso "Entorno temporal (red, RDS, ALB, ECS, SQS y Lambda); la primera vez tarda unos 15 minutos"
 # Sin -CorreoAlarmas, las alarmas existen igual y se ven en CloudWatch, pero no notifican a nadie
 $correo = @(); if ($CorreoAlarmas) { $correo = @("CorreoAlarmas=$CorreoAlarmas") }
 # IA de respaldo (DEC-025): solo con -ConQwen se pasan a la pila los datos de Qwen de backend/.env
@@ -114,12 +157,12 @@ if ($ConQwen) {
 }
 if ($existe) {
   # Entorno ya encendido: solo cambia la imagen; el resto conserva sus valores
-  Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM `
+  Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM @rolCfn `
     --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" @correo @ia --no-fail-on-empty-changeset
 } else {
   $prefijos = Aws ec2 describe-managed-prefix-lists --filters "Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing" `
     --query "PrefixLists[0].PrefixListId" --output text
-  Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM `
+  Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM @rolCfn `
     --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" "PrefixListCloudFront=$prefijos" "OrigenSecreto=$origenSecreto" `
       "ClaveJwt=$(NuevaClave 64)" "ClaveInterna=$(NuevaClave 64)" "PassMaestra=$(NuevaClave 32)" `
       "PassOwner=$(NuevaClave 32)" "PassApp=$(NuevaClave 32)" "PassSystem=$(NuevaClave 32)" `
@@ -128,7 +171,7 @@ if ($existe) {
 $entorno = Salidas "vael-entorno"
 
 Paso "CloudFront apunta /api al nuevo balanceador"
-Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra\aws\base.yaml") `
+Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") @rolCfn `
   --parameter-overrides "OrigenApi=$($entorno.BalanceadorDns)" --no-fail-on-empty-changeset
 
 # --- 4. Roles, migraciones y semillas ---
@@ -148,18 +191,11 @@ try {
   npm run build
   if ($LASTEXITCODE -ne 0) { throw "Falló el build del frontend" }
 } finally { Pop-Location }
-Aws s3 sync (Join-Path $raiz "frontend\dist") "s3://$($base.BucketApp)" --delete
-Aws s3 cp (Join-Path $raiz "frontend\dist\index.html") "s3://$($base.BucketApp)/index.html" --cache-control "no-cache"
+Aws s3 sync (Join-Path $raiz "frontend/dist") "s3://$($base.BucketApp)" --delete
+Aws s3 cp (Join-Path $raiz "frontend/dist/index.html") "s3://$($base.BucketApp)/index.html" --cache-control "no-cache"
 Aws cloudfront create-invalidation --distribution-id $base.DistribucionAppId --paths "/*" | Out-Null
 
-Paso "Landing (www.vael.work)"
-$pendientes = Select-String -Path (Join-Path $raiz "landing\*.html") -Pattern "DATO_PENDIENTE" -List
-if ($pendientes) {
-  Write-Warning "La landing tiene datos pendientes ({{DATO_PENDIENTE}}) en: $($pendientes.Filename -join ', '). No se publica."
-} else {
-  Aws s3 sync (Join-Path $raiz "landing") "s3://$($base.BucketLanding)" --delete --exclude "README.md" --exclude "assets/README.md"
-  Aws cloudfront create-invalidation --distribution-id $base.DistribucionLandingId --paths "/*" | Out-Null
-}
+PublicarLanding $base
 
 $minutos = [math]::Round(((Get-Date) - $inicio).TotalMinutes)
 Write-Host "`nVAEL encendido en $minutos min." -ForegroundColor Green

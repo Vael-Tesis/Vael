@@ -1,0 +1,154 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  VAEL - acceso de GitHub Actions a AWS sin claves guardadas (DEP-C-05, HU-22). Federación OIDC con
+  GitHub, un rol para el flujo de despliegue y un rol de servicio para CloudFormation. Pila
+  permanente y sin costo. Se despliega a mano (infra/aws/README.md); el flujo no puede modificarla,
+  así que no puede ampliar sus propios permisos.
+
+Parameters:
+  Repositorio:
+    Type: String
+    Default: Vael-Tesis/Vael
+  Rama:
+    Type: String
+    Default: main
+    Description: Única rama que puede asumir el rol (los despliegues salen de main)
+
+Resources:
+  ProveedorGitHub:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+
+  # CloudFormation crea y destruye el entorno con este rol: la red, RDS, ECS, el ALB, SQS, Lambda,
+  # las alarmas y los roles de la pila vael-entorno. Solo CloudFormation puede asumirlo.
+  RolCloudFormation:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vael-cloudformation
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Service: cloudformation.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/PowerUserAccess  # todo menos IAM y Organizations
+      Policies:
+        - PolicyName: roles-del-entorno
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:ListRolePolicies
+                  - iam:ListAttachedRolePolicies
+                  - iam:PassRole
+                Resource:
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/vael-entorno-*"
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/vael-base-*"
+              - Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource: "*"
+
+  # Rol del flujo deploy.yml: solo este repositorio y esta rama pueden asumirlo
+  RolGitHub:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vael-github-despliegue
+      MaxSessionDuration: 7200
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: {Federated: !Ref ProveedorGitHub}
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub "repo:${Repositorio}:ref:refs/heads/${Rama}"
+      Policies:
+        - PolicyName: despliegue
+          PolicyDocument:
+            Statement:
+              - Sid: PilasDeVael
+                Effect: Allow
+                Action: cloudformation:*
+                Resource:
+                  - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/vael-base/*"
+                  - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/vael-entorno/*"
+              - Sid: ConsultasDeCloudFormation
+                Effect: Allow
+                Action: [cloudformation:ValidateTemplate, cloudformation:GetTemplateSummary, cloudformation:ListStacks]
+                Resource: "*"
+              - Sid: PasarElRolDeCloudFormation
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt RolCloudFormation.Arn
+              - Sid: PasarLosRolesDeLaTareaDePreparacion
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/vael-entorno-*"
+                Condition:
+                  StringEquals: {iam:PassedToService: ecs-tasks.amazonaws.com}
+              - Sid: Imagenes
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:CompleteLayerUpload
+                  - ecr:DescribeImages
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource:
+                  - !Sub "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/vael-backend"
+                  - !Sub "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/vael-lambda"
+              - Sid: LoginEnEcr
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: SitiosYArchivos
+                Effect: Allow
+                Action: [s3:ListBucket, s3:GetObject, s3:PutObject, s3:DeleteObject]
+                Resource:
+                  - arn:aws:s3:::vael-base-*
+                  - arn:aws:s3:::vael-base-*/*
+                  - arn:aws:s3:::vael-entorno-*
+                  - arn:aws:s3:::vael-entorno-*/*
+              - Sid: CacheDeCloudFront
+                Effect: Allow
+                Action: [cloudfront:CreateInvalidation, cloudfront:GetInvalidation]
+                Resource: "*"
+              - Sid: TareaDePreparacion
+                Effect: Allow
+                Action: [ecs:RunTask, ecs:DescribeTasks]
+                Resource: "*"
+              - Sid: RegistrosDeLaPreparacion
+                Effect: Allow
+                Action: [logs:FilterLogEvents, logs:GetLogEvents, logs:DescribeLogStreams, logs:StartLiveTail]
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/vael*"
+              - Sid: DatosDelEncendido
+                Effect: Allow
+                Action: [ec2:DescribeManagedPrefixLists, acm:ListCertificates]
+                Resource: "*"
+              - Sid: CabeceraSecretaDeCloudFront
+                Effect: Allow
+                Action: [ssm:GetParameter, ssm:PutParameter]
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vael/origen-secreto"
+
+Outputs:
+  RolGitHub:
+    Value: !GetAtt RolGitHub.Arn
+  RolCloudFormation:
+    Value: !GetAtt RolCloudFormation.Arn
