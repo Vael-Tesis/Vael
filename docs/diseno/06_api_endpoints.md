@@ -1,12 +1,12 @@
-> COPIA del documento del Drive `VAEL/Docs/06_api_endpoints.md`, versión 2.5, copiada el 2026-11-04.
+> COPIA del documento del Drive `VAEL/Docs/06_api_endpoints.md`, versión 2.6, copiada el 2026-11-09.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 06 — API: Endpoints
 
 | Campo | Valor |
 |---|---|
-| Versión | 2.5 |
-| Actualizado | 2026-11-03 |
+| Versión | 2.6 |
+| Actualizado | 2026-11-09 |
 | Fuente de verdad | Código en `backend/app/routers/` (85 rutas en 10 routers, contadas en `frontend/openapi.json` el 2026-11-03, tras el Sprint 2) + DEC-001, DEC-008 a DEC-015, DEC-018, DEC-021, DEC-022, DEC-024 + doc 15 |
 | Copia en el repositorio | `docs/diseno/06_api_endpoints.md` (DEC-019). La fuente es este documento |
 
@@ -163,7 +163,7 @@ Candidato: `POST /evaluaciones/candidato/resolver-codigo` (público), `acceso`, 
 | GET | `/entrevista/detalle/{id}` | Autenticado | Implementado |
 | POST | `/entrevista/acceso`, `/iniciar`, `/finalizar`, `/captura`, `/evento` | Candidato | Implementados. Sin análisis de sentimiento ni de emociones (DEC-001); revisión completa en el ciclo siguiente |
 
-## /api/interno — Planificado (DEV-C-13 · HU-23, DEC-018)
+## /api/interno — Implementado (DEV-C-13 · HU-23 · PR #42, DEC-018)
 
 Endpoints que **solo** usan las Lambdas para entregar sus resultados. Excluidos del OpenAPI público.
 
@@ -172,7 +172,16 @@ Endpoints que **solo** usan las Lambdas para entregar sus resultados. Excluidos 
 | POST | `/interno/resultados/analisis-cv` | Recibe el resultado del análisis de un CV |
 | POST | `/interno/resultados/analisis-entrevista` | Recibe el resultado del análisis de una entrevista |
 
-Reglas: firma HMAC-SHA256 del cuerpo y de una marca de tiempo con un secreto de Secrets Manager; rechazo de peticiones con más de 5 minutos; el backend fija el `tenant_id` del mensaje, persiste con RLS y verifica la idempotencia.
+Nivel de permiso **Interno**: sin JWT. Cada entrega lleva las cabeceras `X-Vael-Marca-Tiempo` (segundos Unix) y `X-Vael-Firma`. La firma es el HMAC-SHA256 en hexadecimal de `"<marca>." + cuerpo`, calculado con `INTERNAL_SERVICE_KEY`, que vive en Secrets Manager (`core/interno.py`).
+
+| Código | Cuándo |
+|---|---|
+| 200 `{"aplicado": true}` | Resultado aplicado |
+| 200 `{"aplicado": false}` | Entrega repetida (idempotencia, DEC-016 punto 7), decisión ya tomada, o el registro no existe en el tenant del mensaje |
+| 401 | Sin firma, firma inválida o marca con más de 5 minutos de diferencia |
+| 422 | Cuerpo inválido; por ejemplo, un análisis con texto sin `score_cv` o sin `score_desglose` |
+
+El backend fija el `tenant_id` del mensaje y persiste con la RLS como `vael_app` (DEC-010). Las rutas no están en el OpenAPI ni en el cliente tipado.
 
 ## /api/publico
 
@@ -201,3 +210,4 @@ No es un endpoint: `python -m app.scripts.crear_empresa` (DEC-015).
 | 2.3 | 2026-10-28 | Postulación pública con 422 y 502 (PR #23); criterio del lote de finalistas decidido (DEC-022, por registrar en DEV-A-06) |
 | 2.4 | 2026-11-03 | Sprint 2 (85 rutas, 10 routers): `/metricas/dashboard` y `POST /candidatos/{id}/banco-talento` implementados; ranking con procesos incompletos aparte y recomendación de finalistas (DEC-022, PR #27); banco de talento por marcado explícito con filtro por área (PR #31); ruta de la lista de entrevistas corregida en el frontend (PR #28) |
 | 2.5 | 2026-11-04 | DEC-024 (DEV-C-14 · PR #38): `GET /candidatos/{id}` expone `score_desglose`. Detalle del comportamiento de `/metricas/dashboard` (fotografía de estados sin filtro de fechas; métricas acotadas por `desde`/`hasta` y nulas sin datos) y del 404 de `POST /candidatos/{id}/banco-talento` |
+| 2.6 | 2026-11-09 | HU-23 integrada (DEV-C-13 · PR #42): `/api/interno/resultados/analisis-cv` y `/analisis-entrevista` implementados, con las cabeceras de la firma HMAC y sus códigos de respuesta |

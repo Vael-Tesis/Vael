@@ -1,12 +1,12 @@
-> COPIA del documento del Drive `VAEL/Docs/08_servicios_negocio.md`, versión 3.0, copiada el 2026-11-04.
+> COPIA del documento del Drive `VAEL/Docs/08_servicios_negocio.md`, versión 3.1, copiada el 2026-11-09.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 08 — Servicios de Negocio
 
 | Campo | Valor |
 |---|---|
-| Versión | 3.0 |
-| Actualizado | 2026-11-03 |
+| Versión | 3.1 |
+| Actualizado | 2026-11-09 |
 | Fuente de verdad | Código en `backend/app/services/`, `backend/app/core/` y `backend/app/scripts/` (revisado tras el Sprint 2, 2026-11-03) + DEC-001, DEC-002, DEC-007, DEC-009, DEC-010, DEC-013, DEC-015, DEC-016, DEC-018, DEC-022, DEC-024 |
 | Copia en el repositorio | `docs/diseno/08_servicios_negocio.md` (DEC-019). La fuente es este documento |
 
@@ -34,13 +34,13 @@ backend ──despachar_tarea──▶ SQS ──▶ Lambda (calcular_*) ──H
           (desarrollo: en proceso, sin SQS ni HTTP)
 ```
 
-El mensaje incluye: `tenant_id`, identificadores, key del archivo en S3 y los datos del prompt (requisitos, habilidades, instrucciones de IA del área y de la vacante). Así la Lambda no necesita consultar la base de datos.
+El mensaje incluye: `tipo`, `tenant_id`, identificadores, key del archivo en S3 y los datos del prompt (requisitos, habilidades, instrucciones de IA del área y de la vacante). Así la Lambda no necesita consultar la base de datos. **Implementado (DEV-C-13 · HU-23 · PR #42).** La Lambda (`app/lambda_handler.py`, imagen `backend/Dockerfile.lambda`) recibe sus claves de un secreto propio, sin las URL de la base de datos, e informa los mensajes fallidos con `ReportBatchItemFailures`. Tras 3 intentos, un mensaje termina en la DLQ y su alarma de CloudWatch se dispara.
 
-## core/despacho.py — Implementado en modo en proceso (DEV-C-13 · PR #8); SQS planificado (HU-23)
+## core/despacho.py — Implementado (DEV-C-13 · PR #8 y PR #42)
 
 | Función | Descripción |
 |---|---|
-| `despachar_tarea(tipo, payload)` | **Hoy:** valida que el payload traiga `tenant_id` y el identificador del `tipo` (`TipoTarea`, `CAMPO_ID`) y ejecuta el análisis en el mismo proceso. **Planificado (HU-23):** en producción publica en la cola SQS del `tipo`; en desarrollo y tests ejecuta `calcular_*` y `aplicar_resultado_*` en el mismo proceso |
+| `despachar_tarea(tipo, payload)` | Valida que el payload traiga `tenant_id` y el identificador del `tipo` (`TipoTarea`, `CAMPO_ID`). Según `DESPACHO_MODO`: con `en_proceso` (desarrollo y tests, por defecto), ejecuta preparación, cálculo y aplicación en el mismo proceso; con `sqs` (AWS), prepara el mensaje con la sesión `vael_app` y el tenant fijado, y lo publica en la cola del `tipo` (`SQS_URL_ANALISIS_CV`, `SQS_URL_ANALISIS_ENTREVISTA`) |
 
 Colas: `vael-analisis-cv` y `vael-analisis-entrevista`, cada una con su DLQ (cola de mensajes fallidos).
 
@@ -65,23 +65,24 @@ Usa `google-genai` (`google-generativeai` se eliminó), con el ID de modelo veri
 
 `calcular_semaforo(puntaje_riesgo)`: verde ≤ 6, amarillo 7–18, rojo ≥ 19. Catálogo de eventos: doc 07.
 
-## core/interno.py — Planificado (DEV-C-13 · HU-23)
+## core/interno.py — Implementado (DEV-C-13 · PR #42)
 
 | Función | Descripción |
 |---|---|
-| `verificar_firma(cuerpo, marca_tiempo, firma)` | HMAC-SHA256 con el secreto de Secrets Manager; rechaza firmas inválidas y marcas de más de 5 minutos |
-| `firmar(cuerpo)` | Usada por las Lambdas para firmar su entrega |
+| `verificar_firma(cuerpo, marca_tiempo, firma)` | HMAC-SHA256 de `"<marca>." + cuerpo` con `INTERNAL_SERVICE_KEY` (Secrets Manager); rechaza firmas inválidas y marcas con más de 5 minutos de diferencia (`VENTANA_SEGUNDOS`) |
+| `firmar(cuerpo, marca_tiempo=None)` | Usada por la Lambda: devuelve la marca y la firma para las cabeceras `X-Vael-Marca-Tiempo` y `X-Vael-Firma` |
 
 ## services/analisis_cv.py
 
 | Función | Estado | Descripción |
 |---|---|---|
 | `extraer_texto_pdf(pdf_bytes)` | Implementado | PyPDF2; si falla o queda vacío, pdfminer.six |
-| `construir_prompt_analisis(texto_cv, vacante, area)` | Implementado (DEV-C-14 · HU-12, DEC-024). **Cambia (HU-23):** recibirá los datos de la vacante como diccionario, no como objeto de la base de datos | Texto del CV, requisitos, habilidades, tecnologías, nivel, instrucciones de IA; pide los cinco criterios ponderados (puntaje + justificación por criterio), sin pedir el total; exige JSON puro |
+| `datos_prompt_vacante(vacante, area)` y `construir_prompt_analisis(texto_cv, datos)` | Implementados (DEV-C-14 · PR #38; PR #42). El prompt recibe los datos de la vacante como diccionario; su texto es idéntico al anterior (verificado), así que el OE2 sigue siendo comparable | Texto del CV, requisitos, habilidades, tecnologías, nivel, instrucciones de IA; pide los cinco criterios ponderados (puntaje + justificación por criterio), sin pedir el total; exige JSON puro |
 | `_validar_y_sumar_desglose(criterios)` | Implementado (DEV-C-14 · HU-12, DEC-024) | Valida que estén los cinco criterios y que cada puntaje sea un entero dentro de su rango; `score_cv` es su suma. Si algo no cumple, lanza el error que deja al análisis como fallido (ver más abajo) |
-| `calcular_analisis_cv(mensaje)` | **Planificado (HU-23)** | Parte de cálculo: descarga el PDF, extrae el texto, llama a Gemini y devuelve el resultado. Sin base de datos |
-| `aplicar_resultado_analisis_cv(resultado, tenant_id)` | **Planificado (HU-23)** | Guarda score, clasificación, resumen, habilidades, inconsistencias y enlaces; genera la recomendación según `score_cv_minimo`; deja `cv_por_confirmar`. No emite tokens ni envía correos |
-| `analizar_cv(...)` y `analizar_cv_candidato(...)` | Implementados | Ya cumplen DEC-009 (DEV-C-10 · PR #13): guardan el análisis y dejan `cv_por_confirmar`, sin tokens ni correos. Un CV sin texto extraíble (escaneado) no va a Gemini: queda en `cv_por_confirmar` como `requiere_revision` (DEV-A-05). **Se reemplazan (HU-23)** por las dos funciones anteriores |
+| `preparar_mensaje_analisis_cv(candidato, vacante, area)` | Implementado (PR #42) | Parte de preparación (backend): el mensaje de SQS |
+| `calcular_analisis_cv(mensaje)` | Implementado (PR #42) | Parte de cálculo: descarga el PDF de S3, extrae el texto, llama a Gemini, valida y suma el desglose (DEC-024). Si no hay texto, devuelve `sin_texto` sin llamar a la IA. Sin base de datos |
+| `aplicar_resultado_analisis_cv(candidato, resultado, db)` | Implementado (PR #42) | Guarda score, desglose, clasificación, resumen, habilidades, inconsistencias y enlaces, y deja `cv_por_confirmar`; la recomendación según `score_cv_minimo` la calcula el servicio de decisiones. No emite tokens ni envía correos. Idempotente: solo aplica si el candidato está en `postulado` o `cv_analizando` |
+| `analizar_cv(...)` y `analizar_cv_candidato(...)` | Implementados | Modo en proceso: encadenan preparación, cálculo y aplicación. Cumplen DEC-009 (DEV-C-10 · PR #13). Un CV sin texto extraíble (escaneado) no va a Gemini: queda en `cv_por_confirmar` como `requiere_revision` (DEV-A-05). Si el cálculo falla, el candidato vuelve a `postulado` |
 
 **Corregido (DEV-C-14 · PR #38, DEC-024):** desde su versión 1, este documento describía un desglose ponderado del score (match de habilidades 0-40, experiencia 0-20, formación 0-15, coherencia 0-15, trayectoria 0-10) que el código nunca implementó: el prompt pedía a Gemini un único puntaje global. DEC-024 corrigió el código: `construir_prompt_analisis` pide los cinco criterios por separado, cada uno con una justificación breve, y `_validar_y_sumar_desglose` calcula `score_cv` como su suma, sin depender de que el modelo sume bien. El desglose se guarda en `Candidato.score_desglose` (doc 05) y se muestra en el detalle del candidato (doc 06; RF-A-10 del doc 16). Los pesos son fijos para todo el sistema en esta versión; hacerlos configurables por empresa queda como trabajo futuro.
 
@@ -102,7 +103,8 @@ Respuesta esperada: doc 07, etapa 3.
 | `generar_token_efimero_live()` | Implementado | `expireTime` 30 min; `newSessionExpireTime` 10 min |
 | `generar_pool_preguntas(...)` | Implementado | 8 a 12 preguntas con prioridad |
 | `construir_system_instruction(...)` | Implementado. **Cambia (DEV-B-11, ciclo siguiente):** del voseo al español neutro | Comportamiento de EVA |
-| `analizar_entrevista(...)` | Implementado; `score_final` con DEC-007 (DEV-C-01 · PR #4). **Cambia (HU-23):** se divide en `calcular_analisis_entrevista` (Lambda) y `aplicar_resultado_analisis_entrevista` (backend) | Nota por dimensión con justificación; deja `entrevista_realizada` |
+| `analizar_entrevista(transcripcion, dimensiones)` | Implementado (DEV-C-01 · PR #4; PR #42) | Nota por dimensión con justificación. Recibe las dimensiones como diccionarios (`datos_dimension`) |
+| `preparar_mensaje_analisis_entrevista`, `calcular_analisis_entrevista` y `aplicar_resultado_analisis_entrevista` | Implementados (PR #42) | Preparación (backend), cálculo (Lambda, sin base de datos) y aplicación (backend): guarda la nota, calcula `score_final` con DEC-007 y deja `entrevista_realizada`. Idempotente: no aplica si la entrevista ya tiene nota |
 
 ## services/decisiones.py — Implementado (DEV-C-10 · PR #13 · HU-15, HU-16)
 
@@ -178,7 +180,9 @@ Las métricas del dashboard (DEV-A-10 · PR #29) se calculan en `routers/metrica
 | `transcribir_audio` | Implementado, sin uso (se decide en el ciclo siguiente) |
 | `subir_archivo`, `descargar_archivo`, `generar_url_prefirmada` | Implementados (S3; URLs de 1 hora) |
 | `enviar_correo` | Implementado (SES) |
-| `encolar_tarea` | Implementado, sin uso. Lo usará `despachar_tarea` en producción |
+| `encolar_tarea` | Implementado; lo usa `despachar_tarea` en modo `sqs` (PR #42) |
+
+Los clientes de AWS usan el rol de la tarea o de la Lambda. Con credenciales temporales (la Lambda), incluyen el token de sesión (`AWS_SESSION_TOKEN`): sin él, S3 respondía `InvalidAccessKeyId` (hallado en la prueba en AWS del 2026-11-08).
 
 ## scripts/ — Implementado
 
@@ -206,3 +210,4 @@ Las métricas del dashboard (DEV-A-10 · PR #29) se calculan en `routers/metrica
 | 2.2 | 2026-10-27 | Cierre del Sprint 1: implementados despachador en proceso, `google-genai` con reintento, score, logs JSON, servicio de decisiones, correo de cierre, sesiones, vacantes, candidatos y scripts. Emociones eliminadas. La división cálculo/aplicación y la firma HMAC quedan para HU-23. Pendiente: lote de la etapa entrevista (DEC-022) |
 | 2.3 | 2026-11-03 | Sprint 2: recomendación de finalistas por `top_candidatos_finalistas` con `ranking_vacante` y `recomendaciones_finalistas` (DEC-022, PR #27); `enviar_correos=False` para las semillas (PR #28); banco de talento y métricas implementados en sus routers (PR #29, #31); reintento ante 504 y tiempo límite de Gemini (PR #23) |
 | 3.0 | 2026-11-04 | **Corrección (versión mayor):** la sección de `services/analisis_cv.py` describía desde la v1 un desglose ponderado que el código no implementaba; DEC-024 lo implementó (DEV-C-14 · PR #38): `construir_prompt_analisis` pide los cinco criterios con su justificación y `_validar_y_sumar_desglose` valida y suma `score_cv` |
+| 3.1 | 2026-11-09 | HU-23 integrada (DEV-C-13 · PR #42): despachador con modo `sqs`, `core/interno.py`, y división en preparación, cálculo y aplicación de los análisis de CV y de entrevista pasan a Implementado; Lambda con secreto propio y DLQ; token de sesión en los clientes de AWS |
