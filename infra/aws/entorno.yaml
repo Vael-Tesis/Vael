@@ -51,6 +51,22 @@ Parameters:
   DominioApp:
     Type: String
     Default: app.vael.work
+  IaRespaldo:
+    Type: String
+    Default: ""
+    AllowedValues: ["", qwen]
+    Description: IA de respaldo si Gemini no responde (DEC-025); vacío = sin respaldo
+  QwenBaseUrl:
+    Type: String
+    Default: ""
+    Description: URL de la API compatible con OpenAI del Qwen del instituto
+  QwenModelo:
+    Type: String
+    Default: ""
+  QwenApiKey:
+    Type: String
+    Default: ""
+    NoEcho: true
   CorreoAlarmas:
     Type: String
     Default: ""
@@ -228,7 +244,8 @@ Resources:
           "DATABASE_OWNER_URL":"postgresql+asyncpg://vael_owner:${PassOwner}@${Host}:5432/vael_db",
           "DATABASE_ADMIN_URL":"postgresql+asyncpg://vaeladmin:${PassMaestra}@${Host}:5432/vael_db",
           "SECRET_KEY":"${ClaveJwt}","INTERNAL_SERVICE_KEY":"${ClaveInterna}",
-          "GEMINI_API_KEY":"${GeminiApiKey}","SEED_PASSWORD":"${SeedPassword}"}
+          "GEMINI_API_KEY":"${GeminiApiKey}","SEED_PASSWORD":"${SeedPassword}",
+          "QWEN_API_KEY":"${QwenApiKey}"}
         - Host: !GetAtt BaseDatos.Endpoint.Address
 
   # --- Balanceador: solo reenvía si la petición trae la cabecera secreta de CloudFront ---
@@ -366,6 +383,9 @@ Resources:
             - {Name: DESPACHO_MODO, Value: sqs}
             - {Name: SQS_URL_ANALISIS_CV, Value: !Ref ColaAnalisisCv}
             - {Name: SQS_URL_ANALISIS_ENTREVISTA, Value: !Ref ColaAnalisisEntrevista}
+            - {Name: IA_RESPALDO, Value: !Ref IaRespaldo}
+            - {Name: QWEN_BASE_URL, Value: !Ref QwenBaseUrl}
+            - {Name: QWEN_MODEL, Value: !Ref QwenModelo}
           Secrets:
             - {Name: DATABASE_URL, ValueFrom: !Sub "${Secretos}:DATABASE_URL::"}
             - {Name: DATABASE_SYSTEM_URL, ValueFrom: !Sub "${Secretos}:DATABASE_SYSTEM_URL::"}
@@ -373,6 +393,7 @@ Resources:
             - {Name: SECRET_KEY, ValueFrom: !Sub "${Secretos}:SECRET_KEY::"}
             - {Name: INTERNAL_SERVICE_KEY, ValueFrom: !Sub "${Secretos}:INTERNAL_SERVICE_KEY::"}
             - {Name: GEMINI_API_KEY, ValueFrom: !Sub "${Secretos}:GEMINI_API_KEY::"}
+            - {Name: QWEN_API_KEY, ValueFrom: !Sub "${Secretos}:QWEN_API_KEY::"}
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -486,7 +507,7 @@ Resources:
     Type: AWS::SecretsManager::Secret
     Properties:
       Description: VAEL - claves de la Lambda de análisis (Gemini y firma HMAC de /api/interno)
-      SecretString: !Sub '{"GEMINI_API_KEY":"${GeminiApiKey}","INTERNAL_SERVICE_KEY":"${ClaveInterna}"}'
+      SecretString: !Sub '{"GEMINI_API_KEY":"${GeminiApiKey}","INTERNAL_SERVICE_KEY":"${ClaveInterna}","QWEN_API_KEY":"${QwenApiKey}"}'
 
   RegistrosLambda:
     Type: AWS::Logs::LogGroup
@@ -541,6 +562,9 @@ Resources:
           SECRETO_ARN: !Ref SecretosLambda
           S3_BUCKET_NAME: !Ref BucketArchivos
           BACKEND_URL_INTERNO: !Sub "https://${DominioApp}"
+          IA_RESPALDO: !Ref IaRespaldo
+          QWEN_BASE_URL: !Ref QwenBaseUrl
+          QWEN_MODEL: !Ref QwenModelo
           # La configuración de la aplicación exige estos valores, pero la Lambda nunca los usa:
           # no abre sesiones de base de datos ni firma JWT (DEC-018). Son valores de relleno.
           DATABASE_URL: postgresql+asyncpg://sin-acceso@lambda.invalid/sin_base

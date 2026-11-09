@@ -34,6 +34,15 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.8-flash"
     gemini_live_model: str = "gemini-2.5-flash-native-audio-preview-12-2025"
 
+    # Proveedor de la IA de texto y respaldo (DEC-025, propuesta; DEV-C-15). "gemini" por
+    # defecto; IA_RESPALDO=qwen usa el Qwen del instituto cuando Gemini no está disponible, e
+    # IA_PROVEEDOR=qwen lo usa siempre. La voz (Gemini Live) no tiene respaldo.
+    ia_proveedor: str = "gemini"
+    ia_respaldo: str = ""
+    qwen_base_url: str = ""  # API compatible con OpenAI, por ejemplo https://servidor/v1
+    qwen_api_key: str = ""
+    qwen_model: str = ""
+
     # AWS
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
@@ -92,6 +101,15 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Indica si el entorno actual es de producción."""
         return self.environment.lower() == "production"
+
+    @model_validator(mode="after")
+    def _proveedor_de_ia_valido(self) -> "Settings":
+        """IA_PROVEEDOR e IA_RESPALDO solo aceptan valores conocidos; Qwen exige URL y modelo."""
+        if self.ia_proveedor not in ("gemini", "qwen") or self.ia_respaldo not in ("", "qwen"):
+            raise ValueError("IA_PROVEEDOR debe ser 'gemini' o 'qwen', e IA_RESPALDO vacío o 'qwen'")
+        if "qwen" in (self.ia_proveedor, self.ia_respaldo) and not (self.qwen_base_url and self.qwen_model):
+            raise ValueError("Usar Qwen exige QWEN_BASE_URL y QWEN_MODEL")
+        return self
 
     @model_validator(mode="after")
     def _colas_en_modo_sqs(self) -> "Settings":

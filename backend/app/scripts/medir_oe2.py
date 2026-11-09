@@ -104,7 +104,8 @@ async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float) ->
     parametros = _parametros_generacion()
     inicio = time.perf_counter()
     try:
-        resultado = await consultar_gemini_json(prompt)
+        # El OE2 mide solo a Gemini: sin el respaldo de Qwen (DEC-025)
+        resultado = await consultar_gemini_json(prompt, permitir_respaldo=False)
         # DEC-024: la misma validación de producción — un desglose inválido es una ejecución
         # fallida, igual que cualquier otro error de consultar_gemini_json.
         score, _desglose = _validar_y_sumar_desglose(resultado.get("criterios"))

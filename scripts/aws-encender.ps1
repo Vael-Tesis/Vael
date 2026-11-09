@@ -12,7 +12,7 @@
 .EXAMPLE
   .\scripts\aws-encender.ps1 -CorreoAlarmas equipo@ejemplo.com   # ese correo recibe las alarmas (HU-22)
 #>
-param([string]$Perfil = "vael", [string]$Region = "us-east-1", [string]$CorreoAlarmas = "")
+param([string]$Perfil = "vael", [string]$Region = "us-east-1", [string]$CorreoAlarmas = "", [switch]$ConQwen)
 
 $ErrorActionPreference = "Stop"
 $env:AWS_PAGER = ""  # sin paginador: el script no debe quedarse esperando una tecla
@@ -43,6 +43,13 @@ function NuevaClave([int]$largo = 40) {
 function LeerEnv([string]$nombre) {
   $linea = Get-Content (Join-Path $raiz "backend\.env") | Where-Object { $_ -match "^$nombre=(.+)$" } | Select-Object -First 1
   if (-not $linea) { throw "Falta $nombre en backend/.env" }
+  return ($linea -replace "^$nombre=", "").Trim()
+}
+
+# Devuelve "" si la variable no está (para las opcionales, como el respaldo Qwen de DEC-025)
+function LeerEnvOpcional([string]$nombre) {
+  $linea = Get-Content (Join-Path $raiz "backend\.env") | Where-Object { $_ -match "^$nombre=(.+)$" } | Select-Object -First 1
+  if (-not $linea) { return "" }
   return ($linea -replace "^$nombre=", "").Trim()
 }
 
@@ -97,10 +104,18 @@ $plantilla = Join-Path $raiz "infra\aws\entorno.yaml"
 $existe = AwsOpcional cloudformation describe-stacks --stack-name vael-entorno --query "Stacks[0].StackStatus" --output text
 # Sin -CorreoAlarmas, las alarmas existen igual y se ven en CloudWatch, pero no notifican a nadie
 $correo = @(); if ($CorreoAlarmas) { $correo = @("CorreoAlarmas=$CorreoAlarmas") }
+# IA de respaldo (DEC-025): solo con -ConQwen se pasan a la pila los datos de Qwen de backend/.env
+# (la clave va a Secrets Manager). El Qwen de Tecsup está en una IP privada que AWS no alcanza: sin
+# -ConQwen, el entorno usa solo Gemini y no espera a un servidor inalcanzable.
+$ia = @("IaRespaldo=", "QwenBaseUrl=", "QwenModelo=", "QwenApiKey=")
+if ($ConQwen) {
+  $ia = @("IaRespaldo=qwen", "QwenBaseUrl=$(LeerEnvOpcional 'QWEN_BASE_URL')",
+    "QwenModelo=$(LeerEnvOpcional 'QWEN_MODEL')", "QwenApiKey=$(LeerEnvOpcional 'QWEN_API_KEY')")
+}
 if ($existe) {
   # Entorno ya encendido: solo cambia la imagen; el resto conserva sus valores
   Aws cloudformation deploy --stack-name vael-entorno --template-file $plantilla --capabilities CAPABILITY_IAM `
-    --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" @correo --no-fail-on-empty-changeset
+    --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" @correo @ia --no-fail-on-empty-changeset
 } else {
   $prefijos = Aws ec2 describe-managed-prefix-lists --filters "Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing" `
     --query "PrefixLists[0].PrefixListId" --output text
@@ -108,7 +123,7 @@ if ($existe) {
     --parameter-overrides "ImagenUri=$imagen" "ImagenLambdaUri=$imagenLambda" "PrefixListCloudFront=$prefijos" "OrigenSecreto=$origenSecreto" `
       "ClaveJwt=$(NuevaClave 64)" "ClaveInterna=$(NuevaClave 64)" "PassMaestra=$(NuevaClave 32)" `
       "PassOwner=$(NuevaClave 32)" "PassApp=$(NuevaClave 32)" "PassSystem=$(NuevaClave 32)" `
-      "GeminiApiKey=$(LeerEnv 'GEMINI_API_KEY')" "SeedPassword=$(LeerEnv 'SEED_PASSWORD')" @correo
+      "GeminiApiKey=$(LeerEnv 'GEMINI_API_KEY')" "SeedPassword=$(LeerEnv 'SEED_PASSWORD')" @correo @ia
 }
 $entorno = Salidas "vael-entorno"
 

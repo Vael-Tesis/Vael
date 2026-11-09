@@ -1,6 +1,6 @@
 # CLAUDE.md — VAEL
 
-Instrucciones para Claude Code en este repositorio. Este archivo **se deriva** de la documentación del proyecto (Drive `VAEL/Docs`, la fuente de verdad) y de los ADRs de `docs/decisiones/`. Para el detalle de diseño, lee las copias en `docs/diseno/` (DEC-019): **no las edites**; si encuentras una contradicción, detente y avisa. Si este archivo contradice a un ADR, manda el ADR. Versión 2.3 — 2026-11-03.
+Instrucciones para Claude Code en este repositorio. Este archivo **se deriva** de la documentación del proyecto (Drive `VAEL/Docs`, la fuente de verdad) y de los ADRs de `docs/decisiones/`. Para el detalle de diseño, lee las copias en `docs/diseno/` (DEC-019): **no las edites**; si encuentras una contradicción, detente y avisa. Si este archivo contradice a un ADR, manda el ADR. Versión 2.4 — 2026-11-09.
 
 ## 1. Qué es VAEL
 
@@ -42,7 +42,7 @@ Plataforma SaaS multiempresa de apoyo a la preselección de personal para empres
 ## 5. Stack
 
 - **Backend:** Python 3.12, FastAPI, SQLModel, Alembic, asyncpg, PostgreSQL 16. Gunicorn + UvicornWorker en producción.
-- **IA:** Gemini (texto) y Gemini Live (voz) con **`google-genai`**, el único SDK (`google-generativeai` se eliminó en DEV-C-04). El plan gratuito permite 20 solicitudes por día por modelo (doc 04): una corrida del OE2 (30 llamadas) lo supera.
+- **IA:** Gemini (texto) y Gemini Live (voz) con **`google-genai`**, el único SDK (`google-generativeai` se eliminó en DEV-C-04). El plan gratuito permite 20 solicitudes por día por modelo (doc 04): una corrida del OE2 (30 llamadas) lo supera. **Respaldo (DEC-025):** Qwen del instituto por Open WebUI, compatible con OpenAI (`core/qwen.py`), solo alcanzable desde la red de Tecsup. `IA_RESPALDO=qwen` lo usa si Gemini responde 429, 503, 504 o se agota el tiempo; `IA_PROVEEDOR=qwen` lo usa siempre. El OE2 nunca usa el respaldo (mide Gemini). Se prueba con `python -m app.scripts.probar_qwen`.
 - **Auth:** JWT propio HS256 con **PyJWT** (reemplaza a `python-jose`, DEC-011). Access token de 15 min; refresh tokens con rotación en la tabla `sesiones`; `token_version` en `Usuario`. Sin Cognito.
 - **Sin Redis ni ElastiCache** (DEC-012).
 - **Frontend:** React 19 + Vite 8 + Tailwind 4 + TanStack Query + React Router 7, en **TypeScript estricto** (DEC-008): el perfil Admin está migrado completo; las páginas del candidato siguen en JavaScript hasta la Ruta B (DEV-B-12).
@@ -74,14 +74,15 @@ Antes de crear o modificar cualquier documento, lee `docs/diseno/17_convenciones
 
 ```
 backend/app/
-  core/       config, database (RLS), dependencies, despacho, gemini, logs, proctoring,
-              scoring, security
+  core/       config, database (RLS), dependencies, despacho, gemini, interno (firma HMAC,
+              DEC-018), logs, proctoring, qwen (DEC-025), scoring, security
+  lambda_handler.py   Lambda de análisis (HU-23): calcula sin base y entrega firmado
   models/     un archivo por dominio (`docs/diseno/05_modelos_bd.md`)
   routers/    auth, areas, plantillas, vacantes, candidatos, tags, metricas, evaluaciones,
-              entrevista, publico
+              entrevista, publico, interno (entregas de las Lambdas; fuera del OpenAPI)
   schemas/
   scripts/    crear_roles (DEC-010), crear_empresa (DEC-015), semillas y generar_cvs (doc 13),
-              exportar_openapi (DEC-008)
+              exportar_openapi (DEC-008), medir_oe2 (doc 14), probar_qwen (DEC-025)
   services/   analisis_cv, examen, entrevista_ia, decisiones (DEC-009), correos, vacante_ia,
               aws_services
   templates/emails/
