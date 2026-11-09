@@ -11,11 +11,20 @@ No forma parte del CI ni de pytest: hace 30 llamadas reales a Gemini (cuota real
 
     python -m app.scripts.medir_oe2
 
+Por partes (el plan gratuito permite 20 solicitudes por día y por modelo, doc 04): cada parte
+mide un CV completo (sus 10 ejecuciones) y, cuando están los tres, se unen en la corrida
+completa. Las ejecuciones no cambian: mismo modelo, prompt y configuración en cada parte.
+
+    python -m app.scripts.medir_oe2 --cv CV-TI-01     # un día
+    python -m app.scripts.medir_oe2 --cv CV-TI-04 --cv CV-TI-07   # otro día
+    python -m app.scripts.medir_oe2 --unir
+
 Requiere GEMINI_API_KEY en el entorno (`backend/.env`); nunca se imprime ni se guarda en
 ningún archivo. Si una llamada falla después de los reintentos que ya tiene
 `consultar_gemini_json` (429/503/504, `MAX_INTENTOS`), esta ejecución queda registrada como
 fallida — no se repite en silencio ni se reemplaza por otra.
 """
+import argparse
 import asyncio
 import json
 import re
@@ -48,6 +57,8 @@ DIRECTORIO_METRICAS = RAIZ / "docs" / "metricas"
 # escribe aquí, para no confundirse con la medición real del OE2.
 SALIDA_CORRIDA_COMPLETA = DIRECTORIO_METRICAS / "oe2_consistencia.json"
 _PATRON_INTENTO = re.compile(r"^oe2_intento_(\d+)_.*\.json$")
+# Partes exitosas de una corrida por partes: una por CV, sin fallas (ver --cv y --unir)
+DIRECTORIO_PARTES = DIRECTORIO_METRICAS / "oe2_partes"
 
 CVS = ["CV-TI-01", "CV-TI-04", "CV-TI-07"]
 EJECUCIONES_POR_CV = 10
@@ -186,14 +197,15 @@ def _sha_commit() -> str:
         return "desconocido (no se pudo leer con git rev-parse HEAD)"
 
 
-async def medir() -> dict[str, Any]:
+async def medir(cvs: list[str] | None = None) -> dict[str, Any]:
     if not settings.gemini_api_key:
         raise SystemExit("Falta GEMINI_API_KEY en el entorno (backend/.env) — no se mide el OE2 sin una clave real")
 
     vacante, area = _vacante_y_area_semillas()
     ejecuciones: list[Ejecucion] = []
+    cvs = cvs or CVS
 
-    for cv in CVS:
+    for cv in cvs:
         pdf_bytes = (DIRECTORIO_CVS / f"{cv}.pdf").read_bytes()
         texto_cv = extraer_texto_pdf(pdf_bytes)
         if not texto_cv.strip():
@@ -204,10 +216,10 @@ async def medir() -> dict[str, Any]:
         for numero in range(1, EJECUCIONES_POR_CV + 1):
             ejecucion = await _ejecutar_una_vez(cv, numero, prompt, float(vacante.score_cv_minimo))
             ejecuciones.append(ejecucion)
-            if numero < EJECUCIONES_POR_CV or cv != CVS[-1]:
+            if numero < EJECUCIONES_POR_CV or cv != cvs[-1]:
                 await asyncio.sleep(ESPERA_ENTRE_LLAMADAS_SEGUNDOS)
 
-    resumen_por_cv = {cv: _resumen_por_cv([e for e in ejecuciones if e.cv == cv]) for cv in CVS}
+    resumen_por_cv = {cv: _resumen_por_cv([e for e in ejecuciones if e.cv == cv]) for cv in cvs}
 
     return {
         "_comentario": (
@@ -230,12 +242,66 @@ async def medir() -> dict[str, Any]:
     }
 
 
+def unir_partes() -> dict[str, Any]:
+    """Une las partes exitosas de los tres CV en la corrida completa del OE2.
+
+    Exige una parte por CV, todas con el mismo modelo y la misma configuración de generación.
+    """
+    partes: dict[str, dict[str, Any]] = {}
+    for cv in CVS:
+        candidatas = sorted(DIRECTORIO_PARTES.glob(f"oe2_parte_{cv}_*.json"))
+        if not candidatas:
+            raise SystemExit(f"Falta la parte de {cv}: ejecuta 'python -m app.scripts.medir_oe2 --cv {cv}'")
+        partes[cv] = json.loads(candidatas[-1].read_text(encoding="utf-8"))
+
+    modelos = {p["modelo"] for p in partes.values()}
+    parametros = {json.dumps(e["parametros_generacion"], sort_keys=True) for p in partes.values() for e in p["ejecuciones"]}
+    if len(modelos) > 1 or len(parametros) > 1:
+        raise SystemExit(f"Las partes no son comparables: modelos {sorted(modelos)}, {len(parametros)} configuraciones")
+
+    resultado = dict(partes[CVS[0]])
+    resultado["fecha_utc"] = datetime.now(timezone.utc).isoformat()
+    resultado["sha_commit"] = _sha_commit()
+    resultado["resumen_por_cv"] = {cv: partes[cv]["resumen_por_cv"][cv] for cv in CVS}
+    resultado["ejecuciones"] = [e for cv in CVS for e in partes[cv]["ejecuciones"]]
+    resultado["partes"] = {cv: {"fecha_utc": p["fecha_utc"], "sha_commit": p["sha_commit"]} for cv, p in partes.items()}
+    resultado["_comentario"] += (
+        " Corrida hecha por partes, un CV por parte, por la cuota gratuita de Gemini (20 solicitudes"
+        " por día y por modelo); cada parte tiene sus 10 ejecuciones con el mismo modelo y configuración."
+    )
+    return resultado
+
+
 def main() -> int:
-    resultado = asyncio.run(medir())
+    argumentos = argparse.ArgumentParser(description="Mide el OE2 (TST-A-05)")
+    argumentos.add_argument("--cv", action="append", choices=CVS, help="Mide solo este CV (una parte)")
+    argumentos.add_argument("--unir", action="store_true", help="Une las tres partes en la corrida completa")
+    opciones = argumentos.parse_args()
+
+    DIRECTORIO_METRICAS.mkdir(parents=True, exist_ok=True)
+    if opciones.unir:
+        resultado = unir_partes()
+        SALIDA_CORRIDA_COMPLETA.write_text(json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"\nCorrida completa (por partes) guardada en {SALIDA_CORRIDA_COMPLETA}\n")
+        _imprimir_resumen(resultado)
+        return 0
+
+    resultado = asyncio.run(medir(opciones.cv))
     ejecuciones = [Ejecucion(**e) for e in resultado["ejecuciones"]]
     hubo_fallidas = any(r["ejecuciones_fallidas"] > 0 for r in resultado["resumen_por_cv"].values())
 
-    DIRECTORIO_METRICAS.mkdir(parents=True, exist_ok=True)
+    if opciones.cv and not hubo_fallidas:
+        DIRECTORIO_PARTES.mkdir(parents=True, exist_ok=True)
+        marca = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        for cv in opciones.cv:
+            parte = {**resultado, "resumen_por_cv": {cv: resultado["resumen_por_cv"][cv]},
+                     "ejecuciones": [e for e in resultado["ejecuciones"] if e["cv"] == cv]}
+            ruta_parte = DIRECTORIO_PARTES / f"oe2_parte_{cv}_{marca}.json"
+            ruta_parte.write_text(json.dumps(parte, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(f"Parte de {cv} guardada en {ruta_parte}")
+        _imprimir_resumen(resultado)
+        return 0
+
     if hubo_fallidas:
         ruta = _siguiente_ruta_intento(_motivo_fallo(ejecuciones))
         resultado["_comentario"] += (
@@ -248,6 +314,11 @@ def main() -> int:
     ruta.write_text(json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print(f"\nResultado guardado en {ruta}\n")
+    _imprimir_resumen(resultado)
+    return 1 if hubo_fallidas else 0
+
+
+def _imprimir_resumen(resultado: dict[str, Any]) -> None:
     print(f"{'CV':<10} {'media':>8} {'desv.est.':>10} {'cumple OE2':>11} {'cambió recomendación':>22} {'fallidas':>9}")
     for cv, resumen in resultado["resumen_por_cv"].items():
         print(
@@ -255,8 +326,6 @@ def main() -> int:
             f"{resumen['cumple_meta_oe2']!s:>11} {resumen['la_recomendacion_cambio_entre_ejecuciones']!s:>22} "
             f"{resumen['ejecuciones_fallidas']!s:>9}"
         )
-
-    return 1 if hubo_fallidas else 0
 
 
 if __name__ == "__main__":
