@@ -51,6 +51,13 @@ Parameters:
   DominioApp:
     Type: String
     Default: app.vael.work
+  CorreoAlarmas:
+    Type: String
+    Default: ""
+    Description: Correo que recibe las alarmas (HU-22); vacío = sin suscripción, las alarmas se ven en CloudWatch
+
+Conditions:
+  ConCorreoAlarmas: !Not [!Equals [!Ref CorreoAlarmas, ""]]
 
 Resources:
   # --- Red: dos subredes públicas (ALB y ECS) y dos privadas (RDS), sin NAT Gateway ---
@@ -561,12 +568,13 @@ Resources:
       ScalingConfig:
         MaximumConcurrency: 2
 
-  # Alarma si una DLQ recibe algún mensaje (DEC-016, punto 3). Las notificaciones (SNS) se
-  # agregan con las alarmas de HU-22 (DEP-C-05/06).
+  # Alarma si una DLQ recibe algún mensaje (DEC-016, punto 3); notifica al tema de alarmas.
   AlarmaDlqAnalisisCv:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: vael-dlq-analisis-cv
+      AlarmActions: [!Ref TemaAlarmas]
+      OKActions: [!Ref TemaAlarmas]
       AlarmDescription: Un análisis de CV falló 3 veces y quedó en la DLQ
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
@@ -582,6 +590,8 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: vael-dlq-analisis-entrevista
+      AlarmActions: [!Ref TemaAlarmas]
+      OKActions: [!Ref TemaAlarmas]
       AlarmDescription: Un análisis de entrevista falló 3 veces y quedó en la DLQ
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
@@ -592,6 +602,58 @@ Resources:
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+
+
+  # --- Alarmas mínimas (HU-22, DEP-C-06; doc 09, Observabilidad) ---
+  TemaAlarmas:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: vael-alarmas
+      DisplayName: VAEL alarmas
+
+  SuscripcionAlarmas:
+    Type: AWS::SNS::Subscription
+    Condition: ConCorreoAlarmas
+    Properties:
+      TopicArn: !Ref TemaAlarmas
+      Protocol: email
+      Endpoint: !Ref CorreoAlarmas
+
+  AlarmaErrores5xx:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vael-backend-5xx
+      AlarmDescription: El backend respondió más de 5 errores 5xx en 5 minutos
+      Namespace: AWS/ApplicationELB
+      MetricName: HTTPCode_Target_5XX_Count
+      Dimensions: [{Name: LoadBalancer, Value: !GetAtt Balanceador.LoadBalancerFullName}]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref TemaAlarmas]
+      OKActions: [!Ref TemaAlarmas]
+
+  AlarmaCpuBackend:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vael-backend-cpu
+      AlarmDescription: La CPU del backend en ECS superó el 80% durante 5 minutos
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions:
+        - {Name: ClusterName, Value: !Ref Cluster}
+        - {Name: ServiceName, Value: !GetAtt Servicio.Name}
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref TemaAlarmas]
+      OKActions: [!Ref TemaAlarmas]
 
 Outputs:
   BalanceadorDns:
@@ -612,3 +674,5 @@ Outputs:
     Value: !Ref ColaAnalisisCv
   ColaAnalisisCvDlq:
     Value: !Ref ColaAnalisisCvDlq
+  TemaAlarmas:
+    Value: !Ref TemaAlarmas
