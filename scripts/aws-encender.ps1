@@ -91,7 +91,13 @@ function PublicarLanding($base) {
     Write-Warning "La landing tiene datos pendientes ({{DATO_PENDIENTE}}) en: $($pendientes.Filename -join ', '). No se publica."
     return
   }
-  Aws s3 sync (Join-Path $raiz "landing") "s3://$($base.BucketLanding)" --delete --exclude "README.md" --exclude "assets/README.md"
+  Aws s3 sync (Join-Path $raiz "landing") "s3://$($base.BucketLanding)" --delete --exclude "README.md" --exclude "assets/README.md" --exclude "config.js"
+  # config.js: URL del formulario de demo (DEC-027); sin ella, la landing abre el correo del visitante
+  $config = Join-Path ([System.IO.Path]::GetTempPath()) "vael-landing-config.js"
+  $url = if ($base.ContactoUrl) { $base.ContactoUrl } else { "" }
+  [System.IO.File]::WriteAllText($config, "window.VAEL_CONTACTO_URL = '$url';`n", (New-Object System.Text.UTF8Encoding($false)))
+  Aws s3 cp $config "s3://$($base.BucketLanding)/config.js" --content-type "application/javascript; charset=utf-8" --cache-control "no-cache" | Out-Null
+  Remove-Item $config -Force -Confirm:$false
   Aws cloudfront create-invalidation --distribution-id $base.DistribucionLandingId --paths "/*" | Out-Null
 }
 
@@ -105,7 +111,7 @@ if (-not $origenSecreto) {
   $origenSecreto = NuevaClave
   Aws ssm put-parameter --name /vael/origen-secreto --type SecureString --value $origenSecreto | Out-Null
 }
-Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") @rolCfn `
+Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") --capabilities CAPABILITY_IAM @rolCfn `
   --parameter-overrides "CertificadoArn=$certificado" "OrigenSecreto=$origenSecreto" --no-fail-on-empty-changeset
 $base = Salidas "vael-base"
 
@@ -171,7 +177,7 @@ if ($existe) {
 $entorno = Salidas "vael-entorno"
 
 Paso "CloudFront apunta /api al nuevo balanceador"
-Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") @rolCfn `
+Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") --capabilities CAPABILITY_IAM @rolCfn `
   --parameter-overrides "OrigenApi=$($entorno.BalanceadorDns)" --no-fail-on-empty-changeset
 
 # --- 4. Roles, migraciones y semillas ---

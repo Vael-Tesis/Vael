@@ -21,6 +21,10 @@ Parameters:
     Type: String
     Default: api-apagada.vael.work
     Description: DNS del ALB del entorno temporal; con el entorno apagado apunta a un nombre que no existe
+  CorreoContacto:
+    Type: String
+    Default: contacto@vael.work
+    Description: Remitente y destino del aviso del formulario de demo (dominio verificado en SES)
   OrigenSecreto:
     Type: String
     NoEcho: true
@@ -207,7 +211,164 @@ Resources:
               StringEquals:
                 AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${DistribucionLanding}"
 
+  # --- Formulario de demo de la landing (DEP-C-07, DEC-027) ---
+  # Lambda permanente con URL pública: recibe el correo del visitante, le envía la confirmación
+  # por SES y avisa al equipo. Sin costo fijo; no depende del entorno temporal (DEC-018).
+  RegistrosContacto:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/vael-contacto
+      RetentionInDays: 14
+
+  RolContacto:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals: { aws:SourceAccount: !Ref AWS::AccountId }
+      Policies:
+        - PolicyName: contacto
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt RegistrosContacto.Arn
+              # En el sandbox de SES, el permiso también se evalúa sobre la identidad del destinatario
+              - Effect: Allow
+                Action: ses:SendEmail
+                Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
+                Condition:
+                  StringEquals: { ses:FromAddress: !Ref CorreoContacto }
+
+  FuncionContacto:
+    Type: AWS::Lambda::Function
+    DependsOn: RegistrosContacto
+    Properties:
+      FunctionName: vael-contacto
+      Description: Formulario de demo de www.vael.work (DEC-027)
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 10
+      MemorySize: 128
+      Role: !GetAtt RolContacto.Arn
+      Environment:
+        Variables:
+          CORREO_CONTACTO: !Ref CorreoContacto
+          ORIGENES: !Sub "https://${DominioLanding},https://${DominioRaiz}"
+      Code:
+        ZipFile: |
+          # INICIO-HANDLER (lo prueba backend/tests/test_formulario_demo.py)
+          """Formulario de demo de la landing (DEC-027): confirma al visitante y avisa al equipo."""
+          import base64, html, json, os, re, time
+          import boto3
+
+          CORREO = re.compile(r"^[^\s@<>,;\"']{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$")
+          LIMITE, VENTANA = 20, 600  # envíos por instancia cada 10 minutos (freno ante abuso)
+          _envios, _ses = [], []
+          ASUNTO = "Recibimos tu solicitud de demo de VAEL"
+          TEXTO = (
+              "Hola:\n\nGracias por tu interés en VAEL. Recibimos tu solicitud de demo y te escribiremos a este "
+              "correo para coordinar una reunión de 20 minutos.\n\nPara preparar la demo con un caso de tu empresa, "
+              "puedes responder a este correo con:\n- tu nombre, empresa y cargo;\n- una vacante que tengan abierta "
+              "o por abrir;\n- los días y horarios en los que puedes reunirte.\n\nVAEL apoya la preselección de "
+              "personal con IA bajo supervisión humana: la IA recomienda y tu equipo de RRHH decide.\n\n"
+              "Equipo de VAEL\n{c} · www.vael.work\n\nRecibes este correo porque esta dirección se escribió en el "
+              "formulario de www.vael.work. Si no fuiste tú, ignóralo: no volveremos a escribirte."
+          )
+
+
+          def _r(codigo, cuerpo):
+              return {"statusCode": codigo, "headers": {"Content-Type": "application/json"}, "body": json.dumps(cuerpo)}
+
+
+          def _enviar(destino, asunto, texto, responder_a, con_html=False):
+              if not _ses:
+                  _ses.append(boto3.client("sesv2"))
+              cuerpo = {"Text": {"Data": texto, "Charset": "UTF-8"}}
+              if con_html:
+                  h = html.escape(texto).replace("\n", "<br>")
+                  cuerpo["Html"] = {"Data": '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5">'
+                                    + h + "</div>", "Charset": "UTF-8"}
+              _ses[0].send_email(
+                  FromEmailAddress="VAEL <" + os.environ["CORREO_CONTACTO"] + ">",
+                  Destination={"ToAddresses": [destino]}, ReplyToAddresses=[responder_a],
+                  Content={"Simple": {"Subject": {"Data": asunto, "Charset": "UTF-8"}, "Body": cuerpo}})
+
+
+          def handler(evento, _contexto):
+              cab = {k.lower(): v for k, v in (evento.get("headers") or {}).items()}
+              if cab.get("origin") not in os.environ["ORIGENES"].split(","):
+                  return _r(403, {"error": "origen no permitido"})
+              crudo = evento.get("body") or "{}"
+              if evento.get("isBase64Encoded"):
+                  crudo = base64.b64decode(crudo).decode("utf-8", "replace")
+              try:
+                  datos = json.loads(crudo)
+              except ValueError:
+                  datos = None
+              if not isinstance(datos, dict):
+                  return _r(400, {"error": "cuerpo inválido"})
+              if datos.get("sitio"):  # campo trampa: solo lo llena un bot; se responde como si se enviara
+                  return _r(200, {"ok": True})
+              correo = str(datos.get("correo", "")).strip()
+              if len(correo) > 254 or not CORREO.match(correo):
+                  return _r(422, {"error": "correo inválido"})
+              ahora = time.time()
+              _envios[:] = [t for t in _envios if ahora - t < VENTANA]
+              if len(_envios) >= LIMITE:
+                  return _r(429, {"error": "demasiadas solicitudes"})
+              _envios.append(ahora)
+              c = os.environ["CORREO_CONTACTO"]
+              try:
+                  _enviar(correo, ASUNTO, TEXTO.format(c=c), c, con_html=True)
+                  _enviar(c, "Nueva solicitud de demo: " + correo, "Correo del visitante: " + correo
+                          + "\nSe le envió la confirmación. Responde a este correo para escribirle.", correo)
+              except Exception as error:  # SES rechazó el envío (sandbox, dirección inexistente...)
+                  print(json.dumps({"operation": "formulario_demo", "error": type(error).__name__}))
+                  return _r(502, {"error": "no se pudo enviar"})
+              print(json.dumps({"operation": "formulario_demo", "resultado": "enviado"}))
+              return _r(200, {"ok": True})
+          # FIN-HANDLER
+
+  UrlContacto:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt FuncionContacto.Arn
+      AuthType: NONE
+      Cors:
+        AllowOrigins:
+          - !Sub "https://${DominioLanding}"
+          - !Sub "https://${DominioRaiz}"
+        AllowMethods: [POST]
+        AllowHeaders: [content-type]
+        MaxAge: 3600
+
+  PermisoUrlContacto:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref FuncionContacto
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
+
+  PermisoInvocarContacto:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref FuncionContacto
+      Action: lambda:InvokeFunction
+      Principal: "*"
+      InvokedViaFunctionUrl: true
+
 Outputs:
+  ContactoUrl:
+    Description: URL pública del formulario de demo; la usa la landing (config.js)
+    Value: !GetAtt UrlContacto.FunctionUrl
   RepositorioUri:
     Value: !GetAtt RepositorioBackend.RepositoryUri
   RepositorioLambdaUri:

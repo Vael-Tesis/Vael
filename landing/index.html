@@ -554,6 +554,11 @@
       <label class="sr-only" for="email">Correo de trabajo</label>
       <input class="cta__input" id="email" name="email" type="email" inputmode="email"
              autocomplete="email" placeholder="tu@empresa.com" required />
+      <!-- Campo trampa (DEC-027): invisible para las personas; si un bot lo llena, no se envía nada -->
+      <div class="sr-only" aria-hidden="true">
+        <label for="sitio">No completar</label>
+        <input id="sitio" name="sitio" type="text" tabindex="-1" autocomplete="off" />
+      </div>
       <button class="btn btn--signal" type="submit">Solicitar demo</button>
     </form>
     <p class="cta__msg" id="form-msg" role="status" aria-live="polite"></p>
@@ -611,6 +616,8 @@
   </div>
 </footer>
 
+<!-- config.js lo genera el despliegue con la URL del formulario (DEC-027); en local no existe -->
+<script src="config.js" defer></script>
 <script src="main.js" defer></script>
 </body>
 </html>

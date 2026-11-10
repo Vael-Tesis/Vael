@@ -48,7 +48,7 @@ $bucketApp = AwsOpcional cloudformation describe-stacks --stack-name vael-base `
   --query "Stacks[0].Outputs[?OutputKey=='BucketApp'].OutputValue | [0]" --output text
 if ($bucketApp) {
   Write-Host "== El panel muestra el aviso de entorno apagado" -ForegroundColor Cyan
-  Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") @rolCfn `
+  Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") --capabilities CAPABILITY_IAM @rolCfn `
     --parameter-overrides "OrigenApi=api-apagada.vael.work" --no-fail-on-empty-changeset
   Aws s3 rm "s3://$bucketApp" --recursive | Out-Null
   Aws s3 cp (Join-Path $raiz "infra/aws/apagado.html") "s3://$bucketApp/index.html" --cache-control "no-cache" | Out-Null
