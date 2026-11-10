@@ -1,13 +1,13 @@
-> COPIA del documento del Drive `VAEL/Docs/08_servicios_negocio.md`, versión 3.1, copiada el 2026-11-09.
+> COPIA del documento del Drive `VAEL/Docs/08_servicios_negocio.md`, versión 3.2, copiada el 2026-11-10.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 08 — Servicios de Negocio
 
 | Campo | Valor |
 |---|---|
-| Versión | 3.1 |
-| Actualizado | 2026-11-09 |
-| Fuente de verdad | Código en `backend/app/services/`, `backend/app/core/` y `backend/app/scripts/` (revisado tras el Sprint 2, 2026-11-03) + DEC-001, DEC-002, DEC-007, DEC-009, DEC-010, DEC-013, DEC-015, DEC-016, DEC-018, DEC-022, DEC-024 |
+| Versión | 3.2 |
+| Actualizado | 2026-11-10 |
+| Fuente de verdad | Código en `backend/app/services/`, `backend/app/core/` y `backend/app/scripts/` (revisado tras el Sprint 2, 2026-11-03) + DEC-001, DEC-002, DEC-007, DEC-009, DEC-010, DEC-013, DEC-015, DEC-016, DEC-018, DEC-022, DEC-024, DEC-025, DEC-026 |
 | Copia en el repositorio | `docs/diseno/08_servicios_negocio.md` (DEC-019). La fuente es este documento |
 
 Los servicios contienen la lógica de negocio y no dependen de FastAPI. Estados: **Implementado** · **Cambia (tarea · historia)** · **Planificado (tarea · historia)** · **Se elimina (tarea)**. Lo integrado en los Sprints 1 y 2 indica la tarea y el PR.
@@ -44,14 +44,25 @@ El mensaje incluye: `tipo`, `tenant_id`, identificadores, key del archivo en S3 
 
 Colas: `vael-analisis-cv` y `vael-analisis-entrevista`, cada una con su DLQ (cola de mensajes fallidos).
 
-## core/gemini.py — Implementado (DEV-C-04 · PR #7)
+## core/gemini.py — Implementado (DEV-C-04 · PR #7; respaldo en DEV-C-15 · PR #44)
 
 | Función | Descripción |
 |---|---|
-| `consultar_gemini_json(prompt, model_name=None)` | Llama a Gemini pidiendo JSON y lo parsea |
+| `consultar_gemini_json(prompt, model_name=None, permitir_respaldo=True)` | Punto único de las llamadas de texto con salida JSON. Llama a Gemini pidiendo JSON y lo parsea. **Respaldo (DEC-025, PR #44):** con `IA_PROVEEDOR=qwen` llama directamente a Qwen; con `IA_RESPALDO=qwen`, si Gemini agota sus reintentos por un error de disponibilidad (429, 503, 504 o tiempo límite), repite la llamada con Qwen y lo registra en el log. Un error que no es de disponibilidad (por ejemplo, una clave inválida) no pasa a Qwen. `permitir_respaldo=False` lo desactiva: lo usa la medición del OE2, que mide Gemini |
 | `como_lista_str(valor)` | Normaliza listas devueltas por el modelo |
 
-Usa `google-genai` (`google-generativeai` se eliminó), con el ID de modelo verificado, registro del modelo y los parámetros de cada llamada (OE2) y **reintento con backoff exponencial ante 429, 503 y 504** (`MAX_INTENTOS = 4`, espera base de 2 s) y **tiempo límite de 60 s por llamada** (`TIEMPO_LIMITE_SEGUNDOS`, observación de TST-A-01 · PR #23).
+Usa `google-genai` (`google-generativeai` se eliminó), con el ID de modelo verificado, registro del modelo y los parámetros de cada llamada (OE2) y **reintento con backoff exponencial ante 429, 503 y 504** (`MAX_INTENTOS = 4`, espera base de 2 s) y **tiempo límite de 60 s por llamada** (`TIEMPO_LIMITE_SEGUNDOS`, observación de TST-A-01 · PR #23). Desde el PR #44, ese ciclo vive en `_consultar_gemini` y `consultar_gemini_json` lo envuelve con el respaldo. Los servicios no cambian: siguen llamando a `consultar_gemini_json`, así que el respaldo cubre el análisis de CV, el examen, la entrevista y los textos de vacantes, y también la Lambda. La entrevista por voz (Gemini Live) no tiene respaldo.
+
+## core/qwen.py — Implementado (DEV-C-15 · PR #44, DEC-025)
+
+| Función | Descripción |
+|---|---|
+| `consultar_qwen_json(prompt)` | `POST {QWEN_BASE_URL}/chat/completions` (API compatible con OpenAI: el Open WebUI de Tecsup u OpenRouter) con una instrucción de sistema que exige solo JSON; hasta 3 intentos ante 429, 500, 502, 503 y 504, y 90 s por llamada |
+| `extraer_json(texto)` | Quita el razonamiento `<think>…</think>` de Qwen3, los bloques de markdown y el texto alrededor del objeto, y lo parsea |
+| `listar_modelos()` | Lista los modelos del servidor (lo usa `probar_qwen`) |
+| `qwen_configurado()` | True si hay `QWEN_BASE_URL` y `QWEN_MODEL` |
+
+El servidor de Tecsup está en una IP privada: **solo responde desde la red del campus**. Por eso, con ese servidor, el respaldo sirve con VAEL en local dentro del campus. Con OpenRouter (`https://openrouter.ai/api/v1`, modelo `qwen/qwen3.8-flash`, de pago; DEC-026) responde desde cualquier red. En AWS el respaldo solo se configura con `-ConQwen`.
 
 ## core/scoring.py — Implementado (DEV-C-01 · PR #4)
 
@@ -193,12 +204,14 @@ Los clientes de AWS usan el rol de la tarea o de la Lambda. Con credenciales tem
 | `semillas` | DEV-C-03 · PR #15 | Carga los datos del doc 13 (empresas A y B, usuarios por rol, áreas, plantillas, vacantes y los datos de la empresa testigo B). Contraseñas desde `SEED_PASSWORD` o `SEED_PASSWORD_<ROL>`; reutiliza `crear_empresa`. Idempotente. **Ampliado (DEV-A-07 · PR #28):** candidatos de TI-2026-001 con el proceso completo (doc 13 v1.4), sin enviar correos |
 | `generar_cvs` | DEV-C-03 · PR #15 | Genera los PDF de los CV ficticios desde `backend/seeds/cvs_texto/`, incluidos el escaneado (CV-TI-11) y el dañado (CV-TI-12) |
 | `exportar_openapi` | DEV-C-09 · PR #16 (DEC-008) | Exporta el OpenAPI a `frontend/openapi.json` para generar el cliente tipado |
+| `medir_oe2` | TST-A-05 · PR #35 y PR #45; TST-A-06 · PR #48 (en revisión) | Mide el OE2 (doc 14) con llamadas reales al modelo. **`--proveedor gemini\|qwen` (obligatorio, DEC-026):** Gemini sin respaldo, o Qwen directo por `consultar_qwen_json`. Cada proveedor tiene su registro en `docs/metricas/oe2_<proveedor>/` (`consistencia.json`, `intento_NN_<motivo>.json`, `partes/`). Cada ejecución registra proveedor, modelo y, en Qwen, el servidor; nunca la clave. **Por partes (PR #45):** `--cv <código>` y `--unir`, para no superar la cuota diaria |
+| `probar_qwen` | DEV-C-15 · PR #44 | Verifica la conexión con Qwen: lista los modelos y hace una consulta de prueba en JSON contra el servidor configurado |
 
 ## Consideraciones transversales
 
 - **Idempotencia:** SQS entrega cada mensaje al menos una vez; `aplicar_resultado_*` y el servicio de decisiones no duplican filas, tokens ni correos.
 - **Logs:** JSON con `tenant_id`, `candidato_id`, operación y `duration_ms` (DEV-C-08).
-- **Cuota de Gemini:** con reintento y backoff (DEV-C-04); si se agota, el mensaje vuelve a la cola y, tras los reintentos, termina en la DLQ con alarma.
+- **Cuota de Gemini:** con reintento y backoff (DEV-C-04); en el campus, con `IA_RESPALDO=qwen`, responde Qwen (PR #44); si no, el mensaje vuelve a la cola y, tras los reintentos, termina en la DLQ con alarma.
 
 ## Historial
 
@@ -211,3 +224,4 @@ Los clientes de AWS usan el rol de la tarea o de la Lambda. Con credenciales tem
 | 2.3 | 2026-11-03 | Sprint 2: recomendación de finalistas por `top_candidatos_finalistas` con `ranking_vacante` y `recomendaciones_finalistas` (DEC-022, PR #27); `enviar_correos=False` para las semillas (PR #28); banco de talento y métricas implementados en sus routers (PR #29, #31); reintento ante 504 y tiempo límite de Gemini (PR #23) |
 | 3.0 | 2026-11-04 | **Corrección (versión mayor):** la sección de `services/analisis_cv.py` describía desde la v1 un desglose ponderado que el código no implementaba; DEC-024 lo implementó (DEV-C-14 · PR #38): `construir_prompt_analisis` pide los cinco criterios con su justificación y `_validar_y_sumar_desglose` valida y suma `score_cv` |
 | 3.1 | 2026-11-09 | HU-23 integrada (DEV-C-13 · PR #42): despachador con modo `sqs`, `core/interno.py`, y división en preparación, cálculo y aplicación de los análisis de CV y de entrevista pasan a Implementado; Lambda con secreto propio y DLQ; token de sesión en los clientes de AWS |
+| 3.2 | 2026-11-10 | Respaldo de IA (DEV-C-15 · PR #44, DEC-025): `consultar_gemini_json` con `permitir_respaldo` y `core/qwen.py`; scripts `medir_oe2` (por partes, PR #45; registros separados de Gemini y Qwen, DEC-026, PR #48 en revisión) y `probar_qwen` agregados a la tabla |
