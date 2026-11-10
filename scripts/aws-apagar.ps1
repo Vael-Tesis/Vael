@@ -11,6 +11,9 @@
 param([string]$Perfil = "vael", [string]$Region = "us-east-1")
 
 $ErrorActionPreference = "Stop"
+# La CLI de AWS lee las plantillas con la codificación del sistema en Windows: sin esto, el código
+# inline de la Lambda de contacto (DEC-027) se sube con las tildes rotas
+$env:AWS_CLI_FILE_ENCODING = "UTF-8"
 $env:AWS_PAGER = ""  # sin paginador: el script no debe quedarse esperando una tecla
 $raiz = Split-Path $PSScriptRoot -Parent
 # En Windows PowerShell 5.1, $IsWindows no existe (es $null): ahí también es Windows
