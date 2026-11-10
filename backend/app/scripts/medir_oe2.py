@@ -19,6 +19,13 @@ completa. Las ejecuciones no cambian: mismo modelo, prompt y configuración en c
     python -m app.scripts.medir_oe2 --cv CV-TI-04 --cv CV-TI-07   # otro día
     python -m app.scripts.medir_oe2 --unir
 
+Con el proveedor de respaldo (DEC-026, propuesta): la misma medición contra el modelo compatible
+con OpenAI configurado en QWEN_BASE_URL y QWEN_MODEL (por ejemplo, DeepSeek), en una sola corrida.
+Se registran el modelo y el servidor reales y se guarda en `oe2_consistencia_respaldo.json`, nunca
+en `oe2_consistencia.json`, que queda reservado para Gemini.
+
+    python -m app.scripts.medir_oe2 --proveedor respaldo
+
 Requiere GEMINI_API_KEY en el entorno (`backend/.env`); nunca se imprime ni se guarda en
 ningún archivo. Si una llamada falla después de los reintentos que ya tiene
 `consultar_gemini_json` (429/503/504, `MAX_INTENTOS`), esta ejecución queda registrada como
@@ -36,9 +43,11 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from app.core.config import settings
 from app.core.gemini import _configuracion_json, consultar_gemini_json
+from app.core.qwen import INSTRUCCION_SISTEMA, consultar_qwen_json, qwen_configurado
 from app.models.area import Area
 from app.models.vacante import Vacante
 from app.scripts import semillas
@@ -56,6 +65,8 @@ DIRECTORIO_METRICAS = RAIZ / "docs" / "metricas"
 # Reservado a una corrida completa (0 ejecuciones fallidas): un intento con fallas nunca
 # escribe aquí, para no confundirse con la medición real del OE2.
 SALIDA_CORRIDA_COMPLETA = DIRECTORIO_METRICAS / "oe2_consistencia.json"
+# Corrida completa con el proveedor de respaldo (DEC-026): archivo propio, nunca el de Gemini
+SALIDA_CORRIDA_RESPALDO = DIRECTORIO_METRICAS / "oe2_consistencia_respaldo.json"
 _PATRON_INTENTO = re.compile(r"^oe2_intento_(\d+)_.*\.json$")
 # Partes exitosas de una corrida por partes: una por CV, sin fallas (ver --cv y --unir)
 DIRECTORIO_PARTES = DIRECTORIO_METRICAS / "oe2_partes"
@@ -81,6 +92,7 @@ class Ejecucion:
     recomendacion: str  # "avanzar" | "descartar" | "error"
     umbral_score_cv_minimo: float
     error: str | None = None
+    proveedor: str = "gemini"
 
 
 def _vacante_y_area_semillas() -> tuple[Vacante, Area]:
@@ -98,6 +110,26 @@ def _vacante_y_area_semillas() -> tuple[Vacante, Area]:
     return vacante, area
 
 
+def _servidor_respaldo() -> str:
+    """Solo el host del servidor de respaldo (sin ruta ni credenciales), para el registro."""
+    return urlparse(settings.qwen_base_url).hostname or "desconocido"
+
+
+def _modelo(proveedor: str) -> str:
+    return settings.gemini_model if proveedor == "gemini" else settings.qwen_model
+
+
+def _parametros_respaldo() -> dict[str, Any]:
+    """Los parámetros que envía `consultar_qwen_json`, los mismos del respaldo en producción."""
+    return {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": _servidor_respaldo(),
+        "max_tokens": 4096,
+        "instruccion_sistema": INSTRUCCION_SISTEMA,
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)",
+    }
+
+
 def _parametros_generacion() -> dict[str, Any]:
     """Los mismos parámetros de generación que usa `consultar_gemini_json` en producción,
     para que el registro de cada ejecución los deje explícitos (OE2, doc 14). No se cambia
@@ -111,12 +143,16 @@ def _parametros_generacion() -> dict[str, Any]:
     }
 
 
-async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float) -> Ejecucion:
-    parametros = _parametros_generacion()
+async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float, proveedor: str = "gemini") -> Ejecucion:
+    parametros = _parametros_generacion() if proveedor == "gemini" else _parametros_respaldo()
+    modelo = _modelo(proveedor)
     inicio = time.perf_counter()
     try:
-        # El OE2 mide solo a Gemini: sin el respaldo de Qwen (DEC-025)
-        resultado = await consultar_gemini_json(prompt, permitir_respaldo=False)
+        if proveedor == "gemini":
+            # Medición de Gemini: sin pasar al respaldo (DEC-025), para no mezclar modelos
+            resultado = await consultar_gemini_json(prompt, permitir_respaldo=False)
+        else:
+            resultado = await consultar_qwen_json(prompt)
         # DEC-024: la misma validación de producción — un desglose inválido es una ejecución
         # fallida, igual que cualquier otro error de consultar_gemini_json.
         score, _desglose = _validar_y_sumar_desglose(resultado.get("criterios"))
@@ -125,8 +161,8 @@ async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float) ->
         print(f"  [{cv} #{numero}] FALLÓ tras los reintentos de consultar_gemini_json: {exc!r}", file=sys.stderr)
         return Ejecucion(
             cv=cv, numero=numero, fecha_hora_utc=datetime.now(timezone.utc).isoformat(), duracion_ms=duracion_ms,
-            modelo=settings.gemini_model, parametros_generacion=parametros, score_cv=None, clasificacion_ia=None,
-            recomendacion="error", umbral_score_cv_minimo=umbral, error=str(exc),
+            modelo=modelo, parametros_generacion=parametros, score_cv=None, clasificacion_ia=None,
+            recomendacion="error", umbral_score_cv_minimo=umbral, error=str(exc), proveedor=proveedor,
         )
 
     duracion_ms = round((time.perf_counter() - inicio) * 1000, 1)
@@ -135,8 +171,9 @@ async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float) ->
     print(f"  [{cv} #{numero}] score={score} clasificacion={clasificacion.value} recomendacion={recomendacion} ({duracion_ms:.0f} ms)")
     return Ejecucion(
         cv=cv, numero=numero, fecha_hora_utc=datetime.now(timezone.utc).isoformat(), duracion_ms=duracion_ms,
-        modelo=settings.gemini_model, parametros_generacion=parametros, score_cv=score,
+        modelo=modelo, parametros_generacion=parametros, score_cv=score,
         clasificacion_ia=clasificacion.value, recomendacion=recomendacion, umbral_score_cv_minimo=umbral,
+        proveedor=proveedor,
     )
 
 
@@ -197,9 +234,11 @@ def _sha_commit() -> str:
         return "desconocido (no se pudo leer con git rev-parse HEAD)"
 
 
-async def medir(cvs: list[str] | None = None) -> dict[str, Any]:
-    if not settings.gemini_api_key:
+async def medir(cvs: list[str] | None = None, proveedor: str = "gemini") -> dict[str, Any]:
+    if proveedor == "gemini" and not settings.gemini_api_key:
         raise SystemExit("Falta GEMINI_API_KEY en el entorno (backend/.env) — no se mide el OE2 sin una clave real")
+    if proveedor == "respaldo" and not (qwen_configurado() and settings.qwen_api_key):
+        raise SystemExit("Faltan QWEN_BASE_URL, QWEN_MODEL o QWEN_API_KEY en backend/.env para medir con el respaldo")
 
     vacante, area = _vacante_y_area_semillas()
     ejecuciones: list[Ejecucion] = []
@@ -214,14 +253,14 @@ async def medir(cvs: list[str] | None = None) -> dict[str, Any]:
 
         print(f"\n{cv} — {EJECUCIONES_POR_CV} ejecuciones contra {vacante.titulo} (umbral score_cv_minimo={vacante.score_cv_minimo})")
         for numero in range(1, EJECUCIONES_POR_CV + 1):
-            ejecucion = await _ejecutar_una_vez(cv, numero, prompt, float(vacante.score_cv_minimo))
+            ejecucion = await _ejecutar_una_vez(cv, numero, prompt, float(vacante.score_cv_minimo), proveedor)
             ejecuciones.append(ejecucion)
             if numero < EJECUCIONES_POR_CV or cv != cvs[-1]:
                 await asyncio.sleep(ESPERA_ENTRE_LLAMADAS_SEGUNDOS)
 
     resumen_por_cv = {cv: _resumen_por_cv([e for e in ejecuciones if e.cv == cv]) for cv in cvs}
 
-    return {
+    resultado: dict[str, Any] = {
         "_comentario": (
             "Indicador OE2 (doc 14): consistencia del análisis de CV. Meta: desviación estándar "
             "<= 5 puntos sobre 100 en 10 ejecuciones del mismo CV contra la misma vacante, con la "
@@ -233,13 +272,23 @@ async def medir(cvs: list[str] | None = None) -> dict[str, Any]:
         "historia": "HU-25",
         "fecha_utc": datetime.now(timezone.utc).isoformat(),
         "sha_commit": _sha_commit(),
-        "modelo": settings.gemini_model,
+        "proveedor": proveedor,
+        "modelo": _modelo(proveedor),
         "vacante": vacante.codigo,
         "ejecuciones_por_cv": EJECUCIONES_POR_CV,
         "meta_desviacion_estandar": META_DESVIACION_ESTANDAR,
         "resumen_por_cv": resumen_por_cv,
         "ejecuciones": [asdict(e) for e in ejecuciones],
     }
+    if proveedor == "respaldo":
+        resultado["servidor"] = _servidor_respaldo()
+        resultado["_comentario"] += (
+            f" MEDIDO CON EL PROVEEDOR DE RESPALDO ({_modelo(proveedor)} en {_servidor_respaldo()}), NO CON"
+            " GEMINI (DEC-026, propuesta): Gemini respondía 503 por alta demanda el día de la medición."
+            " El prompt, la vacante, los CV, la validación del desglose y la regla de recomendación son"
+            " los mismos; cambia el modelo, así que el resultado describe la consistencia de ese modelo."
+        )
+    return resultado
 
 
 def unir_partes() -> dict[str, Any]:
@@ -276,7 +325,13 @@ def main() -> int:
     argumentos = argparse.ArgumentParser(description="Mide el OE2 (TST-A-05)")
     argumentos.add_argument("--cv", action="append", choices=CVS, help="Mide solo este CV (una parte)")
     argumentos.add_argument("--unir", action="store_true", help="Une las tres partes en la corrida completa")
+    argumentos.add_argument(
+        "--proveedor", choices=["gemini", "respaldo"], default="gemini",
+        help="gemini (por defecto) o respaldo: el modelo de QWEN_BASE_URL y QWEN_MODEL (DEC-026)",
+    )
     opciones = argumentos.parse_args()
+    if opciones.proveedor == "respaldo" and (opciones.cv or opciones.unir):
+        argumentos.error("--proveedor respaldo mide los tres CV en una sola corrida: no admite --cv ni --unir")
 
     DIRECTORIO_METRICAS.mkdir(parents=True, exist_ok=True)
     if opciones.unir:
@@ -286,7 +341,7 @@ def main() -> int:
         _imprimir_resumen(resultado)
         return 0
 
-    resultado = asyncio.run(medir(opciones.cv))
+    resultado = asyncio.run(medir(opciones.cv, opciones.proveedor))
     ejecuciones = [Ejecucion(**e) for e in resultado["ejecuciones"]]
     hubo_fallidas = any(r["ejecuciones_fallidas"] > 0 for r in resultado["resumen_por_cv"].values())
 
@@ -310,7 +365,7 @@ def main() -> int:
             "reservado a una corrida completa, para no confundir un intento con la medición real."
         )
     else:
-        ruta = SALIDA_CORRIDA_COMPLETA
+        ruta = SALIDA_CORRIDA_COMPLETA if opciones.proveedor == "gemini" else SALIDA_CORRIDA_RESPALDO
     ruta.write_text(json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print(f"\nResultado guardado en {ruta}\n")
