@@ -30,5 +30,6 @@ Cada decisión de implementación se registra como `DEC-NNN` en formato ADR (*Ar
 | DEC-024 | Desglose ponderado y auditable del `score_cv` (corrige el doc 08; se implementa en DEV-C-14) | [DEC-024](DEC-024-desglose-score-cv.md) |
 | DEC-025 | Qwen del instituto como IA de respaldo de Gemini (**Propuesta**) | [DEC-025](DEC-025-ia-respaldo-qwen.md) |
 | DEC-026 | Registros separados del OE2 para Gemini y Qwen (**Propuesta**) | [DEC-026](DEC-026-oe2-registros-gemini-y-qwen.md) |
+| DEC-027 | Formulario de demo de la landing con una Lambda permanente y SES (**Propuesta**) | [DEC-027](DEC-027-formulario-demo-lambda.md) |
 
-La siguiente decisión nueva usa el número DEC-027.
+La siguiente decisión nueva usa el número DEC-028.

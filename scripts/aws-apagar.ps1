@@ -11,6 +11,9 @@
 param([string]$Perfil = "vael", [string]$Region = "us-east-1")
 
 $ErrorActionPreference = "Stop"
+# La CLI de AWS lee las plantillas con la codificación del sistema en Windows: sin esto, el código
+# inline de la Lambda de contacto (DEC-027) se sube con las tildes rotas
+$env:AWS_CLI_FILE_ENCODING = "UTF-8"
 $env:AWS_PAGER = ""  # sin paginador: el script no debe quedarse esperando una tecla
 $raiz = Split-Path $PSScriptRoot -Parent
 # En Windows PowerShell 5.1, $IsWindows no existe (es $null): ahí también es Windows
@@ -48,7 +51,7 @@ $bucketApp = AwsOpcional cloudformation describe-stacks --stack-name vael-base `
   --query "Stacks[0].Outputs[?OutputKey=='BucketApp'].OutputValue | [0]" --output text
 if ($bucketApp) {
   Write-Host "== El panel muestra el aviso de entorno apagado" -ForegroundColor Cyan
-  Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") @rolCfn `
+  Aws cloudformation deploy --stack-name vael-base --template-file (Join-Path $raiz "infra/aws/base.yaml") --capabilities CAPABILITY_IAM @rolCfn `
     --parameter-overrides "OrigenApi=api-apagada.vael.work" --no-fail-on-empty-changeset
   Aws s3 rm "s3://$bucketApp" --recursive | Out-Null
   Aws s3 cp (Join-Path $raiz "infra/aws/apagado.html") "s3://$bucketApp/index.html" --cache-control "no-cache" | Out-Null

@@ -326,7 +326,8 @@
     var form = $('#demo-form');
     var input = $('#email');
     var msg = $('#form-msg');
-    if (!form || !input || !msg) return;
+    var boton = form ? form.querySelector('button[type="submit"]') : null;
+    if (!form || !input || !msg || !boton) return;
 
     var EMAIL = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
 
@@ -344,7 +345,34 @@
 
       input.removeAttribute('aria-invalid');
       msg.classList.remove('is-error');
-      // Nada se envía desde la página: se abre el correo del visitante con la solicitud lista
+
+      // Envío automático (DEC-027): la Lambda de contacto confirma al visitante por correo y avisa
+      // al equipo. Su URL la publica el despliegue en config.js; sin ella, o si falla, se abre el
+      // correo del visitante con la solicitud lista (plan B).
+      var url = window.VAEL_CONTACTO_URL;
+      var trampa = $('#sitio');
+      if (url && window.fetch) {
+        boton.disabled = true;
+        msg.textContent = 'Enviando…';
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ correo: value, sitio: trampa ? trampa.value : '' })
+        }).then(function (r) {
+          if (!r.ok) throw new Error(String(r.status));
+          msg.textContent = 'Listo: te enviamos un correo a ' + value + ' para coordinar la demo. Si no lo ves en unos minutos, revisa tu carpeta de spam.';
+          form.reset();
+        }).catch(function () {
+          abrirCorreo(value);
+        }).then(function () {
+          boton.disabled = false;
+        });
+        return;
+      }
+      abrirCorreo(value);
+    });
+
+    function abrirCorreo(value) {
       // \r\n: saltos de línea que respetan Gmail, Outlook y Apple Mail
       var asunto = encodeURIComponent('Solicitud de demo de VAEL');
       var cuerpo = encodeURIComponent([
@@ -368,7 +396,7 @@
       window.location.href = 'mailto:' + CORREO_CONTACTO + '?subject=' + asunto + '&body=' + cuerpo;
       msg.textContent = 'Se abrió tu correo con la solicitud lista: completa tus datos y envíala. Si no se abrió, escríbenos a ' + CORREO_CONTACTO + '.';
       form.reset();
-    });
+    }
 
     input.addEventListener('input', function () {
       if (input.getAttribute('aria-invalid') === 'true') {
