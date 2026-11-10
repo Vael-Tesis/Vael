@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- VAEL: el embudo. Dos filtros que se acortan y el elegido (lima): de muchos postulantes a la lista corta -->
   <rect width="32" height="32" rx="9" fill="#0E5C4A"/>
-  <path d="M9 13.5l4.6 6.2L23 9.8" fill="none" stroke="#C8F04A" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8 9h16" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/>
+  <path d="M11 14.5h10" stroke="#FFFFFF" stroke-opacity=".8" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="16" cy="21.8" r="3.8" fill="#C8F04A"/>
 </svg>
