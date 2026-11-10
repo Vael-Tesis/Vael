@@ -1,4 +1,4 @@
-"""Mide el OE2 (doc 14, TST-A-05): consistencia del análisis de CV con Gemini.
+"""Mide el OE2 (doc 14, TST-A-05 y TST-A-06): consistencia del análisis de CV, con Gemini y con Qwen.
 
 Analiza CV-TI-01, CV-TI-04 y CV-TI-07 (doc 13: alto, límite y bajo) contra TI-2026-001,
 10 veces cada uno, con la misma función, el mismo prompt y la misma configuración de
@@ -7,29 +7,29 @@ generación que usa el sistema en producción (`app.services.analisis_cv`,
 parámetro: el OE2 mide la consistencia del sistema tal como funciona, no de una
 configuración aparte para la medición.
 
-No forma parte del CI ni de pytest: hace 30 llamadas reales a Gemini (cuota real). Uso:
+No forma parte del CI ni de pytest: hace 30 llamadas reales al modelo. Uso:
 
-    python -m app.scripts.medir_oe2
+    python -m app.scripts.medir_oe2 --proveedor gemini
+    python -m app.scripts.medir_oe2 --proveedor qwen
 
-Por partes (el plan gratuito permite 20 solicitudes por día y por modelo, doc 04): cada parte
-mide un CV completo (sus 10 ejecuciones) y, cuando están los tres, se unen en la corrida
-completa. Las ejecuciones no cambian: mismo modelo, prompt y configuración en cada parte.
+**Dos registros separados (DEC-026, propuesta):** cada proveedor tiene su carpeta en
+`docs/metricas/oe2_<proveedor>/`, con su corrida completa (`consistencia.json`), sus intentos
+fallidos (`intento_NN_<motivo>.json`) y sus partes (`partes/`). Uno nunca reemplaza al otro.
+Gemini usa `GEMINI_API_KEY`; Qwen, el modelo compatible con OpenAI de `QWEN_BASE_URL`,
+`QWEN_MODEL` y `QWEN_API_KEY`. Cada ejecución registra el proveedor, el modelo y, en Qwen, el
+servidor.
 
-    python -m app.scripts.medir_oe2 --cv CV-TI-01     # un día
-    python -m app.scripts.medir_oe2 --cv CV-TI-04 --cv CV-TI-07   # otro día
-    python -m app.scripts.medir_oe2 --unir
+Por partes (el plan gratuito de Gemini permite 20 solicitudes por día y por modelo, doc 04):
+cada parte mide un CV completo (sus 10 ejecuciones) y, cuando están los tres, se unen en la
+corrida completa. Las ejecuciones no cambian: mismo modelo, prompt y configuración en cada parte.
 
-Con el proveedor de respaldo (DEC-026, propuesta): la misma medición contra el modelo compatible
-con OpenAI configurado en QWEN_BASE_URL y QWEN_MODEL (por ejemplo, DeepSeek), en una sola corrida.
-Se registran el modelo y el servidor reales y se guarda en `oe2_consistencia_respaldo.json`, nunca
-en `oe2_consistencia.json`, que queda reservado para Gemini.
+    python -m app.scripts.medir_oe2 --proveedor gemini --cv CV-TI-01     # un día
+    python -m app.scripts.medir_oe2 --proveedor gemini --cv CV-TI-04 --cv CV-TI-07   # otro día
+    python -m app.scripts.medir_oe2 --proveedor gemini --unir
 
-    python -m app.scripts.medir_oe2 --proveedor respaldo
-
-Requiere GEMINI_API_KEY en el entorno (`backend/.env`); nunca se imprime ni se guarda en
-ningún archivo. Si una llamada falla después de los reintentos que ya tiene
-`consultar_gemini_json` (429/503/504, `MAX_INTENTOS`), esta ejecución queda registrada como
-fallida — no se repite en silencio ni se reemplaza por otra.
+Las claves nunca se imprimen ni se guardan en ningún archivo. Si una llamada falla después de
+los reintentos del cliente (429/503/504), esa ejecución queda registrada como fallida — no se
+repite en silencio ni se reemplaza por otra.
 """
 import argparse
 import asyncio
@@ -62,14 +62,24 @@ from app.services.analisis_cv import (
 RAIZ = Path(__file__).resolve().parents[3]
 DIRECTORIO_CVS = Path(__file__).resolve().parents[2] / "seeds" / "cvs"
 DIRECTORIO_METRICAS = RAIZ / "docs" / "metricas"
-# Reservado a una corrida completa (0 ejecuciones fallidas): un intento con fallas nunca
-# escribe aquí, para no confundirse con la medición real del OE2.
-SALIDA_CORRIDA_COMPLETA = DIRECTORIO_METRICAS / "oe2_consistencia.json"
-# Corrida completa con el proveedor de respaldo (DEC-026): archivo propio, nunca el de Gemini
-SALIDA_CORRIDA_RESPALDO = DIRECTORIO_METRICAS / "oe2_consistencia_respaldo.json"
-_PATRON_INTENTO = re.compile(r"^oe2_intento_(\d+)_.*\.json$")
-# Partes exitosas de una corrida por partes: una por CV, sin fallas (ver --cv y --unir)
-DIRECTORIO_PARTES = DIRECTORIO_METRICAS / "oe2_partes"
+PROVEEDORES = ("gemini", "qwen")  # DEC-026: un registro por proveedor
+_PATRON_INTENTO = re.compile(r"^intento_(\d+)_.*\.json$")
+
+
+def directorio_registro(proveedor: str) -> Path:
+    """Carpeta del registro del OE2 de ese proveedor (DEC-026)."""
+    return DIRECTORIO_METRICAS / f"oe2_{proveedor}"
+
+
+def salida_corrida_completa(proveedor: str) -> Path:
+    """Reservada a una corrida completa (0 ejecuciones fallidas): un intento con fallas nunca
+    escribe aquí, para no confundirse con la medición real del OE2."""
+    return directorio_registro(proveedor) / "consistencia.json"
+
+
+def directorio_partes(proveedor: str) -> Path:
+    """Partes exitosas de una corrida por partes: una por CV, sin fallas (ver --cv y --unir)."""
+    return directorio_registro(proveedor) / "partes"
 
 CVS = ["CV-TI-01", "CV-TI-04", "CV-TI-07"]
 EJECUCIONES_POR_CV = 10
@@ -110,8 +120,8 @@ def _vacante_y_area_semillas() -> tuple[Vacante, Area]:
     return vacante, area
 
 
-def _servidor_respaldo() -> str:
-    """Solo el host del servidor de respaldo (sin ruta ni credenciales), para el registro."""
+def _servidor_qwen() -> str:
+    """Solo el host del servidor de Qwen (sin ruta ni credenciales), para el registro."""
     return urlparse(settings.qwen_base_url).hostname or "desconocido"
 
 
@@ -119,11 +129,11 @@ def _modelo(proveedor: str) -> str:
     return settings.gemini_model if proveedor == "gemini" else settings.qwen_model
 
 
-def _parametros_respaldo() -> dict[str, Any]:
-    """Los parámetros que envía `consultar_qwen_json`, los mismos del respaldo en producción."""
+def _parametros_qwen() -> dict[str, Any]:
+    """Los parámetros que envía `consultar_qwen_json`, los mismos que usa el sistema con Qwen."""
     return {
         "api": "chat/completions compatible con OpenAI",
-        "servidor": _servidor_respaldo(),
+        "servidor": _servidor_qwen(),
         "max_tokens": 4096,
         "instruccion_sistema": INSTRUCCION_SISTEMA,
         "temperature": "valor por defecto del servidor (no se fija, igual que en producción)",
@@ -143,8 +153,8 @@ def _parametros_generacion() -> dict[str, Any]:
     }
 
 
-async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float, proveedor: str = "gemini") -> Ejecucion:
-    parametros = _parametros_generacion() if proveedor == "gemini" else _parametros_respaldo()
+async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float, proveedor: str) -> Ejecucion:
+    parametros = _parametros_generacion() if proveedor == "gemini" else _parametros_qwen()
     modelo = _modelo(proveedor)
     inicio = time.perf_counter()
     try:
@@ -152,6 +162,7 @@ async def _ejecutar_una_vez(cv: str, numero: int, prompt: str, umbral: float, pr
             # Medición de Gemini: sin pasar al respaldo (DEC-025), para no mezclar modelos
             resultado = await consultar_gemini_json(prompt, permitir_respaldo=False)
         else:
+            # Directo a Qwen (DEC-026), sin pasar por Gemini
             resultado = await consultar_qwen_json(prompt)
         # DEC-024: la misma validación de producción — un desglose inválido es una ejecución
         # fallida, igual que cualquier otro error de consultar_gemini_json.
@@ -201,7 +212,7 @@ def _resumen_por_cv(ejecuciones: list[Ejecucion]) -> dict[str, Any]:
 
 def _motivo_fallo(ejecuciones: list[Ejecucion]) -> str:
     """Un slug corto que describe por qué falló el intento, a partir de los errores
-    registrados — para que el nombre del archivo (`oe2_intento_NN_<motivo>.json`) ya diga
+    registrados — para que el nombre del archivo (`intento_NN_<motivo>.json`) ya diga
     algo sin tener que abrirlo."""
     errores = " ".join(e.error for e in ejecuciones if e.error)
     if "RESOURCE_EXHAUSTED" in errores or "429" in errores:
@@ -215,16 +226,17 @@ def _motivo_fallo(ejecuciones: list[Ejecucion]) -> str:
     return "fallo_parcial"
 
 
-def _siguiente_ruta_intento(motivo: str) -> Path:
-    """El próximo `oe2_intento_NN_<motivo>.json`, con NN siguiente al último que exista en
-    docs/metricas/ — nunca reutiliza ni sobrescribe el número de un intento anterior."""
+def _siguiente_ruta_intento(motivo: str, proveedor: str) -> Path:
+    """El próximo `intento_NN_<motivo>.json` del registro de ese proveedor, con NN siguiente al
+    último que exista — nunca reutiliza ni sobrescribe el número de un intento anterior."""
+    directorio = directorio_registro(proveedor)
     numeros_existentes = [
         int(coincidencia.group(1))
-        for archivo in DIRECTORIO_METRICAS.glob("oe2_intento_*.json")
+        for archivo in directorio.glob("intento_*.json")
         if (coincidencia := _PATRON_INTENTO.match(archivo.name))
     ]
     siguiente = max(numeros_existentes, default=0) + 1
-    return DIRECTORIO_METRICAS / f"oe2_intento_{siguiente:02d}_{motivo}.json"
+    return directorio / f"intento_{siguiente:02d}_{motivo}.json"
 
 
 def _sha_commit() -> str:
@@ -237,8 +249,8 @@ def _sha_commit() -> str:
 async def medir(cvs: list[str] | None = None, proveedor: str = "gemini") -> dict[str, Any]:
     if proveedor == "gemini" and not settings.gemini_api_key:
         raise SystemExit("Falta GEMINI_API_KEY en el entorno (backend/.env) — no se mide el OE2 sin una clave real")
-    if proveedor == "respaldo" and not (qwen_configurado() and settings.qwen_api_key):
-        raise SystemExit("Faltan QWEN_BASE_URL, QWEN_MODEL o QWEN_API_KEY en backend/.env para medir con el respaldo")
+    if proveedor == "qwen" and not (qwen_configurado() and settings.qwen_api_key):
+        raise SystemExit("Faltan QWEN_BASE_URL, QWEN_MODEL o QWEN_API_KEY en backend/.env — no se mide el OE2 sin una clave real")
 
     vacante, area = _vacante_y_area_semillas()
     ejecuciones: list[Ejecucion] = []
@@ -268,7 +280,7 @@ async def medir(cvs: list[str] | None = None, proveedor: str = "gemini") -> dict
             "(sin bajar la temperatura ni cambiar ningún otro parámetro para la medición)."
         ),
         "indicador": "OE2 - consistencia de la calificación automatizada",
-        "tarea": "TST-A-05",
+        "tarea": "TST-A-05" if proveedor == "gemini" else "TST-A-06",
         "historia": "HU-25",
         "fecha_utc": datetime.now(timezone.utc).isoformat(),
         "sha_commit": _sha_commit(),
@@ -280,27 +292,27 @@ async def medir(cvs: list[str] | None = None, proveedor: str = "gemini") -> dict
         "resumen_por_cv": resumen_por_cv,
         "ejecuciones": [asdict(e) for e in ejecuciones],
     }
-    if proveedor == "respaldo":
-        resultado["servidor"] = _servidor_respaldo()
+    if proveedor == "qwen":
+        resultado["servidor"] = _servidor_qwen()
         resultado["_comentario"] += (
-            f" MEDIDO CON EL PROVEEDOR DE RESPALDO ({_modelo(proveedor)} en {_servidor_respaldo()}), NO CON"
-            " GEMINI (DEC-026, propuesta): Gemini respondía 503 por alta demanda el día de la medición."
-            " El prompt, la vacante, los CV, la validación del desglose y la regla de recomendación son"
-            " los mismos; cambia el modelo, así que el resultado describe la consistencia de ese modelo."
+            f" Registro de Qwen ({_modelo(proveedor)} en {_servidor_qwen()}), separado del de Gemini"
+            " (DEC-026, propuesta). El prompt, la vacante, los CV, la validación del desglose y la regla"
+            " de recomendación son los del sistema; el resultado describe la consistencia del análisis"
+            " con este modelo, no con Gemini."
         )
     return resultado
 
 
-def unir_partes() -> dict[str, Any]:
-    """Une las partes exitosas de los tres CV en la corrida completa del OE2.
+def unir_partes(proveedor: str) -> dict[str, Any]:
+    """Une las partes exitosas de los tres CV en la corrida completa del OE2 de ese proveedor.
 
     Exige una parte por CV, todas con el mismo modelo y la misma configuración de generación.
     """
     partes: dict[str, dict[str, Any]] = {}
     for cv in CVS:
-        candidatas = sorted(DIRECTORIO_PARTES.glob(f"oe2_parte_{cv}_*.json"))
+        candidatas = sorted(directorio_partes(proveedor).glob(f"parte_{cv}_*.json"))
         if not candidatas:
-            raise SystemExit(f"Falta la parte de {cv}: ejecuta 'python -m app.scripts.medir_oe2 --cv {cv}'")
+            raise SystemExit(f"Falta la parte de {cv}: ejecuta 'python -m app.scripts.medir_oe2 --proveedor {proveedor} --cv {cv}'")
         partes[cv] = json.loads(candidatas[-1].read_text(encoding="utf-8"))
 
     modelos = {p["modelo"] for p in partes.values()}
@@ -315,57 +327,57 @@ def unir_partes() -> dict[str, Any]:
     resultado["ejecuciones"] = [e for cv in CVS for e in partes[cv]["ejecuciones"]]
     resultado["partes"] = {cv: {"fecha_utc": p["fecha_utc"], "sha_commit": p["sha_commit"]} for cv, p in partes.items()}
     resultado["_comentario"] += (
-        " Corrida hecha por partes, un CV por parte, por la cuota gratuita de Gemini (20 solicitudes"
-        " por día y por modelo); cada parte tiene sus 10 ejecuciones con el mismo modelo y configuración."
+        " Corrida hecha por partes, un CV por parte (cuota diaria del proveedor); cada parte tiene sus"
+        " 10 ejecuciones con el mismo modelo y configuración."
     )
     return resultado
 
 
 def main() -> int:
-    argumentos = argparse.ArgumentParser(description="Mide el OE2 (TST-A-05)")
+    argumentos = argparse.ArgumentParser(description="Mide el OE2 (TST-A-05, TST-A-06)")
+    argumentos.add_argument(
+        "--proveedor", choices=PROVEEDORES, required=True,
+        help="gemini o qwen: cada uno tiene su propio registro en docs/metricas/oe2_<proveedor>/ (DEC-026)",
+    )
     argumentos.add_argument("--cv", action="append", choices=CVS, help="Mide solo este CV (una parte)")
     argumentos.add_argument("--unir", action="store_true", help="Une las tres partes en la corrida completa")
-    argumentos.add_argument(
-        "--proveedor", choices=["gemini", "respaldo"], default="gemini",
-        help="gemini (por defecto) o respaldo: el modelo de QWEN_BASE_URL y QWEN_MODEL (DEC-026)",
-    )
     opciones = argumentos.parse_args()
-    if opciones.proveedor == "respaldo" and (opciones.cv or opciones.unir):
-        argumentos.error("--proveedor respaldo mide los tres CV en una sola corrida: no admite --cv ni --unir")
+    proveedor = opciones.proveedor
 
-    DIRECTORIO_METRICAS.mkdir(parents=True, exist_ok=True)
+    directorio_registro(proveedor).mkdir(parents=True, exist_ok=True)
+    salida = salida_corrida_completa(proveedor)
     if opciones.unir:
-        resultado = unir_partes()
-        SALIDA_CORRIDA_COMPLETA.write_text(json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"\nCorrida completa (por partes) guardada en {SALIDA_CORRIDA_COMPLETA}\n")
+        resultado = unir_partes(proveedor)
+        salida.write_text(json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"\nCorrida completa (por partes) guardada en {salida}\n")
         _imprimir_resumen(resultado)
         return 0
 
-    resultado = asyncio.run(medir(opciones.cv, opciones.proveedor))
+    resultado = asyncio.run(medir(opciones.cv, proveedor))
     ejecuciones = [Ejecucion(**e) for e in resultado["ejecuciones"]]
     hubo_fallidas = any(r["ejecuciones_fallidas"] > 0 for r in resultado["resumen_por_cv"].values())
 
     if opciones.cv and not hubo_fallidas:
-        DIRECTORIO_PARTES.mkdir(parents=True, exist_ok=True)
+        directorio_partes(proveedor).mkdir(parents=True, exist_ok=True)
         marca = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         for cv in opciones.cv:
             parte = {**resultado, "resumen_por_cv": {cv: resultado["resumen_por_cv"][cv]},
                      "ejecuciones": [e for e in resultado["ejecuciones"] if e["cv"] == cv]}
-            ruta_parte = DIRECTORIO_PARTES / f"oe2_parte_{cv}_{marca}.json"
+            ruta_parte = directorio_partes(proveedor) / f"parte_{cv}_{marca}.json"
             ruta_parte.write_text(json.dumps(parte, ensure_ascii=False, indent=2), encoding="utf-8")
             print(f"Parte de {cv} guardada en {ruta_parte}")
         _imprimir_resumen(resultado)
         return 0
 
     if hubo_fallidas:
-        ruta = _siguiente_ruta_intento(_motivo_fallo(ejecuciones))
+        ruta = _siguiente_ruta_intento(_motivo_fallo(ejecuciones), proveedor)
         resultado["_comentario"] += (
             " ESTE ARCHIVO ES UN INTENTO FALLIDO (no las 30 ejecuciones exitosas que pide el "
-            "CA de TST-A-05): algunas ejecuciones fallaron; 'oe2_consistencia.json' queda "
-            "reservado a una corrida completa, para no confundir un intento con la medición real."
+            "CA del OE2): algunas ejecuciones fallaron; 'consistencia.json' queda reservado a "
+            "una corrida completa, para no confundir un intento con la medición real."
         )
     else:
-        ruta = SALIDA_CORRIDA_COMPLETA if opciones.proveedor == "gemini" else SALIDA_CORRIDA_RESPALDO
+        ruta = salida
     ruta.write_text(json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print(f"\nResultado guardado en {ruta}\n")
