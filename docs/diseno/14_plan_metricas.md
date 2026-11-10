@@ -1,11 +1,11 @@
-> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.7 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-10, copiada el 2026-11-10.
+> COPIA del documento del Drive `VAEL/Docs/14_plan_metricas.md`, versión 1.8 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-10, copiada el 2026-11-10.
 > La fuente de verdad es el Drive. No editar aquí: los cambios se hacen en el Drive y se vuelven a copiar.
 
 # 14 — Plan de métricas
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.7 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-10 |
+| Versión | 1.8 — **APROBADO** (2026-10-18); estado de la instrumentación y de las mediciones actualizado el 2026-11-10 |
 | Tarea de origen | PLN-C-06 |
 | Fuente de los objetivos | Monografía, sección 1.2 y Tabla 1.1 |
 | Datos de prueba | Doc 13 |
@@ -88,7 +88,7 @@ Además del puntaje, se reporta si **la recomendación** (avanzar o descartar) c
 
 **Medición del indicador 1 (TST-C-01 · PR #32, 2026-11-01, commit `a972d83`):** **0 accesos cruzados** en las dos capas. Cobertura del **100%**: 66 de 66 endpoints autenticados de RRHH y 11 de 11 del candidato (DEC-021). Las 5 operaciones de la lista cerrada (6 funciones; DEC-010, DEC-014, DEC-021) quedan fuera del conteo porque usan la sesión del sistema y no llevan `Authorization`. Datos crudos: `docs/metricas/oe4_aislamiento.json`. La suite (`test_aislamiento_multiempresa.py` y `test_rls.py`) corre en cada PR.
 
-**Indicador 2, sin medir todavía:** los 3 despliegues hechos hasta hoy fueron manuales: el del 2026-10-28, ejecutando los pasos por separado, y los del 2026-10-29 y 2026-11-08, con `scripts/aws-encender.ps1`. `deploy.yml` está integrado desde el 2026-11-10 (DEP-C-05 · PR #46), pero solo corre desde `main` y todavía no se ha ejecutado. **Pendiente de decidir (equipo):** si el indicador cuenta desde la integración de `deploy.yml`, o si los despliegues anteriores entran en el total.
+**Indicador 2, sin medir todavía.** **Decisión del Product Owner (2026-11-10):** el indicador cuenta los despliegues **desde la integración de `deploy.yml`** (DEP-C-05 · PR #46, 2026-11-10). Los 4 despliegues anteriores fueron manuales y se declaran como la etapa previa a la automatización: el del 2026-10-28, ejecutando los pasos por separado, y los del 2026-10-29, 2026-11-08 y 2026-11-10, con `scripts/aws-encender.ps1`. Para que el indicador tenga datos, `deploy.yml` debe ejecutarse desde `main` antes de la sustentación (requiere el PR `develop → main` con el Sprint 3).
 
 ## Métricas de apoyo
 
@@ -134,3 +134,4 @@ Cada medición guarda sus datos en `docs/metricas/` del repositorio (CSV o JSON)
 | 1.5 | 2026-11-03 | Materiales del OE1 integrados (TST-A-04 · PR #36); OE1 sin medir hasta DEV-C-14 (DEC-024, sin registrar) |
 | 1.6 | 2026-11-04 | DEC-024 registrada e implementada (DEV-C-14 · PR #38): el OE1 ya puede medirse con la rúbrica de criterios ponderados, y la medición válida del OE2 se hará sobre el análisis con desglose |
 | 1.7 | 2026-11-10 | **OE2 con dos registros separados (DEC-026, TST-A-06 · PR #48):** medido con Qwen3.8-Flash vía OpenRouter (desviación de 3,30, 4,22 y 3,05; cumple en los tres CV; M-03 sin cambios), Gemini sin corrida completa; OE2 por partes (PR #45); rutas nuevas en `docs/metricas/oe2_gemini/` y `oe2_qwen/`; OE4: tercer despliegue manual y `deploy.yml` integrado (PR #46), sin ejecutar. Versión publicada por Gabriel Llanos; el original de Diego Nina queda en `_historial` como v1.6 |
+| 1.8 | 2026-11-10 | OE4: el indicador 2 cuenta desde la integración de `deploy.yml` (decisión del Product Owner); cuarto despliegue manual (2026-11-10). Versión publicada por Gabriel Llanos |
