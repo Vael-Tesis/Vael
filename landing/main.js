@@ -345,10 +345,28 @@
       input.removeAttribute('aria-invalid');
       msg.classList.remove('is-error');
       // Nada se envía desde la página: se abre el correo del visitante con la solicitud lista
+      // \r\n: saltos de línea que respetan Gmail, Outlook y Apple Mail
       var asunto = encodeURIComponent('Solicitud de demo de VAEL');
-      var cuerpo = encodeURIComponent('Hola, quiero coordinar una demo de VAEL. Mi correo de trabajo es ' + value + '.');
+      var cuerpo = encodeURIComponent([
+        'Hola, equipo de VAEL:',
+        '',
+        'Me interesa ver cómo VAEL puede apoyar la preselección de personal en mi empresa y quisiera coordinar una demo de 20 minutos.',
+        '',
+        'Mis datos:',
+        '- Nombre: ',
+        '- Empresa: ',
+        '- Cargo: ',
+        '- Correo de trabajo: ' + value,
+        '- Vacantes que abrimos al mes (aprox.): ',
+        '',
+        'Días y horarios en los que puedo reunirme: ',
+        '',
+        'Quedo atento a su respuesta.',
+        '',
+        'Saludos.'
+      ].join('\r\n'));
       window.location.href = 'mailto:' + CORREO_CONTACTO + '?subject=' + asunto + '&body=' + cuerpo;
-      msg.textContent = 'Se abrió tu correo con la solicitud lista: solo envíala. Si no se abrió, escríbenos a ' + CORREO_CONTACTO + '.';
+      msg.textContent = 'Se abrió tu correo con la solicitud lista: completa tus datos y envíala. Si no se abrió, escríbenos a ' + CORREO_CONTACTO + '.';
       form.reset();
     });
 
