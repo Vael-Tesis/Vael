@@ -1,0 +1,690 @@
+{
+  "_comentario": "Indicador OE2 (doc 14): consistencia del análisis de CV. Meta: desviación estándar <= 5 puntos sobre 100 en 10 ejecuciones del mismo CV contra la misma vacante, con la misma función, prompt y configuración de generación que usa el sistema en producción (sin bajar la temperatura ni cambiar ningún otro parámetro para la medición). Registro de Qwen (qwen/qwen3.8-flash en openrouter.ai), separado del de Gemini (DEC-026, propuesta). El prompt, la vacante, los CV, la validación del desglose y la regla de recomendación son los del sistema; el resultado describe la consistencia del análisis con este modelo, no con Gemini.",
+  "indicador": "OE2 - consistencia de la calificación automatizada",
+  "tarea": "TST-A-06",
+  "historia": "HU-25",
+  "fecha_utc": "2026-11-10T16:04:22.108692+00:00",
+  "sha_commit": "dbcc319ce55b06bb2a532a58f35c59df17be1084",
+  "proveedor": "qwen",
+  "modelo": "qwen/qwen3.8-flash",
+  "vacante": "TI-2026-001",
+  "ejecuciones_por_cv": 10,
+  "meta_desviacion_estandar": 5.0,
+  "resumen_por_cv": {
+    "CV-TI-01": {
+      "ejecuciones_totales": 10,
+      "ejecuciones_exitosas": 10,
+      "ejecuciones_fallidas": 0,
+      "scores": [
+        88,
+        93,
+        89,
+        91,
+        85,
+        95,
+        90,
+        89,
+        91,
+        96
+      ],
+      "media": 90.7,
+      "desviacion_estandar": 3.3,
+      "cumple_meta_oe2": true,
+      "la_recomendacion_cambio_entre_ejecuciones": false,
+      "recomendaciones_vistas": [
+        "avanzar"
+      ]
+    },
+    "CV-TI-04": {
+      "ejecuciones_totales": 10,
+      "ejecuciones_exitosas": 10,
+      "ejecuciones_fallidas": 0,
+      "scores": [
+        36,
+        43,
+        39,
+        35,
+        33,
+        29,
+        41,
+        33,
+        39,
+        38
+      ],
+      "media": 36.6,
+      "desviacion_estandar": 4.22,
+      "cumple_meta_oe2": true,
+      "la_recomendacion_cambio_entre_ejecuciones": false,
+      "recomendaciones_vistas": [
+        "descartar"
+      ]
+    },
+    "CV-TI-07": {
+      "ejecuciones_totales": 10,
+      "ejecuciones_exitosas": 10,
+      "ejecuciones_fallidas": 0,
+      "scores": [
+        0,
+        1,
+        0,
+        10,
+        3,
+        0,
+        2,
+        3,
+        3,
+        0
+      ],
+      "media": 2.2,
+      "desviacion_estandar": 3.05,
+      "cumple_meta_oe2": true,
+      "la_recomendacion_cambio_entre_ejecuciones": false,
+      "recomendaciones_vistas": [
+        "descartar"
+      ]
+    }
+  },
+  "ejecuciones": [
+    {
+      "cv": "CV-TI-01",
+      "numero": 1,
+      "fecha_hora_utc": "2026-11-10T15:49:05.945406+00:00",
+      "duracion_ms": 26965.4,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 88,
+      "clasificacion_ia": "recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 2,
+      "fecha_hora_utc": "2026-11-10T15:49:27.724805+00:00",
+      "duracion_ms": 18771.9,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 93,
+      "clasificacion_ia": "altamente_recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 3,
+      "fecha_hora_utc": "2026-11-10T15:50:48.884749+00:00",
+      "duracion_ms": 78155.4,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 89,
+      "clasificacion_ia": "recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 4,
+      "fecha_hora_utc": "2026-11-10T15:51:46.811904+00:00",
+      "duracion_ms": 54923.9,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 91,
+      "clasificacion_ia": "altamente_recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 5,
+      "fecha_hora_utc": "2026-11-10T15:52:42.164789+00:00",
+      "duracion_ms": 52344.6,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 85,
+      "clasificacion_ia": "altamente_recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 6,
+      "fecha_hora_utc": "2026-11-10T15:53:23.241061+00:00",
+      "duracion_ms": 38062.3,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 95,
+      "clasificacion_ia": "altamente_recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 7,
+      "fecha_hora_utc": "2026-11-10T15:54:09.694898+00:00",
+      "duracion_ms": 43437.3,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 90,
+      "clasificacion_ia": "recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 8,
+      "fecha_hora_utc": "2026-11-10T15:54:52.896882+00:00",
+      "duracion_ms": 40200.9,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 89,
+      "clasificacion_ia": "altamente_recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 9,
+      "fecha_hora_utc": "2026-11-10T15:55:28.129914+00:00",
+      "duracion_ms": 32219.1,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 91,
+      "clasificacion_ia": "recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-01",
+      "numero": 10,
+      "fecha_hora_utc": "2026-11-10T15:55:56.015399+00:00",
+      "duracion_ms": 24877.6,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 96,
+      "clasificacion_ia": "altamente_recomendado",
+      "recomendacion": "avanzar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 1,
+      "fecha_hora_utc": "2026-11-10T15:56:15.859717+00:00",
+      "duracion_ms": 16841.3,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 36,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 2,
+      "fecha_hora_utc": "2026-11-10T15:56:46.552347+00:00",
+      "duracion_ms": 27677.1,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 43,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 3,
+      "fecha_hora_utc": "2026-11-10T15:57:07.535091+00:00",
+      "duracion_ms": 17982.1,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 39,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 4,
+      "fecha_hora_utc": "2026-11-10T15:57:30.741359+00:00",
+      "duracion_ms": 20197.7,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 35,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 5,
+      "fecha_hora_utc": "2026-11-10T15:58:04.641178+00:00",
+      "duracion_ms": 30894.8,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 33,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 6,
+      "fecha_hora_utc": "2026-11-10T15:58:45.206994+00:00",
+      "duracion_ms": 37563.1,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 29,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 7,
+      "fecha_hora_utc": "2026-11-10T15:59:03.559190+00:00",
+      "duracion_ms": 15347.6,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 41,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 8,
+      "fecha_hora_utc": "2026-11-10T15:59:28.292501+00:00",
+      "duracion_ms": 21724.2,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 33,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 9,
+      "fecha_hora_utc": "2026-11-10T15:59:49.285379+00:00",
+      "duracion_ms": 17988.3,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 39,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-04",
+      "numero": 10,
+      "fecha_hora_utc": "2026-11-10T16:00:14.203405+00:00",
+      "duracion_ms": 21908.8,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 38,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 1,
+      "fecha_hora_utc": "2026-11-10T16:00:48.916899+00:00",
+      "duracion_ms": 31676.8,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 0,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 2,
+      "fecha_hora_utc": "2026-11-10T16:01:17.751506+00:00",
+      "duracion_ms": 25820.7,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 1,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 3,
+      "fecha_hora_utc": "2026-11-10T16:01:58.577536+00:00",
+      "duracion_ms": 37820.6,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 0,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 4,
+      "fecha_hora_utc": "2026-11-10T16:02:21.969792+00:00",
+      "duracion_ms": 20378.4,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 10,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 5,
+      "fecha_hora_utc": "2026-11-10T16:02:39.125243+00:00",
+      "duracion_ms": 14153.1,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 3,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 6,
+      "fecha_hora_utc": "2026-11-10T16:02:58.320925+00:00",
+      "duracion_ms": 16187.3,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 0,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 7,
+      "fecha_hora_utc": "2026-11-10T16:03:11.888667+00:00",
+      "duracion_ms": 10562.1,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 2,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 8,
+      "fecha_hora_utc": "2026-11-10T16:03:32.954763+00:00",
+      "duracion_ms": 18063.2,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 3,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 9,
+      "fecha_hora_utc": "2026-11-10T16:03:58.553298+00:00",
+      "duracion_ms": 22585.5,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 3,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    },
+    {
+      "cv": "CV-TI-07",
+      "numero": 10,
+      "fecha_hora_utc": "2026-11-10T16:04:22.108692+00:00",
+      "duracion_ms": 20544.4,
+      "modelo": "qwen/qwen3.8-flash",
+      "parametros_generacion": {
+        "api": "chat/completions compatible con OpenAI",
+        "servidor": "openrouter.ai",
+        "max_tokens": 4096,
+        "instruccion_sistema": "Responde únicamente con un objeto JSON válido, sin texto adicional ni bloques de markdown.",
+        "temperature": "valor por defecto del servidor (no se fija, igual que en producción)"
+      },
+      "score_cv": 0,
+      "clasificacion_ia": "no_apto",
+      "recomendacion": "descartar",
+      "umbral_score_cv_minimo": 60.0,
+      "error": null,
+      "proveedor": "qwen"
+    }
+  ],
+  "servidor": "openrouter.ai"
+}
