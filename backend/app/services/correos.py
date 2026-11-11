@@ -96,7 +96,7 @@ async def correo_bienvenida_examen(candidato: Candidato, token: str, vacante: Va
         "correo_bienvenida_examen.html",
         candidato=candidato,
         vacante_titulo=vacante_titulo,
-        link_examen=f"{settings.frontend_url}/examen?token={token}",
+        link_examen=f"{settings.frontend_url}/candidato/acceso?token={token}",
     )
     await _enviar_correo(candidato.email, f"Tu evaluación técnica está lista — {vacante_titulo}", html)
 
@@ -111,7 +111,7 @@ async def correo_invitacion_entrevista(candidato: Candidato, token: str, vacante
         "correo_invitacion_entrevista.html",
         candidato=candidato,
         vacante_titulo=vacante_titulo,
-        link_entrevista=f"{settings.frontend_url}/entrevista?token={token}",
+        link_entrevista=f"{settings.frontend_url}/candidato/acceso?token={token}",
     )
     await _enviar_correo(
         candidato.email,
