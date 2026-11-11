@@ -51,6 +51,11 @@ Parameters:
   DominioApp:
     Type: String
     Default: app.vael.work
+  IaProveedor:
+    Type: String
+    Default: gemini
+    AllowedValues: [gemini, qwen]
+    Description: IA del análisis (DEC-025); qwen = siempre Qwen, sin pasar por Gemini (demos con Gemini saturado)
   IaRespaldo:
     Type: String
     Default: ""
@@ -383,6 +388,7 @@ Resources:
             - {Name: DESPACHO_MODO, Value: sqs}
             - {Name: SQS_URL_ANALISIS_CV, Value: !Ref ColaAnalisisCv}
             - {Name: SQS_URL_ANALISIS_ENTREVISTA, Value: !Ref ColaAnalisisEntrevista}
+            - {Name: IA_PROVEEDOR, Value: !Ref IaProveedor}
             - {Name: IA_RESPALDO, Value: !Ref IaRespaldo}
             - {Name: QWEN_BASE_URL, Value: !Ref QwenBaseUrl}
             - {Name: QWEN_MODEL, Value: !Ref QwenModelo}
@@ -562,6 +568,7 @@ Resources:
           SECRETO_ARN: !Ref SecretosLambda
           S3_BUCKET_NAME: !Ref BucketArchivos
           BACKEND_URL_INTERNO: !Sub "https://${DominioApp}"
+          IA_PROVEEDOR: !Ref IaProveedor
           IA_RESPALDO: !Ref IaRespaldo
           QWEN_BASE_URL: !Ref QwenBaseUrl
           QWEN_MODEL: !Ref QwenModelo

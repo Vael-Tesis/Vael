@@ -17,12 +17,16 @@
   .\scripts\aws-encender.ps1 -CorreoAlarmas equipo@ejemplo.com   # ese correo recibe las alarmas (HU-22)
 .EXAMPLE
   ./scripts/aws-encender.ps1 -Perfil "" -SoloSiEncendido   # deploy.yml al integrar en main
+.EXAMPLE
+  .\scripts\aws-encender.ps1 -SoloQwen   # todo el análisis con Qwen, sin esperar a Gemini (DEC-025)
 #>
 param(
   [string]$Perfil = "vael",
   [string]$Region = "us-east-1",
   [string]$CorreoAlarmas = "",
   [switch]$ConQwen,
+  # Usa siempre Qwen (IA_PROVEEDOR=qwen), sin pasar por Gemini; incluye los datos de -ConQwen
+  [switch]$SoloQwen,
   # Publica las imágenes y la landing; actualiza el entorno solo si ya está encendido (no lo crea)
   [switch]$SoloSiEncendido
 )
@@ -159,9 +163,12 @@ $correo = @(); if ($CorreoAlarmas) { $correo = @("CorreoAlarmas=$CorreoAlarmas")
 # IA de respaldo (DEC-025): solo con -ConQwen se pasan a la pila los datos de Qwen de backend/.env
 # (la clave va a Secrets Manager). El Qwen de Tecsup está en una IP privada que AWS no alcanza: sin
 # -ConQwen, el entorno usa solo Gemini y no espera a un servidor inalcanzable.
-$ia = @("IaRespaldo=", "QwenBaseUrl=", "QwenModelo=", "QwenApiKey=")
-if ($ConQwen) {
-  $ia = @("IaRespaldo=qwen", "QwenBaseUrl=$(LeerEnvOpcional 'QWEN_BASE_URL')",
+# Con -SoloQwen, el análisis va siempre a Qwen (IA_PROVEEDOR=qwen): útil cuando Gemini está saturado
+# o sin cuota, porque los reintentos de Gemini demoran cada análisis de 2 a 3 minutos.
+$ia = @("IaProveedor=gemini", "IaRespaldo=", "QwenBaseUrl=", "QwenModelo=", "QwenApiKey=")
+if ($ConQwen -or $SoloQwen) {
+  $proveedor = if ($SoloQwen) { "qwen" } else { "gemini" }
+  $ia = @("IaProveedor=$proveedor", "IaRespaldo=qwen", "QwenBaseUrl=$(LeerEnvOpcional 'QWEN_BASE_URL')",
     "QwenModelo=$(LeerEnvOpcional 'QWEN_MODEL')", "QwenApiKey=$(LeerEnvOpcional 'QWEN_API_KEY')")
 }
 if ($existe) {

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { api, mensajeDeError } from '../api/cliente'
 import { guardarTokens, guardarUsuario, limpiarSesion, tokenAcceso } from '../auth/sesion'
+import Logo from '../components/ui/Logo'
 
 /** P-01 Login (HU-01, RF-A-01): 401 con credenciales inválidas, 403 si el usuario está inactivo. */
 
@@ -73,11 +74,7 @@ export default function Login() {
         style={{ width: '100%', maxWidth: 360, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 32 }}
       >
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{
-            width: 36, height: 36, background: 'var(--brand)', borderRadius: 8,
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--on-brand)', fontSize: 13, fontWeight: 600, marginBottom: 12,
-          }}>VA</div>
+          <div style={{ display: 'inline-flex', marginBottom: 12 }}><Logo tamano={40} /></div>
           <h1 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>Bienvenido a VAEL</h1>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Panel de Recursos Humanos</p>
         </div>
