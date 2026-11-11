@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { puedeVer } from '../auth/permisos'
 import { cerrarSesion, usuarioActual } from '../auth/sesion'
+import Logo from '../components/ui/Logo'
 
 export type Tema = 'light' | 'dark'
 
@@ -76,14 +77,7 @@ export default function AdminLayout({ theme, setTheme }: AdminLayoutProps) {
           alignItems: 'center',
           gap: 10,
         }}>
-          <div style={{
-            width: 28, height: 28,
-            background: 'var(--brand)',
-            borderRadius: 6,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--on-brand)',
-            fontSize: 11, fontWeight: 600, letterSpacing: '-0.5px',
-          }}>VA</div>
+          <Logo tamano={28} />
           <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-primary)' }}>VAEL</span>
         </div>
 
